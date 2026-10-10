@@ -46,3 +46,11 @@ app.*.map.json
 
 # Local discussion / layout workspace (not versioned)
 /_claude/
+
+# Generated code
+*.g.dart
+*.freezed.dart
+
+# Environment files (the example is committed)
+/env/*.json
+!/env/*.example.json

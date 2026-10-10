@@ -1,4 +1,4 @@
-package com.a2zdigital.parkeasy
+package com.swanlabstechnologies.parkeasy
 
 import io.flutter.embedding.android.FlutterActivity
 

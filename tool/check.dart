@@ -1,0 +1,43 @@
+// Runs every check CI runs: format, analysis, tests.
+//
+//     dart run tool/check.dart
+//
+// Written in Dart so it works the same on Windows, macOS and Linux.
+
+import 'dart:io';
+
+Future<void> main() async {
+  final steps = <(String, String, List<String>)>[
+    (
+      'Format',
+      'dart',
+      [
+        'format',
+        '--output=none',
+        '--set-exit-if-changed',
+        'lib',
+        'test',
+        'tool',
+      ],
+    ),
+    ('Analyse', 'flutter', ['analyze', '--fatal-infos']),
+    ('Test', 'flutter', ['test']),
+  ];
+
+  for (final (name, command, arguments) in steps) {
+    stdout.writeln('\n== $name: $command ${arguments.join(' ')}');
+    final process = await Process.start(
+      command,
+      arguments,
+      mode: ProcessStartMode.inheritStdio,
+      runInShell: true,
+    );
+    final code = await process.exitCode;
+    if (code != 0) {
+      stderr.writeln('\n$name failed.');
+      exit(code);
+    }
+  }
+
+  stdout.writeln('\nAll checks passed.');
+}

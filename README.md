@@ -1,16 +1,27 @@
-# parkeasy
+# ParkEasy Mobile
 
-ParkEasy: find, book and manage parking.
+The Flutter app for ParkEasy, a parking marketplace: customers find and book parking; owners list facilities and manage bookings. One app serves both roles. Android and iOS.
 
-## Getting Started
+The app talks to the ParkEasy API (separate repository). The API contract is its `docs/api/openapi.yaml`.
 
-This project is a starting point for a Flutter application.
+## Quick start
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+flutter pub get
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+dart run tool/check.dart
+```
+
+The last command formats, analyses and tests; it must pass before every push.
+
+## Documentation
+
+Start at [docs/README.md](docs/README.md).
+
+> **Status:** project skeleton and conventions only. No feature is built yet.
