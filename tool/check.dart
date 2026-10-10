@@ -1,4 +1,5 @@
-// Runs every check CI runs: app name, format, code generation, analysis, tests.
+// Runs every check CI runs: secrets, app name, format, localisation, code
+// generation, analysis, tests.
 //
 //     dart run tool/check.dart
 //
@@ -8,6 +9,7 @@ import 'dart:io';
 
 Future<void> main() async {
   final steps = <(String, String, List<String>)>[
+    ('Secrets', 'dart', ['run', 'tool/secret_scan.dart']),
     ('App name', 'dart', ['run', 'tool/app_identity.dart', '--check']),
     (
       'Format',
@@ -21,6 +23,7 @@ Future<void> main() async {
         'tool',
       ],
     ),
+    ('Localise', 'flutter', ['gen-l10n']),
     (
       'Generate',
       'dart',

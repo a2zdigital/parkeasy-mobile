@@ -2,7 +2,7 @@
 
 The shared components in `lib/core/widgets`. A screen is assembled from these. If a screen needs something that is not here, the component is added here first, with its states, and then used.
 
-> **Status:** Confirmed specification. None is built yet. Each is built with a widget test for every state.
+> **Status:** Confirmed specification. **Implemented:** `PrimaryButton` (also its destructive form), `SecondaryButton`, `TextAction`, `AppTextField`, `OtpField`, `AppScaffold`, `EmptyState`, `ErrorState`, `AppBanner`, `AppLogo`, `CountdownBuilder`, `showConfirmDialog`. The rest are built with the feature that first needs them.
 
 Every interactive component has: default, pressed, focused, disabled. Those that start work also have loading.
 

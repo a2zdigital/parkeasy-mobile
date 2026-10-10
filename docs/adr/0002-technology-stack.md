@@ -9,7 +9,7 @@
 | Concern | Choice | Why |
 |---|---|---|
 | Framework | Flutter, stable channel, version pinned in CI | One codebase for Android and iOS |
-| State and dependency injection | Riverpod (`flutter_riverpod`, with code generation) | Compile-time safety, testable without a widget tree, no `BuildContext` needed for logic |
+| State and dependency injection | Riverpod (`flutter_riverpod`), providers written by hand | Compile-time safety, testable without a widget tree, no `BuildContext` needed for logic |
 | Navigation | `go_router` | Declarative routes, redirects for sign-in, deep links later |
 | HTTP | `dio` | Interceptors for the token, request ID and error mapping |
 | Models | `freezed` + `json_serializable` | Immutable models and unions without hand-written boilerplate |
@@ -33,6 +33,7 @@ Packages are added when the first feature needs them, not in advance. Each addit
 ## Consequences
 
 - Code generation (`build_runner`) is part of the workflow. Generated files are not committed: they are produced locally and in CI, and are git-ignored.
+- Riverpod's code generator is not used: a hand-written `Notifier` is a few lines, and one generator (for models) is enough to keep in step with Flutter releases.
 - Everyone learns Riverpod's rules in [state-management.md](../conventions/state-management.md).
 
 ## Review trigger

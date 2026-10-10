@@ -9,7 +9,8 @@ The mandatory rules, on one page. A pull request that breaks one is not merged.
 | S1 | The API decides every business rule. The app never calculates a price, a commission, availability or a booking status. |
 | S2 | The access token lives only in secure storage. |
 | S3 | Never log or send to a reporting tool: tokens, OTP codes, phone numbers, payment details. |
-| S4 | No secret is compiled into the app. A value in the app is public. |
+| S4 | No secret is compiled into the app. A value in the app is public. A feature that needs a secret key is built on our API. |
+| S7 | No key, credential or signing file is committed, typed in source, logged or shared by message. Client keys (Maps, Firebase) are restricted at the provider and injected at build time. The check fails otherwise. |
 | S5 | A payment succeeds only when the API says so. The payment SDK's success callback is never trusted. |
 | S6 | Ask for a device permission only when the feature needs it, with an explanation first. |
 

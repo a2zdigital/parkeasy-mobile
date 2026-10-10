@@ -1,8 +1,8 @@
 # Design Tokens
 
-The only visual values a widget may use. In code they live in `lib/core/theme` and are read through the theme (`context.colors`, `context.space`, `Theme.of(context).textTheme`). A literal value outside `lib/core/theme` fails review.
+The only visual values a widget may use. In code they live in `lib/core/theme` and are read through the theme (`context.colors`, `context.space`, `Theme.of(context).textTheme`). A literal value outside `lib/core/theme` fails review. (`Colors.transparent` is the one literal allowed.)
 
-> **Status:** Confirmed values. The Dart implementation is the first coding task.
+> **Status:** **Implemented** in `lib/core/theme`. A test recalculates every contrast ratio below from the tokens. **Not yet:** the Inter font files are not bundled, so the platform's default typeface is used until they are added.
 
 ## Colour
 
@@ -171,6 +171,6 @@ Material Symbols, outlined, as shipped with Flutter (`Icons.*_outlined`): no ico
 |---|---|
 | Colours | `context.colors.<token>` (a `ThemeExtension`) |
 | Text styles | `context.text.<token>` |
-| Spacing | `context.space.<token>`, plus ready-made gaps (`Gap.lg`) |
+| Spacing and sizes | `AppSpace.<token>`, `AppSize.<token>`, and ready-made gaps (`Gap.lg()`) |
 | Radius | `AppRadius.<token>` |
 | Durations | `AppMotion.<token>` |

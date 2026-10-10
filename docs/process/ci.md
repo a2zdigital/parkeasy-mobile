@@ -5,7 +5,7 @@ GitHub Actions, in `.github/workflows/ci.yml`. It runs on every pull request to 
 | Job | Checks | Fix locally |
 |---|---|---|
 | PR title | The title follows the commit format | Rename the PR |
-| Format, analyse and test | `dart run tool/check.dart`: the app's name is typed nowhere; `dart format` leaves nothing to change; model code generates; `flutter analyze` reports nothing, infos included; `flutter test` passes | `dart format lib test tool`, then fix what the analyzer and tests report |
+| Format, analyse and test | `dart run tool/check.dart`: no key or credential is tracked; the app's name is typed nowhere; localisations generate; `dart format` leaves nothing to change; model code generates; `flutter analyze` reports nothing, infos included; `flutter test` passes | `dart format lib test tool`, then fix what the analyzer and tests report |
 
 Flutter is pinned to the version in the workflow file. Upgrading it is its own PR.
 

@@ -1,0 +1,17 @@
+import 'dart:math';
+
+/// A new key for one user action that creates something (a booking, a
+/// payment order). Create it when the user presses the button and reuse
+/// it for every retry of that press; see docs/conventions/api-client.md.
+///
+/// A random version-4 UUID.
+String newIdempotencyKey([Random? random]) {
+  final source = random ?? Random.secure();
+  final bytes = List<int>.generate(16, (_) => source.nextInt(256));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+      '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+}

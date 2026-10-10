@@ -27,13 +27,14 @@ Full index: [docs/README.md](docs/README.md).
 - **Never decide an open decision.** Check [docs/overview/open-decisions.md](docs/overview/open-decisions.md). If the task depends on one, stop and ask.
 - Feature-first structure: `lib/app`, `lib/core`, `lib/features/<feature>/{data,state,ui}`. Propose any structural change with the resulting folder tree and wait for approval.
 - A feature never imports another feature's repository or `ui`. Models in `data/models` may be imported across features. Other shared code moves to `lib/core`.
-- Widgets do not call the API or storage. Widget → state (notifier) → repository → API client.
+- Widgets do not call the API or storage. Widget → state (notifier) → repository → API client. Providers are hand-written Riverpod `Notifier`s; providers shared by all features are in `lib/core/providers.dart`.
 - The server decides every business rule. The app never calculates a price, a commission or a booking status.
 - Money is never a `double`. Use the money type in `lib/core/money`.
 - Branch on the API's `error.code`, never on its message.
 - Every screen that loads data handles loading, empty and error.
 - No hard-coded colours, text styles, spacing or user-facing strings in widgets: use the theme tokens and localisation.
 - Tokens only in secure storage. Never log a token, an OTP or a phone number.
+- **No key or credential in the repository, ever**: not in Dart, a manifest, a plist, Gradle, an env file, a test or a doc. Secret keys (payment secret, Firebase service account, unrestricted Google keys) live on the API server only, and the app calls our API. Client keys (Maps SDK, Firebase config) are restricted at the provider and injected at build time from untracked files. `tool/secret_scan.dart` runs in the check. Read [docs/conventions/security.md](docs/conventions/security.md) before adding any SDK.
 - **The app's name is never typed** in code, strings, tests or widgets. Its one source is `app_identity.json`; use `appDisplayName`, and `{appName}` placeholders in localised strings. To rename: edit the JSON, run `dart run tool/app_identity.dart`. The Dart package is named `app` for the same reason.
 - UI is built only from the design tokens and shared components in [docs/design](docs/design/README.md): no literal colour, size, spacing, radius or duration in a widget, every component and screen with all its states, nothing decorative, no feature the API does not have.
 - Never add a package without approval.

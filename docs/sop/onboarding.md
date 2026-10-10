@@ -46,13 +46,15 @@ Test accounts (local only, code `123456`): `+919000000001` customer, `+919000000
 | iOS simulator | `http://localhost:8000` |
 | A real phone | Your machine's LAN address; start the API with `php artisan serve --host=0.0.0.0` |
 
-Environment files (`env/local.json`) arrive with the first feature; see [configuration.md](../conventions/configuration.md).
+Copy `env/local.example.json` to `env/local.json` and put the address for your device in `API_BASE_URL`. See [configuration.md](../conventions/configuration.md).
 
 ## Run
 
 ```bash
-flutter run
+flutter run --dart-define-from-file=env/local.json
 ```
+
+Without the flag the app stops at start-up and says so.
 
 ## Read
 

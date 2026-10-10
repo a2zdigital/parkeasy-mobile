@@ -1,6 +1,6 @@
 # State Management
 
-Riverpod, with code generation ([ADR-0002](../adr/0002-technology-stack.md)).
+Riverpod with hand-written providers ([ADR-0002](../adr/0002-technology-stack.md)). Worked examples: `SessionController`, `PhoneSignInNotifier`, `OtpNotifier`, `CompleteProfileNotifier`.
 
 ## Kinds of provider
 
@@ -37,6 +37,10 @@ A screen that loads uses `AsyncValue<T>`, which already has loading, data and er
 
 - A read retries by invalidating its provider (pull to refresh, "Try again").
 - A write that needs an idempotency key creates the key once per user action and keeps it in the notifier's state until that action succeeds or the user abandons it. See [api-client.md](api-client.md).
+
+## Time
+
+Nothing whose result affects behaviour calls `DateTime.now()`. Read `clockProvider`, so a test can set the time.
 
 ## Testing
 

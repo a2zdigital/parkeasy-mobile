@@ -11,10 +11,6 @@ flutter pub get
 ```
 
 ```bash
-flutter run
-```
-
-```bash
 dart run tool/check.dart
 ```
 
@@ -24,4 +20,6 @@ The last command formats, analyses and tests; it must pass before every push.
 
 Start at [docs/README.md](docs/README.md).
 
-> **Status:** conventions, design system and the data model. No screen is built yet.
+> **Status:** foundation and sign-in are built. Search, booking, payment and the owner area are not.
+
+Copy `env/local.example.json` to `env/local.json` first, and run with `flutter run --dart-define-from-file=env/local.json`.

@@ -54,3 +54,27 @@ app.*.map.json
 # Environment files (the example is committed)
 /env/*.json
 !/env/*.example.json
+
+# Generated localisations
+/lib/l10n/generated/
+
+# Keys, credentials and signing material. None of these is ever committed;
+# see docs/conventions/security.md. tool/secret_scan.dart enforces it.
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
+firebase_app_id_file.json
+.firebaserc
+*.jks
+*.keystore
+*.p8
+*.p12
+*.pem
+*.mobileprovision
+key.properties
+secrets.properties
+/android/secrets.properties
+/ios/Flutter/Secrets.xcconfig
+.env
+.env.*
+service-account*.json

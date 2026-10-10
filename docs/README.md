@@ -13,7 +13,7 @@ Working documentation for everyone who builds or tests the app. It is versioned 
 
 **MUST** is mandatory. **SHOULD** is the default; deviate only with a reason in the PR. **MAY** is optional.
 
-> Today the data model is **Implemented**. Everything else in `conventions/` and `design/` is **Confirmed** and not built yet.
+> **Implemented** today: the data model, the foundation (theme, components, API client, session, router) and sign-in. Each document says at its top what exists.
 
 ## New here? Read in this order
 

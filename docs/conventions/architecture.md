@@ -2,7 +2,7 @@
 
 Decision records: [ADR-0002](../adr/0002-technology-stack.md), [ADR-0003](../adr/0003-feature-first-structure.md).
 
-> **Status:** Confirmed. The models and core API types exist; no repository, notifier or screen does yet. Sign-in will be the worked example.
+> **Status:** **Implemented** for the foundation: theme, shared components, configuration, API client, session, router, and sign-in with profile as the worked example. Copy `lib/features/auth` and `lib/features/profile` when building a feature.
 
 ## The flow of one screen
 
@@ -25,9 +25,10 @@ flowchart LR
 
 | Folder | Contents |
 |---|---|
-| `lib/app` | The root widget, the router, wiring of the theme |
+| `lib/app` | The root widget, the router, the route names and access policy (`Routes.redirect`), the customer shell |
 | `lib/core/api` | `ApiClient`, `ApiException`, error codes, pagination, idempotency keys |
-| `lib/core/auth` | Token storage and the session (signed in or not, roles) |
+| `lib/core/auth` | Token storage, and the event that says the API refused the token. The session itself (`SessionController`) is in `features/auth/state`, because it holds the `User` model and `core` imports no feature |
+| `lib/core/providers.dart` | The providers every feature shares: configuration, token store, API client, clock |
 | `lib/core/config` | `AppConfig` |
 | `lib/core/money` | The money type and its formatting |
 | `lib/core/theme` | Colour, typography, spacing and radius tokens; the `ThemeData` |

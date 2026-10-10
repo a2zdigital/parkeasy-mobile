@@ -2,7 +2,7 @@
 
 The contract is `docs/api/openapi.yaml` in the API repository, with a guided tour in its `docs/api/getting-started.md`. This page says how the app implements the client side. When they disagree, the OpenAPI file is right.
 
-> **Status:** Confirmed. `core/api` is not built yet.
+> **Status:** **Implemented**: `ApiClient`, `ApiException`, error codes, pagination types, idempotency keys, and the central handling of a refused token. **Planned:** automatic single retry of `GET`s, the force-update and suspended screens, the shared paginated-list notifier.
 
 ## One client
 

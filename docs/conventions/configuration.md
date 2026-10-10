@@ -2,7 +2,9 @@
 
 Decision record: [ADR-0004](../adr/0004-environments.md).
 
-> **Status:** Confirmed. `env/` and `AppConfig` are created with the first feature.
+> **Status:** **Implemented**: `AppConfig` and `env/local.example.json`.
+
+Copy `env/local.example.json` to `env/local.json` and set the API address for your device. The app refuses to start without it, and refuses a non-HTTPS address outside local.
 
 ## Environments
 
