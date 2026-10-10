@@ -16,7 +16,7 @@
 | Token storage | `flutter_secure_storage` | Keychain and Keystore |
 | Decimal arithmetic | `decimal` | Money is never a `double` |
 | Localisation | `flutter_localizations` + `intl` (ARB files) | Built into Flutter |
-| Payments | `razorpay_flutter` | The API's payment provider |
+| Payments | `razorpay_flutter`, used only behind `CheckoutLauncher` in `lib/core/payment` | The API's payment provider |
 | Tests | `flutter_test`, `mocktail` | No code generation for mocks |
 
 Packages are added when the first feature needs them, not in advance. Each addition follows [dependencies.md](../conventions/dependencies.md).

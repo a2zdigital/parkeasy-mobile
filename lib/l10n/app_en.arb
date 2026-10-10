@@ -271,7 +271,6 @@
   "reviewCancelNote": "You can cancel before the booking starts. If you paid online and cancel early enough, the refund is automatic.",
   "reviewBook": "Book parking",
   "reviewSendRequest": "Send request",
-  "reviewOnlineNotReady": "Paying in the app arrives in the next build. A booking made with online payment will wait for payment and then expire.",
   "errSlotUnavailable": "The last space for this time was just taken. Choose another time or facility.",
   "errQuoteExpired": "The price for this time has changed. Go back to see the new price.",
   "errPaymentModeNotSupported": "This facility doesn't accept that way of paying. Choose the other one.",
@@ -300,7 +299,7 @@
     }
   },
   "bannerPendingApprovalNoTime": "Request sent. Waiting for the owner to answer.",
-  "bannerAwaitingPayment": "Waiting for payment until {time}. Paying in the app arrives in the next build, so this booking will expire.",
+  "bannerAwaitingPayment": "Pay by {time} to confirm this booking. After that the space is released.",
   "@bannerAwaitingPayment": {
     "placeholders": {
       "time": {
@@ -341,5 +340,44 @@
   "errCancellationNotAllowed": "This booking can no longer be cancelled.",
   "bookingNotFound": "We couldn't find that booking.",
   "statusAwaitingUpdate": "Update the app to see this status",
-  "actionBackToTime": "Change time"
+  "actionBackToTime": "Change time",
+  "bannerAwaitingPaymentNoTime": "Pay now to confirm this booking.",
+  "payAmount": "Pay {amount}",
+  "@payAmount": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentTitle": "Payment",
+  "paymentStarting": "Getting your payment ready",
+  "paymentInCheckout": "Complete the payment in the window that opened.",
+  "paymentConfirming": "Confirming your payment. This usually takes a few seconds.",
+  "paymentSucceededTitle": "Payment received",
+  "paymentSucceededBody": "{amount} paid. Your booking is confirmed.",
+  "@paymentSucceededBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "paymentViewBooking": "View booking",
+  "paymentFailedTitle": "Payment didn't go through",
+  "paymentFailedBody": "Nothing was confirmed. You can try again while the booking is still waiting for payment.",
+  "paymentNotCompletedTitle": "Payment not completed",
+  "paymentNotCompletedBody": "You closed the payment window before paying. The booking is still waiting for payment.",
+  "paymentPendingTitle": "Still confirming",
+  "paymentPendingBody": "Your bank hasn't confirmed the payment yet. This can take a few minutes. The booking will show as confirmed once it arrives; you don't need to pay again.",
+  "paymentUnavailableTitle": "Can't pay here",
+  "paymentUnavailableBody": "This build can't take a payment for this booking. Update the app or contact support.",
+  "paymentTestNote": "Test server: payments are simulated and no money moves.",
+  "paymentSimulateSuccess": "Simulate a successful payment",
+  "paymentSimulateFailure": "Simulate a failed payment",
+  "errPaymentNotRequired": "This booking doesn't need an online payment.",
+  "errPaymentAlreadyCompleted": "This booking is already paid.",
+  "errBookingExpired": "This booking is no longer waiting for payment. Book again to get a space.",
+  "errApprovalRequired": "The owner hasn't accepted this request yet. You can pay once they do.",
+  "errPaymentProviderUnavailable": "The payment service isn't responding. Try again in a moment."
 }

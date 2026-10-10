@@ -126,7 +126,6 @@ void main() {
     expect(find.text('Pay at the facility'), findsNothing);
     expect(find.text('Pay online'), findsOneWidget);
     expect(find.textContaining('This is a request.'), findsOneWidget);
-    expect(find.textContaining('arrives in the next build'), findsOneWidget);
 
     final pending = bookingJson(
       status: 'pending_approval',

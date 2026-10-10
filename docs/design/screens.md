@@ -2,7 +2,7 @@
 
 Every screen in the first version, and the API call behind it. A screen is in scope only if the API supports it today.
 
-> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, around the configured city centre), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. Activity shows a plain "not built yet" screen. C9 (paying online) is not built. Progress: [mvp-status.md](../overview/mvp-status.md).
+> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, around the configured city centre), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. Activity shows a plain "not built yet" screen. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
 
 ## Customer
 

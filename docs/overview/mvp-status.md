@@ -15,6 +15,7 @@ Last updated: 2026-10-10.
 | Review and book | Everything being committed to on one screen; pay at the facility or online; instant booking or a request to the owner; safe to retry without double-booking |
 | Booking | Status, what to do next, reference for the gate, price, amount due at the facility; cancel after confirming, with the refund outcome shown |
 | My bookings | Newest first, with status, time, total and reference; paging; pull to refresh |
+| Pay online | A "Pay ₹…" button on a booking waiting for payment; Razorpay checkout opened with the order our API creates; the booking is confirmed only when our API confirms the payment; clear outcomes for paid, failed, window closed and still confirming. On a test server the payment is simulated |
 | Profile | Name, phone, email, sign out |
 | Under everything | Loading, empty and error states; no-network handling; a refused token signs out; text scales to 200% |
 
@@ -26,9 +27,8 @@ In build order. The API already supports all of these.
 
 | # | Feature | Notes |
 |---|---|---|
-| 1 | Pay online | Simulated payment against the local API first; Razorpay checkout when test keys exist |
-| 2 | Activity | Notifications list, unread count, mark read |
-| 3 | Owner area | Apply, bookings (approve, reject, check in, record payment, check out), earnings; facility editor last |
+| 1 | Activity | Notifications list, unread count, mark read |
+| 2 | Owner area | Apply, bookings (approve, reject, check in, record payment, check out), earnings; facility editor last |
 
 **The shortest complete journey works now:** find a facility → choose a time → book to pay at the facility → see the booking → cancel it. That is enough for a first device test of the customer side.
 
@@ -39,7 +39,7 @@ In build order. The API already supports all of these.
 | A device run of the current build | Confirming the native settings (network permission, local HTTP in debug) | Technical lead |
 | Staging API server | Anyone testing without running the API on their own machine | Technical lead |
 | SMS provider on the API | Signing in with a real code; today only the fixed development code works, and only against a local API | Technical lead |
-| Razorpay test keys on the API | Real checkout | Technical lead |
+| Razorpay test keys on the API (`PARKEASY_PAYMENT_DRIVER=razorpay`) | Real checkout. **The Razorpay window itself has never been opened**: the SDK is integrated and its logic is tested with a stand-in, but only a device run with test keys proves the native side | Technical lead |
 | Logo and app icon artwork | Replacing the placeholders; launcher icon | Design |
 | Map decision (MD-02) | A map view in Explore | Technical lead |
 | Tester distribution (MD-06) and signing (MD-09) | Giving a build to people outside the team | Technical lead |
@@ -52,7 +52,6 @@ In build order. The API already supports all of these.
 | No search by place name | Needs a geocoding service behind our API |
 | Search results do not show amenities | The API's search result carries amenity codes without names |
 | Facility time zones other than India are shown in UTC | No time-zone database is bundled; the pilot is India only |
-| A booking made with online payment cannot be paid in the app; it waits and then expires, and the screens say so | Paying is the next feature |
 | The cancel confirmation cannot say in advance whether a refund is due; the booking shows it after cancelling | The API reports refund eligibility only in the cancellation result |
 | The review screen describes the cancellation rule in general terms | The API does not expose the free-cancellation period to customers |
 | Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |

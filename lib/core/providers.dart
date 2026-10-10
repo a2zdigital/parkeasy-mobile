@@ -2,6 +2,8 @@ import 'package:app/core/api/api_client.dart';
 import 'package:app/core/auth/auth_events.dart';
 import 'package:app/core/auth/token_store.dart';
 import 'package:app/core/config/app_config.dart';
+import 'package:app/core/payment/checkout_launcher.dart';
+import 'package:app/core/payment/razorpay_checkout_launcher.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,3 +38,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 /// The current time. Overridden in tests; nothing calls `DateTime.now()`
 /// directly where the result affects behaviour.
 final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
+/// Opens the payment provider's window. Overridden in tests.
+final checkoutLauncherProvider = Provider<CheckoutLauncher>(
+  (ref) => RazorpayCheckoutLauncher(),
+);

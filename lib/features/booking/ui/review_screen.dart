@@ -120,13 +120,6 @@ class ReviewScreen extends ConsumerWidget {
               isSelected: state.paymentMode == PaymentMode.online,
               onTap: () => notifier.selectPaymentMode(PaymentMode.online),
             ),
-          if (state.paymentMode == PaymentMode.online) ...[
-            const Gap.sm(),
-            AppBanner(
-              tone: StatusTone.warning,
-              message: l10n.reviewOnlineNotReady,
-            ),
-          ],
           const Gap.lg(),
           AppBanner(
             tone: needsApproval ? StatusTone.warning : StatusTone.info,

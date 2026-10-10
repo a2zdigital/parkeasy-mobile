@@ -27,6 +27,11 @@ The app sends `X-App-Version` on every request. The API can refuse versions belo
 4. Upload; staged roll-out on Android.
 5. Tag `main`.
 
+## Before the first release build
+
+- Razorpay's Android SDK needs its ProGuard rules when code shrinking is on. Add them with the release signing setup and test a release build's checkout.
+- Confirm the checkout window on both platforms with test keys.
+
 ## Never
 
 Commit a keystore, a signing certificate or a store credential. Where they are kept is part of MD-09.

@@ -14,6 +14,7 @@ import 'package:app/features/booking/ui/bookings_screen.dart';
 import 'package:app/features/booking/ui/choose_time_screen.dart';
 import 'package:app/features/booking/ui/review_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
+import 'package:app/features/payment/ui/payment_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
 import 'package:app/features/profile/ui/profile_screen.dart';
 import 'package:app/features/search/ui/explore_screen.dart';
@@ -116,6 +117,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: ':id',
                     builder: (context, state) =>
                         BookingDetailsScreen(id: state.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'pay',
+                        builder: (context, state) => PaymentScreen(
+                          bookingId: state.pathParameters['id']!,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

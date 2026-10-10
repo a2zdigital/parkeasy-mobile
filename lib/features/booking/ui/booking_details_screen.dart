@@ -1,3 +1,4 @@
+import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/money/money_format.dart';
@@ -21,6 +22,7 @@ import 'package:app/features/booking/ui/price_breakdown.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class BookingDetailsScreen extends ConsumerWidget {
   const BookingDetailsScreen({required this.id, super.key});
@@ -86,6 +88,13 @@ class BookingDetailsScreen extends ConsumerWidget {
         return AppScaffold(
           title: l10n.bookingTitle,
           scrollable: false,
+          // The amount is on the button: paying is never an unlabelled tap.
+          bottom: booking.paymentRequired
+              ? PrimaryButton(
+                  label: l10n.payAmount(formatMoney(booking.total)),
+                  onPressed: () => context.push(Routes.pay(booking.id)),
+                )
+              : null,
           body: RefreshIndicator(
             onRefresh: ref.read(bookingDetailsProvider(id).notifier).refresh,
             child: ListView(
@@ -164,7 +173,7 @@ class _Body extends StatelessWidget {
       BookingStatus.awaitingPayment => (
         StatusTone.warning,
         paymentDeadline == null
-            ? l10n.reviewOnlineNotReady
+            ? l10n.bannerAwaitingPaymentNoTime
             : l10n.bannerAwaitingPayment(at(paymentDeadline)),
       ),
       BookingStatus.confirmed when booking.isCheckedIn => (

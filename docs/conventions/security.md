@@ -35,14 +35,14 @@ Tokens · OTP codes · phone numbers and emails · payment details · full reque
 
 ### What exists today
 
-No third-party key is in the project: there is no Maps, Firebase or payment SDK yet. The scanner and the ignore rules are in place so the first key cannot be committed by accident.
+No key is in the project. The Razorpay SDK is installed, and it needs none from us: the public key ID arrives from our API with each order and is passed straight to the checkout window (`lib/core/payment`); the key secret and the webhook secret exist only on the API server. There is no Maps or Firebase SDK yet.
 
 | When this is added | The key goes |
 |---|---|
 | Google Maps SDK (MD-02) | Restricted per platform; `android/secrets.properties` → manifest placeholder; `ios/Flutter/Secrets.xcconfig` → `Info.plist` variable. Both files untracked; CI writes them from its secrets |
 | Place search or geocoding | A server-side key on our API; the app calls our API |
 | Firebase (push, crash reports) | `google-services.json` and `GoogleService-Info.plist` written by CI from its secrets; App Check enabled |
-| Razorpay checkout | Key ID arrives from our API per order; nothing stored in the app |
+| Razorpay checkout (**in place**) | Key ID arrives from our API per order; nothing stored in the app. Switching from test to live keys is a server change only; the app is not rebuilt |
 | Release signing | Keystore and passwords from CI secrets; `key.properties` untracked |
 
 ## Trust

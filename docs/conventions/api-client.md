@@ -83,7 +83,9 @@ Lists return `meta.next_cursor` and `meta.has_more`; pass `cursor` and `per_page
 
 ## Payments
 
-After the payment SDK closes, ignore its result and poll `GET /bookings/{id}/payment` every two seconds for up to a minute. Only `succeeded` from the API confirms a booking.
+After the payment window closes, its result is never taken as proof. `PaymentNotifier` asks `GET /bookings/{id}/payment` every two seconds: for up to a minute when the window reported success, once when it was closed or reported failure. Only the API's answer confirms a booking. If the API has not confirmed in time the screen says "still confirming" and offers no retry, because a second payment could charge the customer twice.
+
+The provider's SDK is used only in `lib/core/payment/razorpay_checkout_launcher.dart`, behind the `CheckoutLauncher` interface; tests replace it. On a server running the simulated provider (and with `ENABLE_PAYMENT_SIMULATION` on) the screen offers "simulate success" and "simulate failure" instead of opening a window.
 
 ## A new API call
 

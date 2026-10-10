@@ -25,6 +25,9 @@ abstract final class Routes {
   /// One of the customer's bookings.
   static String booking(String id) => '$bookings/$id';
 
+  /// Paying for a booking online.
+  static String pay(String id) => '${booking(id)}/pay';
+
   static const Set<String> _signedOut = {launch, phone, code};
 
   /// Where the session allows the user to be. Returns the location to go

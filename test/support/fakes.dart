@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:app/core/auth/token_store.dart';
 import 'package:app/core/config/app_config.dart';
+import 'package:app/core/payment/checkout_launcher.dart';
 import 'package:dio/dio.dart';
 
 final testConfig = AppConfig.validated(
@@ -128,4 +129,19 @@ class FakeHttpAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+}
+
+/// Stands in for the payment provider's window: records what it was asked
+/// to open and reports the outcome the test chose.
+class FakeCheckoutLauncher implements CheckoutLauncher {
+  FakeCheckoutLauncher([this.outcome = CheckoutOutcome.completed]);
+
+  CheckoutOutcome outcome;
+  final List<CheckoutRequest> opened = [];
+
+  @override
+  Future<CheckoutOutcome> open(CheckoutRequest request) async {
+    opened.add(request);
+    return outcome;
+  }
 }

@@ -277,3 +277,46 @@ Map<String, dynamic> bookingsJson(
     'has_more': nextCursor != null,
   },
 };
+
+Map<String, dynamic> orderJson({
+  String status = 'created',
+  String provider = 'razorpay',
+  bool payable = true,
+}) => {
+  'id': '01M4JQSZSNAVTVCMS8A7AJ0ORD',
+  'booking_id': bookingId,
+  'status': status,
+  'amount': '80.00',
+  'currency': 'INR',
+  'provider': provider,
+  'checkout': !payable
+      ? null
+      : {
+          'provider': provider,
+          if (provider == 'razorpay') 'key_id': 'rzp_test_public',
+          'order_id': 'order_abc',
+          'amount_minor': 8000,
+          'currency': 'INR',
+          if (provider == 'razorpay') 'name': 'Parking Co',
+          if (provider == 'razorpay') 'description': 'Booking BK-K2M5XCN4',
+        },
+  'expires_at': '2026-11-02T04:28:00Z',
+  'paid_at': status == 'succeeded' ? '2026-11-02T04:19:00Z' : null,
+};
+
+Map<String, dynamic> paymentJson({
+  String orderStatus = 'pending',
+  String bookingStatus = 'awaiting_payment',
+  String provider = 'razorpay',
+}) => {
+  'data': {
+    'payment_mode': 'online',
+    'booking_status': bookingStatus,
+    'payment_required': bookingStatus == 'awaiting_payment',
+    'order': orderJson(
+      status: orderStatus,
+      provider: provider,
+      payable: orderStatus == 'created' || orderStatus == 'pending',
+    ),
+  },
+};
