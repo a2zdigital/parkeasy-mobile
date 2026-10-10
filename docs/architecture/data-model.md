@@ -75,7 +75,6 @@ erDiagram
 
 | Missing | Why |
 |---|---|
-| Request bodies for creating a pool and setting a rate | Their schemas are inline in the specification; they are added with the owner facility editor |
 | Admin settings | The app has no admin area |
 | Typed checkout details for Razorpay | Added with the payment feature, behind the payment wrapper |
 

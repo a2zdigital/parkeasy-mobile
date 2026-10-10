@@ -1,6 +1,8 @@
+import 'package:app/app/routes.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/cursor_list_view.dart';
@@ -13,9 +15,9 @@ import 'package:app/features/owner/ui/owner_common.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-/// The owner's facilities and where each stands in review. Read-only:
-/// creating and editing a facility is not built in the app yet.
+/// The owner's facilities and where each stands in review.
 class OwnerFacilitiesScreen extends ConsumerWidget {
   const OwnerFacilitiesScreen({super.key});
 
@@ -42,7 +44,14 @@ class OwnerFacilitiesScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: l10n.ownerTabFacilities,
-      actions: const [ExitOwnerAreaAction()],
+      actions: [
+        IconButton(
+          tooltip: l10n.facilityAdd,
+          icon: const Icon(Icons.add),
+          onPressed: () => context.push(Routes.ownerFacilityNew),
+        ),
+        const ExitOwnerAreaAction(),
+      ],
       scrollable: false,
       body: CursorListView<OwnerParkingLot>(
         state: state,
@@ -53,6 +62,10 @@ class OwnerFacilitiesScreen extends ConsumerWidget {
           icon: Icons.local_parking_outlined,
           title: l10n.facilitiesEmptyTitle,
           body: l10n.facilitiesEmptyBody,
+          action: SecondaryButton(
+            label: l10n.facilityAdd,
+            onPressed: () => context.push(Routes.ownerFacilityNew),
+          ),
         ),
         itemBuilder: (context, facility) {
           final (label, tone) = _status(l10n, facility);
@@ -63,6 +76,7 @@ class OwnerFacilitiesScreen extends ConsumerWidget {
           );
 
           return AppCard(
+            onTap: () => context.push(Routes.ownerFacility(facility.lot.id)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

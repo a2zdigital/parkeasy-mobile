@@ -16,7 +16,8 @@ Last updated: 2026-10-10.
 | Booking | Status, what to do next, reference for the gate, price, amount due at the facility; cancel after confirming, with the refund outcome shown |
 | My bookings | Newest first, with status, time, total and reference; paging; pull to refresh |
 | Activity | Notifications newest first, unread badge on the tab, mark one or all read, open the booking a notification is about |
-| Owner area | Apply and see the application's status; bookings at your facilities filtered by status, opening on requests waiting; approve, reject, check in, record payment taken at the facility, check out; facilities with their review state (read-only); earnings summary and entries |
+| Owner area | Apply and see the application's status; bookings at your facilities filtered by status, opening on requests waiting, or found by reference; approve, reject, check in, record payment taken at the facility, check out; earnings summary and entries |
+| Facility editor | Create a facility (details, location, booking mode, payments, amenities); add spaces and rates per vehicle type; set opening hours; submit for review; see why it was not approved and submit again. A facility in review is locked |
 | Pay online | A "Pay ₹…" button on a booking waiting for payment; Razorpay checkout opened with the order our API creates; the booking is confirmed only when our API confirms the payment; clear outcomes for paid, failed, window closed and still confirming. On a test server the payment is simulated |
 | Profile | Name, phone, email, sign out |
 | Under everything | Loading, empty and error states; no-network handling; a refused token signs out; text scales to 200% |
@@ -25,11 +26,25 @@ Verified by automated tests only (logic and screens against a faked network). **
 
 ## Still to build
 
-| # | Feature | Notes |
-|---|---|---|
-| 1 | Owner facility editor | Create a facility, add spaces and rates, set opening hours, submit for review. Until then an owner's facilities are created through the API or the demo data; the app lists them and their review state |
+Nothing in the agreed first-version scope. Every screen in [screens.md](../design/screens.md) that the API supports is built.
 
-**Both sides now work end to end against the API.** Customer: sign in → find → choose a time → book → pay online or at the facility → see the booking → cancel. Owner: apply → (approved by an admin) → answer requests → check in → record payment → check out → see earnings.
+**Both sides work end to end against the API.** Customer: sign in → find → choose a time → book → pay online or at the facility → see the booking → cancel. Owner: apply → (approved by an admin) → create a facility → (approved by an admin) → answer requests → check in → record payment → check out → see earnings.
+
+## Check-in at the gate: what exists and what does not
+
+| | Today |
+|---|---|
+| How a vehicle is checked in | The owner, signed in, finds the booking in their list or by typing the reference the customer shows, and presses **Check in**; later **Check out** |
+| Check-in by scanning a QR code | **Not built**, in the app or the API |
+| Check-in by a one-time code (OTP) the customer reads out | **Not built**, in the app or the API |
+| A separate login for a gate attendant or manager | **Not built**. Only the owner's own account can check vehicles in |
+
+What QR and OTP check-in need, in order:
+
+1. **API:** a gate-staff role tied to a facility; a per-booking check-in code and QR token that the API issues and verifies; endpoints to check in and out by code or token. The token must be verified by the server, not trusted because the app scanned it.
+2. **App, customer:** the QR and the code on the booking screen.
+3. **App, gate:** a scan screen (a camera package and camera permission, which must be tried on real devices) and a code-entry screen.
+4. **Decisions:** whether check-out also needs a code; what happens without a network at the gate; whether the owner or an admin creates gate staff.
 
 ## Needed from outside the code
 
@@ -56,4 +71,13 @@ Verified by automated tests only (logic and screens against a faked network). **
 | Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |
 | A notification about a booking opens it as the customer's booking, except a new request, which opens the owner's view. An owner tapping "booking confirmed" or "cancelled" for their facility sees "couldn't find that booking" | Notifications do not say whether they are for the customer or the owner |
 | The owner area has no dashboard; it opens on booking requests | Simpler, and requests are what an owner must act on |
+| A facility's location is typed as latitude and longitude | Picking it on a map needs the map decision (MD-02) |
+| A rate cannot be removed once set, only changed | The API has no call to remove a rate |
+| No facility photos | The API has no image upload |
 | Owner earnings entries show times in India's zone | An entry carries no facility |
+
+## Later versions
+
+Named by the technical lead for a later, advanced version. **Not designed, not scheduled, and nothing in the current build prepares for them.** Each needs its own product and API design first.
+
+RFID access · FASTag payment · vehicle insurance and PUC (pollution certificate) records · EV charging stations at facilities.

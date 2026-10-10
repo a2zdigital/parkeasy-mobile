@@ -15,6 +15,12 @@ final ownerBookingFilterProvider = StateProvider.autoDispose<BookingStatus?>(
   (ref) => BookingStatus.pendingApproval,
 );
 
+/// A booking reference typed at the gate. When set, it replaces the
+/// status filter: the owner is looking for one booking, whatever its state.
+final ownerBookingReferenceProvider = StateProvider.autoDispose<String?>(
+  (ref) => null,
+);
+
 final ownerBookingsProvider =
     NotifierProvider.autoDispose<
       OwnerBookingsNotifier,
@@ -23,12 +29,25 @@ final ownerBookingsProvider =
 
 class OwnerBookingsNotifier extends CursorListNotifier<Booking> {
   @override
-  void watchInputs() => ref.watch(ownerBookingFilterProvider);
+  void watchInputs() {
+    ref
+      ..watch(ownerBookingFilterProvider)
+      ..watch(ownerBookingReferenceProvider);
+  }
 
   @override
-  Future<CursorPage<Booking>> fetchPage(String? cursor) => ref
-      .read(ownerRepositoryProvider)
-      .bookings(status: ref.read(ownerBookingFilterProvider), cursor: cursor);
+  Future<CursorPage<Booking>> fetchPage(String? cursor) {
+    final reference = ref.read(ownerBookingReferenceProvider);
+    return ref
+        .read(ownerRepositoryProvider)
+        .bookings(
+          status: reference == null
+              ? ref.read(ownerBookingFilterProvider)
+              : null,
+          reference: reference,
+          cursor: cursor,
+        );
+  }
 }
 
 final ownerFacilitiesProvider =

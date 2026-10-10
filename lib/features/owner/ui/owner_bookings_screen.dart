@@ -6,6 +6,7 @@ import 'package:app/core/time/facility_time.dart';
 import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_filter_chip.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
+import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/core/widgets/cursor_list_view.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/features/booking/data/models/booking.dart';
@@ -27,6 +28,7 @@ class OwnerBookingsScreen extends ConsumerWidget {
     final state = ref.watch(ownerBookingsProvider);
     final notifier = ref.read(ownerBookingsProvider.notifier);
     final filter = ref.watch(ownerBookingFilterProvider);
+    final reference = ref.watch(ownerBookingReferenceProvider);
 
     final filters = <(BookingStatus?, String)>[
       (BookingStatus.pendingApproval, l10n.ownerFilterRequests),
@@ -34,7 +36,8 @@ class OwnerBookingsScreen extends ConsumerWidget {
       (BookingStatus.completed, l10n.ownerFilterCompleted),
       (null, l10n.ownerFilterAll),
     ];
-    final onRequests = filter == BookingStatus.pendingApproval;
+    final onRequests =
+        reference == null && filter == BookingStatus.pendingApproval;
 
     return AppScaffold(
       title: l10n.ownerTabBookings,
@@ -45,22 +48,43 @@ class OwnerBookingsScreen extends ConsumerWidget {
         onRefresh: notifier.load,
         onLoadMore: notifier.loadMore,
         errorText: (failure) => ownerAccessText(l10n, failure),
-        header: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final (index, (status, label)) in filters.indexed) ...[
-                if (index > 0) const Gap.sm(),
-                AppFilterChip(
-                  label: label,
-                  isSelected: filter == status,
-                  onPressed: () =>
-                      ref.read(ownerBookingFilterProvider.notifier).state =
-                          status,
+        header: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Gap.sm(),
+            // At the gate: type the reference the customer shows.
+            AppTextField(
+              label: l10n.ownerFindReference,
+              hintText: l10n.ownerFindReferenceHint,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (value) {
+                final reference = value.trim().toUpperCase();
+                ref.read(ownerBookingReferenceProvider.notifier).state =
+                    reference.isEmpty ? null : reference;
+              },
+            ),
+            if (reference == null)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final (index, (status, label)) in filters.indexed) ...[
+                      if (index > 0) const Gap.sm(),
+                      AppFilterChip(
+                        label: label,
+                        isSelected: filter == status,
+                        onPressed: () =>
+                            ref
+                                    .read(ownerBookingFilterProvider.notifier)
+                                    .state =
+                                status,
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
-          ),
+              ),
+          ],
         ),
         empty: EmptyState(
           icon: Icons.event_available_outlined,

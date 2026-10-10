@@ -20,6 +20,6 @@ The last command formats, analyses and tests; it must pass before every push.
 
 Start at [docs/README.md](docs/README.md).
 
-> **Status:** sign-in, Explore, the customer journey (find, book, pay, cancel), notifications and the owner area (requests, check-in, payment, earnings) are built. The owner's facility editor is not. See [docs/overview/mvp-status.md](docs/overview/mvp-status.md).
+> **Status:** sign-in, Explore, the customer journey (find, book, pay, cancel), notifications and the owner area (requests, check-in, payment, earnings) and the owner's facility editor are built: the whole agreed first-version scope. See [docs/overview/mvp-status.md](docs/overview/mvp-status.md).
 
 Copy `env/local.example.json` to `env/local.json` first, and run with `flutter run --dart-define-from-file=env/local.json`.

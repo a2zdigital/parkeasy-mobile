@@ -398,3 +398,62 @@ Map<String, dynamic> earningsJson() => {
     'on_site': {'collected': '120.00', 'commission': '18.00'},
   },
 };
+
+const facilityId = '01M4JQSZSNAVTVCMS8A7AJ0WJ9';
+
+/// A facility as its owner sees it. By default a fresh draft with nothing
+/// set up.
+Map<String, dynamic> facilityJson({
+  String status = 'draft',
+  bool withPool = false,
+  bool withHours = false,
+  String? reason,
+}) {
+  final lot = Map<String, dynamic>.from(
+    lotJson()['data']! as Map<String, dynamic>,
+  );
+  final pools = lot['pools']! as List<Object?>;
+  final hours = [
+    for (var day = 1; day <= 7; day++)
+      {
+        'day_of_week': day,
+        'is_closed': false,
+        'opens_at': '00:00',
+        'closes_at': '24:00',
+      },
+  ];
+  return {
+    'data': {
+      ...lot,
+      'booking_mode': 'instant',
+      'accepts_onsite_payment': true,
+      'pools': withPool ? [pools.first] : <Object?>[],
+      'operating_hours': withHours ? hours : <Object?>[],
+      'approval_status': status,
+      'rejection_reason': reason,
+      'is_active': status == 'approved',
+      'submitted_at': null,
+      'reviewed_at': null,
+      'created_at': '2026-10-08T08:00:00Z',
+      'updated_at': '2026-10-09T08:00:00Z',
+    },
+  };
+}
+
+Map<String, dynamic> optionsJson() => {
+  'data': {
+    'default_booking_mode': 'instant',
+    'selectable_booking_modes': ['instant', 'owner_approval'],
+    'rate_types': ['hourly', 'daily'],
+    'vehicle_types': [
+      {'code': 'car', 'name': 'Car'},
+      {'code': 'two_wheeler', 'name': 'Two wheeler'},
+    ],
+    'amenities': [
+      {'code': 'cctv', 'name': 'CCTV'},
+      {'code': 'covered', 'name': 'Covered'},
+    ],
+    'default_timezone': 'Asia/Kolkata',
+    'currency': 'INR',
+  },
+};

@@ -13,11 +13,15 @@ import 'package:app/features/booking/ui/bookings_screen.dart';
 import 'package:app/features/booking/ui/choose_time_screen.dart';
 import 'package:app/features/booking/ui/review_screen.dart';
 import 'package:app/features/notifications/ui/activity_screen.dart';
+import 'package:app/features/owner/ui/facility_form_screen.dart';
+import 'package:app/features/owner/ui/facility_screen.dart';
+import 'package:app/features/owner/ui/hours_form_screen.dart';
 import 'package:app/features/owner/ui/owner_application_screen.dart';
 import 'package:app/features/owner/ui/owner_booking_screen.dart';
 import 'package:app/features/owner/ui/owner_bookings_screen.dart';
 import 'package:app/features/owner/ui/owner_earnings_screen.dart';
 import 'package:app/features/owner/ui/owner_facilities_screen.dart';
+import 'package:app/features/owner/ui/pool_form_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
 import 'package:app/features/payment/ui/payment_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
@@ -180,6 +184,42 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.ownerFacilities,
                 builder: (context, state) => const OwnerFacilitiesScreen(),
+                routes: [
+                  // Before ':id', so "new" is not read as an ID.
+                  GoRoute(
+                    path: 'new',
+                    builder: (context, state) => const FacilityFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) =>
+                        FacilityScreen(id: state.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        builder: (context, state) => FacilityFormScreen(
+                          facilityId: state.pathParameters['id'],
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'hours',
+                        builder: (context, state) => HoursFormScreen(
+                          facilityId: state.pathParameters['id']!,
+                        ),
+                      ),
+                      GoRoute(
+                        path: 'pools/:poolId',
+                        builder: (context, state) {
+                          final poolId = state.pathParameters['poolId'];
+                          return PoolFormScreen(
+                            facilityId: state.pathParameters['id']!,
+                            poolId: poolId == 'new' ? null : poolId,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

@@ -34,6 +34,18 @@ abstract final class Routes {
   static const String ownerFacilities = '/owner/facilities';
   static const String ownerEarnings = '/owner/earnings';
 
+  static const String ownerFacilityNew = '$ownerFacilities/new';
+
+  /// One of the owner's facilities, with everything that sets it up.
+  static String ownerFacility(String id) => '$ownerFacilities/$id';
+  static String ownerFacilityEdit(String id) => '${ownerFacility(id)}/edit';
+  static String ownerFacilityHours(String id) => '${ownerFacility(id)}/hours';
+
+  /// Adding spaces for a vehicle type, or editing a pool when [poolId] is
+  /// given.
+  static String ownerFacilityPool(String id, {String? poolId}) =>
+      '${ownerFacility(id)}/pools/${poolId ?? 'new'}';
+
   /// A booking at one of the owner's facilities.
   static String ownerBooking(String id) => '$ownerBookings/$id';
 
