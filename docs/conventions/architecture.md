@@ -49,7 +49,7 @@ flowchart LR
 
 A feature never imports another feature's `data` or `ui`. If two features need the same model or widget, it moves to `core`. Navigation to another feature goes through a route name, not an import of its screen.
 
-Imports inside `lib` are package imports (`package:parkeasy/...`), never relative.
+Imports inside `lib` are package imports (`package:app/...`), never relative. The Dart package is deliberately named `app`, not after the product, because the product's name may change.
 
 ## Naming
 

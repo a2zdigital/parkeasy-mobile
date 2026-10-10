@@ -7,13 +7,14 @@ A ticket is done when all of this is true.
 - [ ] It does what the ticket asks, on Android and iOS.
 - [ ] Loading, empty and error states exist and were seen.
 - [ ] It behaves with no network, a slow network, and when the user goes back mid-request.
-- [ ] It works on the smallest supported screen, at 200% text size and in dark mode.
+- [ ] It works on the smallest supported screen, and at 200% text size.
 
 ## Code
 
 - [ ] `dart run tool/check.dart` passes.
 - [ ] It follows the [engineering rules](../conventions/engineering-rules.md).
-- [ ] No hard-coded colours, sizes or strings.
+- [ ] No hard-coded colours, sizes or strings, and the app's name is not typed anywhere.
+- [ ] Built from the shared components and tokens in [design](../design/README.md).
 - [ ] Nothing sensitive is logged.
 
 ## Tests

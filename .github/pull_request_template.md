@@ -6,7 +6,7 @@
 
 ## Screens
 
-<!-- Screenshot or short recording for every changed screen: light, dark, and the loading / empty / error state if you touched them. -->
+<!-- Screenshot or short recording for every changed screen, and the loading / empty / error state if you touched them. -->
 
 ## Impact
 
@@ -26,7 +26,8 @@
 - [ ] `dart run tool/check.dart` passes locally
 - [ ] Tests added or updated
 - [ ] Loading, empty and error states handled
-- [ ] No hard-coded colours, sizes or user-facing strings
+- [ ] No hard-coded colours, sizes or user-facing strings; the app's name is not typed anywhere
+- [ ] Built from shared components and design tokens
 - [ ] Checked on a small screen and with large text
 - [ ] `CHANGELOG.md` updated (or not user-visible)
 - [ ] Docs updated (or not needed)

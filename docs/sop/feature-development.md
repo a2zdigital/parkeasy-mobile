@@ -4,7 +4,7 @@ From a ticket to a merged pull request.
 
 ## 1. Understand
 
-- [ ] Read the ticket and the design for the screen.
+- [ ] Read the ticket, the screen's row in [screens.md](../design/screens.md) and the [UX conventions](../design/ux-conventions.md).
 - [ ] Find every API call it needs in the API repository's `openapi.yaml`. If one is missing or unclear, ask the API team now.
 - [ ] Check [open-decisions.md](../overview/open-decisions.md). If the ticket depends on one, stop and ask.
 - [ ] List the states: loading, empty, data, each error the screen must explain.
@@ -32,7 +32,7 @@ Use the shared components in `core/widgets` and the theme tokens. If a component
 dart run tool/check.dart
 ```
 
-Then by hand: Android and iOS · small screen · 200% text · dark mode · aeroplane mode · back during a request · double-tap on the main button.
+Then by hand: Android and iOS · small screen · 200% text · aeroplane mode · back during a request · double-tap on the main button.
 
 ## 5. Document
 

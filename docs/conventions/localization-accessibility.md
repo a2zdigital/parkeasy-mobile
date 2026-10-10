@@ -6,6 +6,7 @@ The first version is English. More languages are an open decision (MD-03), so al
 
 - Strings live in `lib/l10n/app_en.arb`. Widgets use the generated `AppLocalizations`.
 - Keys are camelCase and say what the text is for: `bookingCancelConfirmTitle`, not `text12`.
+- The app's name is a placeholder in every string that mentions it (`{appName}`), filled from `appDisplayName`. It is never written in an ARB file.
 - Never build a sentence by joining strings. Use placeholders and plurals in the ARB file.
 - Dates, times and numbers are formatted with `intl` for the user's locale; money with the money formatter.
 - The API's error `message` is English and is a fallback only. Screens show the app's own text for the codes they handle.

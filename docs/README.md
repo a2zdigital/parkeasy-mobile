@@ -13,7 +13,7 @@ Working documentation for everyone who builds or tests the app. It is versioned 
 
 **MUST** is mandatory. **SHOULD** is the default; deviate only with a reason in the PR. **MAY** is optional.
 
-> Today everything in `conventions/` is **Confirmed** and nothing is **Implemented**: the repository holds the project skeleton only.
+> Today everything in `conventions/` and `design/` is **Confirmed** and nothing is **Implemented**: the repository holds the project skeleton only.
 
 ## New here? Read in this order
 
@@ -75,4 +75,13 @@ Working documentation for everyone who builds or tests the app. It is versioned 
 
 ## Design
 
-**Planned.** The design system (colours, typography, spacing, components) and the UX conventions are the next step and will live in `docs/design/`.
+Start at [design/README.md](design/README.md).
+
+| File | Contents |
+|---|---|
+| [principles.md](design/principles.md) | The principles and the rules that keep the UI engineered |
+| [tokens.md](design/tokens.md) | Colour (with checked contrast), typography, spacing, radius, elevation, motion |
+| [components.md](design/components.md) | Shared components and their states |
+| [ux-conventions.md](design/ux-conventions.md) | States, errors, forms, money, time, status, navigation |
+| [screens.md](design/screens.md) | Screens in the first version and what is deferred |
+| [review-notes.md](design/review-notes.md) | Decisions taken on the reference material |

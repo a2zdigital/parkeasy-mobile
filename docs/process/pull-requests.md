@@ -27,9 +27,10 @@ The reviewer checks, in this order:
 
 1. **Does it work?** Run it. Try no network, a slow network, and going back mid-request.
 2. **Rules.** [engineering-rules.md](../conventions/engineering-rules.md): layers respected, money and error codes handled properly, nothing sensitive logged.
-3. **States.** Loading, empty, error; small screen; large text; dark mode.
-4. **Tests.** Do they fail if the behaviour breaks?
-5. **Readability.**
+3. **States.** Loading, empty, error; small screen; large text.
+4. **Design.** Only tokens and shared components ([design](../design/README.md)); nothing decorative; one primary action.
+5. **Tests.** Do they fail if the behaviour breaks?
+6. **Readability.**
 
 Comment prefixes: `must:` blocks the merge, `should:` expects a reply, `nit:` is optional, `question:` asks.
 

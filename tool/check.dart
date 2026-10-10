@@ -8,6 +8,7 @@ import 'dart:io';
 
 Future<void> main() async {
   final steps = <(String, String, List<String>)>[
+    ('App name', 'dart', ['run', 'tool/app_identity.dart', '--check']),
     (
       'Format',
       'dart',

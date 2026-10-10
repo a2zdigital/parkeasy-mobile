@@ -15,6 +15,7 @@ The same rules apply to AI-written code as to human-written code.
 | Calling the API | [docs/conventions/api-client.md](docs/conventions/api-client.md) |
 | Tests | [docs/conventions/testing.md](docs/conventions/testing.md) |
 | Tokens, storage, permissions | [docs/conventions/security.md](docs/conventions/security.md) |
+| Any screen or widget | [docs/design/README.md](docs/design/README.md) |
 | A package | [docs/conventions/dependencies.md](docs/conventions/dependencies.md) |
 | Commit or PR | [docs/conventions/version-control.md](docs/conventions/version-control.md), [docs/process/pull-requests.md](docs/process/pull-requests.md) |
 
@@ -32,6 +33,8 @@ Full index: [docs/README.md](docs/README.md).
 - Every screen that loads data handles loading, empty and error.
 - No hard-coded colours, text styles, spacing or user-facing strings in widgets: use the theme tokens and localisation.
 - Tokens only in secure storage. Never log a token, an OTP or a phone number.
+- **The app's name is never typed** in code, strings, tests or widgets. Its one source is `app_identity.json`; use `appDisplayName`, and `{appName}` placeholders in localised strings. To rename: edit the JSON, run `dart run tool/app_identity.dart`. The Dart package is named `app` for the same reason.
+- UI is built only from the design tokens and shared components in [docs/design](docs/design/README.md): no literal colour, size, spacing, radius or duration in a widget, every component and screen with all its states, nothing decorative, no feature the API does not have.
 - Never add a package without approval.
 - Do not describe something as implemented in docs unless the code exists and is tested.
 - Do not silence the analyzer with `// ignore` comments.

@@ -8,3 +8,5 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
 - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
+- **design:** Design system: principles, tokens with checked contrast, components, UX conventions, screen list and review notes.
+- **project:** The app's display name has a single source (`app_identity.json`); the check fails if the name is typed anywhere in code.

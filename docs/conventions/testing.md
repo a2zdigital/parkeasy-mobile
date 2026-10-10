@@ -35,4 +35,4 @@ Booking and payment notifiers must also test: the idempotency key is reused on r
 
 ## Manual testing
 
-Each PR that changes a screen is run on one Android and one iOS device or simulator, on a small screen, with large text and in dark mode. The API's QA test plan lists the server-side cases; a mobile test plan is **Planned**.
+Each PR that changes a screen is run on one Android and one iOS device or simulator, on a small screen and with large text. The API's QA test plan lists the server-side cases; a mobile test plan is **Planned**.

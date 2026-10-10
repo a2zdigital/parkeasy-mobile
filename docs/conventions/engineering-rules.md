@@ -48,11 +48,13 @@ The mandatory rules, on one page. A pull request that breaks one is not merged.
 | U1 | Every screen that loads data shows loading, empty and error states. |
 | U2 | No hard-coded colour, text style, spacing or radius in a widget. Use theme tokens. |
 | U3 | No user-facing string in a widget. Use localisation. |
+| U7 | The app's name is never typed in code, strings or tests. It comes from `appDisplayName`, generated from `app_identity.json`. The check fails otherwise. |
+| U8 | Screens are assembled from `core/widgets`. A missing component is added there, with all its states, before it is used. |
 | U4 | Every tappable control is at least 48 by 48 logical pixels and has a semantic label. |
 | U5 | A button that starts a request is disabled while it runs. |
 | U6 | Screens work at the smallest supported width and at 200% text size. |
 
-→ [coding-standards.md](coding-standards.md), [localization-accessibility.md](localization-accessibility.md)
+→ [coding-standards.md](coding-standards.md), [localization-accessibility.md](localization-accessibility.md), [design](../design/README.md)
 
 ## Testing
 
