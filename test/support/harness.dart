@@ -217,3 +217,63 @@ Map<String, dynamic> availabilityJson({int left = 12}) => {
     'is_available': left > 0,
   },
 };
+
+const bookingId = '01M4JQYWW2WEFYAASEC49S6PW3';
+
+Map<String, dynamic> bookingJson({
+  String id = bookingId,
+  String status = 'confirmed',
+  String paymentMode = 'on_site',
+  String reference = 'BK-K2M5XCN4',
+  bool? refundEligible,
+  String? approvalDeadline,
+  String? paymentDeadline,
+  String? checkedInAt,
+}) => {
+  'id': id,
+  'reference': reference,
+  'status': status,
+  'booking_mode': status == 'pending_approval' ? 'owner_approval' : 'instant',
+  'payment_mode': paymentMode,
+  'payment_required': status == 'awaiting_payment',
+  'parking_lot': {
+    'id': '01M4JQSZSNAVTVCMS8A7AJ0WJ9',
+    'name': 'MG Road Metro Parking',
+  },
+  'vehicle_type': 'car',
+  'start_at': '2026-11-02T04:30:00Z',
+  'end_at': '2026-11-02T06:30:00Z',
+  'timezone': 'Asia/Kolkata',
+  'price_lines': [
+    {
+      'rate_type': 'hourly',
+      'quantity': 2,
+      'unit_amount': '40.00',
+      'amount': '80.00',
+    },
+  ],
+  'base_amount': '80.00',
+  'total_amount': '80.00',
+  'currency': 'INR',
+  'approval_deadline_at': approvalDeadline,
+  'payment_deadline_at': paymentDeadline,
+  'confirmed_at': status == 'confirmed' ? '2026-11-02T04:18:00Z' : null,
+  'checked_in_at': checkedInAt,
+  'checked_out_at': null,
+  'cancelled_at': status == 'cancelled' ? '2026-11-02T04:20:00Z' : null,
+  'cancellation_reason': null,
+  'refund_eligible': refundEligible,
+  'created_at': '2026-11-02T04:18:00Z',
+};
+
+Map<String, dynamic> bookingsJson(
+  List<Map<String, dynamic>> items, {
+  String? nextCursor,
+}) => {
+  'data': items,
+  'meta': {
+    'per_page': 20,
+    'next_cursor': nextCursor,
+    'has_more': nextCursor != null,
+  },
+};

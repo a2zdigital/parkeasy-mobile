@@ -50,10 +50,15 @@ class ExploreNotifier extends Notifier<ExploreState> {
   // Each new search invalidates the answers of the ones before it, so a
   // slow response can never overwrite a newer one.
   int _generation = 0;
+  bool _disposed = false;
 
   @override
   ExploreState build() {
-    Future.microtask(load);
+    _disposed = false;
+    ref.onDispose(() => _disposed = true);
+    Future.microtask(() {
+      if (!_disposed) load();
+    });
     return const ExploreState(isLoading: true);
   }
 
@@ -73,7 +78,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
 
     try {
       final result = await _fetch(1);
-      if (generation != _generation) return;
+      if (_disposed || generation != _generation) return;
 
       state = ExploreState(
         items: result.items,
@@ -85,7 +90,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
             : state.vehicleTypes,
       );
     } on ApiException catch (failure) {
-      if (generation != _generation) return;
+      if (_disposed || generation != _generation) return;
 
       state = ExploreState(
         // A failed refresh keeps the list; a failed first load shows the error.
@@ -115,7 +120,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
 
     try {
       final result = await _fetch(state.page + 1);
-      if (generation != _generation) return;
+      if (_disposed || generation != _generation) return;
 
       state = ExploreState(
         items: [...state.items, ...result.items],
@@ -125,7 +130,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
         vehicleTypes: state.vehicleTypes,
       );
     } on ApiException catch (failure) {
-      if (generation != _generation) return;
+      if (_disposed || generation != _generation) return;
 
       state = ExploreState(
         items: state.items,

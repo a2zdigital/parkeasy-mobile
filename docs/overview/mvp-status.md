@@ -12,6 +12,9 @@ Last updated: 2026-10-10.
 | Explore | Facilities around the pilot city centre, nearest first, with distance, starting price, approval and pay-at-facility flags; filter by vehicle type; paging; pull to refresh |
 | Facility | Address, booking mode, payment modes, rates per vehicle type, opening hours, amenities |
 | Choose time | Vehicle type, arrival and departure on the facility's clock, live price and availability, reasons a time cannot be booked |
+| Review and book | Everything being committed to on one screen; pay at the facility or online; instant booking or a request to the owner; safe to retry without double-booking |
+| Booking | Status, what to do next, reference for the gate, price, amount due at the facility; cancel after confirming, with the refund outcome shown |
+| My bookings | Newest first, with status, time, total and reference; paging; pull to refresh |
 | Profile | Name, phone, email, sign out |
 | Under everything | Loading, empty and error states; no-network handling; a refused token signs out; text scales to 200% |
 
@@ -23,14 +26,11 @@ In build order. The API already supports all of these.
 
 | # | Feature | Notes |
 |---|---|---|
-| 1 | Review and book | Price summary, payment mode, instant or request, cancellation rule; create the booking with an idempotency key |
-| 2 | Booking result and details | Confirmed, request sent, awaiting payment; reference; cancel with the refund consequence |
-| 3 | My bookings | Upcoming and past |
-| 4 | Pay online | Simulated payment against the local API first; Razorpay checkout when test keys exist |
-| 5 | Activity | Notifications list, unread count, mark read |
-| 6 | Owner area | Apply, bookings (approve, reject, check in, record payment, check out), earnings; facility editor last |
+| 1 | Pay online | Simulated payment against the local API first; Razorpay checkout when test keys exist |
+| 2 | Activity | Notifications list, unread count, mark read |
+| 3 | Owner area | Apply, bookings (approve, reject, check in, record payment, check out), earnings; facility editor last |
 
-Items 1 to 3 with pay-at-facility make the shortest end-to-end journey a tester can complete.
+**The shortest complete journey works now:** find a facility → choose a time → book to pay at the facility → see the booking → cancel it. That is enough for a first device test of the customer side.
 
 ## Needed from outside the code
 
@@ -52,5 +52,8 @@ Items 1 to 3 with pay-at-facility make the shortest end-to-end journey a tester 
 | No search by place name | Needs a geocoding service behind our API |
 | Search results do not show amenities | The API's search result carries amenity codes without names |
 | Facility time zones other than India are shown in UTC | No time-zone database is bundled; the pilot is India only |
-| The choose-time screen ends with a note instead of a "Book" action | Booking is the next feature |
-| Bookings and Activity tabs show "Not built yet" | Next features |
+| A booking made with online payment cannot be paid in the app; it waits and then expires, and the screens say so | Paying is the next feature |
+| The cancel confirmation cannot say in advance whether a refund is due; the booking shows it after cancelling | The API reports refund eligibility only in the cancellation result |
+| The review screen describes the cancellation rule in general terms | The API does not expose the free-cancellation period to customers |
+| Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |
+| The Activity tab shows "Not built yet" | Next feature |

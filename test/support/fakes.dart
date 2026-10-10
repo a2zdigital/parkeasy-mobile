@@ -40,7 +40,7 @@ class FakeHttpAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
   final List<Object> _answers = [];
 
-  /// Standing answers by path, used for every request to that path. They
+  /// Standing answers by path, used for every GET of that path. They
   /// take precedence over the queue, so background loads (the Explore
   /// list) do not consume answers meant for the step under test.
   final Map<String, Object?> stubs = {};
@@ -77,7 +77,7 @@ class FakeHttpAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
-    if (stubs.containsKey(options.path)) {
+    if (options.method == 'GET' && stubs.containsKey(options.path)) {
       return ResponseBody.fromString(
         jsonEncode(stubs[options.path]),
         200,

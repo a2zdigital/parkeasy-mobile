@@ -8,7 +8,11 @@ import 'package:app/features/auth/ui/launch_screen.dart';
 import 'package:app/features/auth/ui/otp_screen.dart';
 import 'package:app/features/auth/ui/phone_screen.dart';
 import 'package:app/features/auth/ui/start_up_screen.dart';
+import 'package:app/features/booking/state/booking_draft.dart';
+import 'package:app/features/booking/ui/booking_details_screen.dart';
+import 'package:app/features/booking/ui/bookings_screen.dart';
 import 'package:app/features/booking/ui/choose_time_screen.dart';
+import 'package:app/features/booking/ui/review_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
 import 'package:app/features/profile/ui/profile_screen.dart';
@@ -80,6 +84,21 @@ final routerProvider = Provider<GoRouter>((ref) {
                         builder: (context, state) => ChooseTimeScreen(
                           lotId: state.pathParameters['id']!,
                         ),
+                        routes: [
+                          GoRoute(
+                            path: 'review',
+                            // Without the choice there is nothing to review.
+                            redirect: (context, state) =>
+                                state.extra is BookingDraft
+                                ? null
+                                : Routes.chooseTime(
+                                    state.pathParameters['id']!,
+                                  ),
+                            builder: (context, state) => ReviewScreen(
+                              draft: state.extra! as BookingDraft,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -91,8 +110,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.bookings,
-                builder: (context, state) =>
-                    NotBuiltScreen(title: context.l10n.tabBookings),
+                builder: (context, state) => const BookingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) =>
+                        BookingDetailsScreen(id: state.pathParameters['id']!),
+                  ),
+                ],
               ),
             ],
           ),

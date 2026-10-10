@@ -1,3 +1,4 @@
+import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/theme/app_colors.dart';
@@ -12,11 +13,13 @@ import 'package:app/core/widgets/app_filter_chip.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/core/widgets/status_chip.dart';
+import 'package:app/features/booking/state/booking_draft.dart';
 import 'package:app/features/booking/state/choose_time_notifier.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 class ChooseTimeScreen extends ConsumerWidget {
   const ChooseTimeScreen({required this.lotId, super.key});
@@ -46,13 +49,35 @@ class ChooseTimeScreen extends ConsumerWidget {
           ),
         ),
       ),
-      data: (state) => AppScaffold(
-        title: l10n.timeTitle,
-        body: _Form(
-          state: state,
-          notifier: ref.read(chooseTimeProvider(lotId).notifier),
-        ),
-      ),
+      data: (state) {
+        final pricing = state.pricing;
+        // Continue is offered only for a window the API priced and has
+        // space for; otherwise the screen explains why not.
+        final draft = pricing is Priced && pricing.availability.isAvailable
+            ? BookingDraft(
+                lot: state.lot,
+                vehicleType: state.vehicleType,
+                startAt: state.startAt,
+                endAt: state.endAt,
+                quote: pricing.quote,
+              )
+            : null;
+
+        return AppScaffold(
+          title: l10n.timeTitle,
+          body: _Form(
+            state: state,
+            notifier: ref.read(chooseTimeProvider(lotId).notifier),
+          ),
+          bottom: draft == null
+              ? null
+              : PrimaryButton(
+                  label: l10n.timeContinue,
+                  onPressed: () =>
+                      context.push(Routes.review(lotId), extra: draft),
+                ),
+        );
+      },
     );
   }
 }
@@ -264,8 +289,6 @@ class _PricingView extends StatelessWidget {
             ),
             const Gap.md(),
             PriceBreakdown(lines: quote.lines, total: quote.total),
-            const Gap.md(),
-            AppBanner(tone: StatusTone.info, message: l10n.timeNextBuild),
           ],
         );
     }

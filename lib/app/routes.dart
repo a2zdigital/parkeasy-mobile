@@ -19,6 +19,12 @@ abstract final class Routes {
   /// Choosing a vehicle type and a window at a facility.
   static String chooseTime(String id) => '${parkingLot(id)}/time';
 
+  /// Reviewing the choice before booking. The choice travels in memory.
+  static String review(String id) => '${chooseTime(id)}/review';
+
+  /// One of the customer's bookings.
+  static String booking(String id) => '$bookings/$id';
+
   static const Set<String> _signedOut = {launch, phone, code};
 
   /// Where the session allows the user to be. Returns the location to go

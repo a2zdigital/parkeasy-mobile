@@ -9,6 +9,7 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
 - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
 - **design:** Design system: principles, tokens with checked contrast, components, UX conventions, screen list and review notes.
+- **booking:** Review and book a space (pay at the facility, or online once paying is built), see the booking with its status and reference, cancel it, and list your bookings.
 - **explore:** Find facilities near the city centre, filter by vehicle type, open a facility, and see the price and availability for a chosen time.
 - **design:** Inter is bundled as the app's typeface.
 - **auth:** Sign in with a phone number and an SMS code, give a name on first sign-in, stay signed in, sign out.

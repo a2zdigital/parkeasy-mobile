@@ -256,5 +256,90 @@
   "errInvalidWindow": "That time can't be booked. Start in the future and leave after you arrive.",
   "errVehicleNotSupported": "This facility has no spaces for that vehicle type.",
   "errNotBookable": "This facility isn't taking bookings right now.",
-  "timeNextBuild": "Booking and payment arrive in the next build."
+  "timeContinue": "Continue",
+  "reviewTitle": "Review and book",
+  "reviewVehicle": "Vehicle",
+  "reviewArrive": "Arrive",
+  "reviewLeave": "Leave",
+  "reviewPayment": "How you'll pay",
+  "payOnline": "Pay online",
+  "payOnlineHint": "Pay in the app to confirm the booking.",
+  "payOnSite": "Pay at the facility",
+  "payOnSiteHint": "Pay the attendant when you arrive.",
+  "reviewInstantNote": "Your booking is confirmed as soon as you book.",
+  "reviewApprovalNote": "This is a request. The owner must accept it before it's confirmed.",
+  "reviewCancelNote": "You can cancel before the booking starts. If you paid online and cancel early enough, the refund is automatic.",
+  "reviewBook": "Book parking",
+  "reviewSendRequest": "Send request",
+  "reviewOnlineNotReady": "Paying in the app arrives in the next build. A booking made with online payment will wait for payment and then expire.",
+  "errSlotUnavailable": "The last space for this time was just taken. Choose another time or facility.",
+  "errQuoteExpired": "The price for this time has changed. Go back to see the new price.",
+  "errPaymentModeNotSupported": "This facility doesn't accept that way of paying. Choose the other one.",
+  "bookingsEmptyTitle": "No bookings yet",
+  "bookingsEmptyBody": "When you book parking, it appears here.",
+  "bookingsFind": "Find parking",
+  "bookingTitle": "Booking",
+  "bookingReference": "Reference",
+  "bookingTotal": "Total",
+  "statusPendingApproval": "Awaiting approval",
+  "statusAwaitingPayment": "Payment pending",
+  "statusConfirmed": "Confirmed",
+  "statusParked": "Parked",
+  "statusCompleted": "Completed",
+  "statusCancelled": "Cancelled",
+  "statusRejected": "Not accepted",
+  "statusExpired": "Expired",
+  "statusNoShow": "Missed",
+  "bannerConfirmed": "You're booked. Show the reference at the facility.",
+  "bannerPendingApproval": "Request sent. The owner has until {time} to answer.",
+  "@bannerPendingApproval": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "bannerPendingApprovalNoTime": "Request sent. Waiting for the owner to answer.",
+  "bannerAwaitingPayment": "Waiting for payment until {time}. Paying in the app arrives in the next build, so this booking will expire.",
+  "@bannerAwaitingPayment": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "bannerParked": "You're checked in. Leave by {time}.",
+  "@bannerParked": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "bannerCancelledRefund": "Cancelled. Your payment will be refunded.",
+  "bannerCancelledNoRefund": "Cancelled. No refund is due for this booking.",
+  "bannerCancelled": "This booking was cancelled.",
+  "bannerRejected": "The owner couldn't accept this request. You haven't been charged.",
+  "bannerExpired": "This booking expired because it wasn't completed in time.",
+  "bannerNoShow": "This booking was missed, so the space was released.",
+  "bannerCompleted": "This stay is complete.",
+  "payAtFacilityDue": "Pay {amount} at the facility",
+  "@payAtFacilityDue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "payOnlineLabel": "Paid online",
+  "bookingCancel": "Cancel booking",
+  "bookingCancelRequest": "Cancel request",
+  "cancelConfirmTitle": "Cancel this booking?",
+  "cancelConfirmBodyOnSite": "The space will be released. This can't be undone.",
+  "cancelConfirmBodyOnline": "The space will be released. If a refund is due, it's issued automatically. This can't be undone.",
+  "cancelKeep": "Keep booking",
+  "errCancellationNotAllowed": "This booking can no longer be cancelled.",
+  "bookingNotFound": "We couldn't find that booking.",
+  "statusAwaitingUpdate": "Update the app to see this status",
+  "actionBackToTime": "Change time"
 }
