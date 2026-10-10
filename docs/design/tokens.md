@@ -2,7 +2,7 @@
 
 The only visual values a widget may use. In code they live in `lib/core/theme` and are read through the theme (`context.colors`, `context.space`, `Theme.of(context).textTheme`). A literal value outside `lib/core/theme` fails review. (`Colors.transparent` is the one literal allowed.)
 
-> **Status:** **Implemented** in `lib/core/theme`. A test recalculates every contrast ratio below from the tokens. **Not yet:** the Inter font files are not bundled, so the platform's default typeface is used until they are added.
+> **Status:** **Implemented** in `lib/core/theme`. A test recalculates every contrast ratio below from the tokens.
 
 ## Colour
 
@@ -82,7 +82,7 @@ Rejected values and the reasons are in [review-notes.md](review-notes.md). **A n
 
 ## Typography
 
-**Inter**, bundled with the app as a font asset (weights 400, 500, 600, 700) so text never flashes or depends on the network. Licence: SIL Open Font Licence.
+**Inter** 4.1, bundled in `assets/fonts` (weights 400, 500, 600, 700) so text never flashes or depends on the network. Licence: SIL Open Font Licence, kept beside the files.
 
 | Token | Size / line height | Weight | Use |
 |---|---|---|---|

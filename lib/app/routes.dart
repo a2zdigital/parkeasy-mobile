@@ -13,6 +13,12 @@ abstract final class Routes {
   static const String activity = '/activity';
   static const String profile = '/profile';
 
+  /// A facility's details. The ID is the public, opaque one.
+  static String parkingLot(String id) => '$explore/lots/$id';
+
+  /// Choosing a vehicle type and a window at a facility.
+  static String chooseTime(String id) => '${parkingLot(id)}/time';
+
   static const Set<String> _signedOut = {launch, phone, code};
 
   /// Where the session allows the user to be. Returns the location to go

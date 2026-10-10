@@ -8,8 +8,11 @@ import 'package:app/features/auth/ui/launch_screen.dart';
 import 'package:app/features/auth/ui/otp_screen.dart';
 import 'package:app/features/auth/ui/phone_screen.dart';
 import 'package:app/features/auth/ui/start_up_screen.dart';
+import 'package:app/features/booking/ui/choose_time_screen.dart';
+import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
 import 'package:app/features/profile/ui/profile_screen.dart';
+import 'package:app/features/search/ui/explore_screen.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -65,8 +68,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.explore,
-                builder: (context, state) =>
-                    NotBuiltScreen(title: context.l10n.tabExplore),
+                builder: (context, state) => const ExploreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'lots/:id',
+                    builder: (context, state) =>
+                        ParkingLotScreen(id: state.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'time',
+                        builder: (context, state) => ChooseTimeScreen(
+                          lotId: state.pathParameters['id']!,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

@@ -29,6 +29,7 @@ Working documentation for everyone who builds or tests the app. It is versioned 
 |---|---|
 | [project-overview.md](overview/project-overview.md) | What the app is, who uses it, scope of the pilot |
 | [open-decisions.md](overview/open-decisions.md) | Decisions not yet made |
+| [mvp-status.md](overview/mvp-status.md) | What is built, what the first test version still needs, known limits |
 
 ## Decisions
 

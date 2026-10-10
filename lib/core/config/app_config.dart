@@ -9,6 +9,8 @@ class AppConfig {
     required this.environment,
     required this.enablePaymentSimulation,
     required this.appVersion,
+    required this.searchOrigin,
+    required this.searchRadiusKm,
   });
 
   /// Reads the values passed with `--dart-define-from-file=env/<name>.json`.
@@ -26,11 +28,19 @@ class AppConfig {
       'FLUTTER_BUILD_NAME',
       defaultValue: '0.0.0',
     ),
+    searchLatitude: const String.fromEnvironment('DEFAULT_SEARCH_LAT'),
+    searchLongitude: const String.fromEnvironment('DEFAULT_SEARCH_LNG'),
+    searchLabel: const String.fromEnvironment('DEFAULT_SEARCH_LABEL'),
+    searchRadiusKm: const String.fromEnvironment('DEFAULT_SEARCH_RADIUS_KM'),
   );
 
   factory AppConfig.validated({
     required String apiBaseUrl,
     required String environment,
+    required String searchLatitude,
+    required String searchLongitude,
+    required String searchLabel,
+    required String searchRadiusKm,
     bool enablePaymentSimulation = false,
     String appVersion = '0.0.0',
   }) {
@@ -62,11 +72,34 @@ class AppConfig {
       throw StateError('Payment simulation cannot be enabled in production.');
     }
 
+    final latitude = double.tryParse(searchLatitude);
+    final longitude = double.tryParse(searchLongitude);
+    final radius = double.tryParse(searchRadiusKm);
+    if (latitude == null ||
+        longitude == null ||
+        latitude.abs() > 90 ||
+        longitude.abs() > 180 ||
+        searchLabel.isEmpty) {
+      throw StateError(
+        'DEFAULT_SEARCH_LAT, DEFAULT_SEARCH_LNG and DEFAULT_SEARCH_LABEL '
+        'must describe a real place.',
+      );
+    }
+    if (radius == null || radius <= 0 || radius > 50) {
+      throw StateError('DEFAULT_SEARCH_RADIUS_KM must be between 0 and 50.');
+    }
+
     return AppConfig._(
       apiBaseUrl: apiBaseUrl.replaceAll(RegExp(r'/+$'), ''),
       environment: parsed.single,
       enablePaymentSimulation: enablePaymentSimulation,
       appVersion: appVersion,
+      searchOrigin: SearchOrigin(
+        latitude: latitude,
+        longitude: longitude,
+        label: searchLabel,
+      ),
+      searchRadiusKm: radius,
     );
   }
 
@@ -83,8 +116,28 @@ class AppConfig {
   /// Sent to the API as `X-App-Version`.
   final String appVersion;
 
+  /// Where Explore searches until the device's own location is used: the
+  /// centre of the pilot city.
+  final SearchOrigin searchOrigin;
+
+  /// How far from the origin Explore looks. The API allows at most 50.
+  final double searchRadiusKm;
+
   /// The base of every versioned API call.
   String get apiV1 => '$apiBaseUrl/api/v1';
 }
 
 enum AppEnvironment { local, staging, production }
+
+/// A point to search around, with the name shown to the user.
+class SearchOrigin {
+  const SearchOrigin({
+    required this.latitude,
+    required this.longitude,
+    required this.label,
+  });
+
+  final double latitude;
+  final double longitude;
+  final String label;
+}

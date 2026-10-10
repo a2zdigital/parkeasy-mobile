@@ -34,6 +34,9 @@ flutter run --dart-define-from-file=env/local.json
 | `API_BASE_URL` | Base URL without `/api/v1` |
 | `ENVIRONMENT` | `local`, `staging` or `production`; for display and reporting only |
 | `ENABLE_PAYMENT_SIMULATION` | Shows the simulated-payment controls; true only where the API uses its fake payment provider |
+| `DEFAULT_SEARCH_LAT`, `DEFAULT_SEARCH_LNG` | The point Explore searches around until the phone's location is used: the centre of the pilot city |
+| `DEFAULT_SEARCH_LABEL` | The name of that place, shown as "Near …" |
+| `DEFAULT_SEARCH_RADIUS_KM` | How far Explore looks; at most 50, the API's limit |
 
 ## Values that belong to the server
 

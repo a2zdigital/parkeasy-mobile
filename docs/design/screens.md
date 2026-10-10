@@ -2,7 +2,7 @@
 
 Every screen in the first version, and the API call behind it. A screen is in scope only if the API supports it today.
 
-> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C14 (profile: view and sign out), and the four-tab shell. Explore, Bookings and Activity show a plain "not built yet" screen until their features land.
+> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, around the configured city centre), C6 (facility), C7 (choose time, with price and availability), C14 (profile: view and sign out), and the four-tab shell. Bookings and Activity show a plain "not built yet" screen. Progress: [mvp-status.md](../overview/mvp-status.md).
 
 ## Customer
 

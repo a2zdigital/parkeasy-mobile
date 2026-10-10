@@ -2,7 +2,7 @@
 
 The shared components in `lib/core/widgets`. A screen is assembled from these. If a screen needs something that is not here, the component is added here first, with its states, and then used.
 
-> **Status:** Confirmed specification. **Implemented:** `PrimaryButton` (also its destructive form), `SecondaryButton`, `TextAction`, `AppTextField`, `OtpField`, `AppScaffold`, `EmptyState`, `ErrorState`, `AppBanner`, `AppLogo`, `CountdownBuilder`, `showConfirmDialog`. The rest are built with the feature that first needs them.
+> **Status:** Confirmed specification. **Implemented:** `PrimaryButton` (also its destructive form), `SecondaryButton`, `TextAction`, `AppTextField`, `OtpField`, `AppScaffold`, `EmptyState`, `ErrorState`, `AppBanner`, `AppLogo`, `CountdownBuilder`, `showConfirmDialog`, `StatusChip`, `AppFilterChip`, `AppCard`, `Skeleton`, `SkeletonCard`, `SectionHeader`, and in their features `FacilityCard` and `PriceBreakdown`. The rest are built with the feature that first needs them.
 
 Every interactive component has: default, pressed, focused, disabled. Those that start work also have loading.
 

@@ -10,6 +10,10 @@ final testConfig = AppConfig.validated(
   environment: 'local',
   enablePaymentSimulation: true,
   appVersion: '1.2.3',
+  searchLatitude: '12.9716',
+  searchLongitude: '77.5946',
+  searchLabel: 'Bengaluru',
+  searchRadiusKm: '25',
 );
 
 class InMemoryTokenStore implements TokenStore {
@@ -35,6 +39,11 @@ StoredToken validToken([String value = 'token-1']) =>
 class FakeHttpAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
   final List<Object> _answers = [];
+
+  /// Standing answers by path, used for every request to that path. They
+  /// take precedence over the queue, so background loads (the Explore
+  /// list) do not consume answers meant for the step under test.
+  final Map<String, Object?> stubs = {};
 
   void respond(int status, Object? body, {Map<String, String>? headers}) {
     _answers.add(
@@ -68,6 +77,15 @@ class FakeHttpAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
+    if (stubs.containsKey(options.path)) {
+      return ResponseBody.fromString(
+        jsonEncode(stubs[options.path]),
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     if (_answers.isEmpty) {
       throw StateError('No fake answer queued for ${options.path}.');
     }

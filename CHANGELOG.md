@@ -9,6 +9,8 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
 - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
 - **design:** Design system: principles, tokens with checked contrast, components, UX conventions, screen list and review notes.
+- **explore:** Find facilities near the city centre, filter by vehicle type, open a facility, and see the price and availability for a chosen time.
+- **design:** Inter is bundled as the app's typeface.
 - **auth:** Sign in with a phone number and an SMS code, give a name on first sign-in, stay signed in, sign out.
 - **core:** Theme tokens, shared components, configuration per environment, API client, secure token storage, routing with an access policy.
 - **security:** No keys in the repository: ignore rules for key and signing files, a secret scanner in the check, Android backups off, plain HTTP only in debug builds.

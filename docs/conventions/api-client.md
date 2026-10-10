@@ -60,7 +60,7 @@ The API sends `"80.00"` with a `currency`. Parse it into `Money` (`core/money`, 
 ## Time
 
 - Parse timestamps as UTC. Send them as UTC ISO 8601 with `Z`.
-- Show booking times in the **facility's** `timezone`, not the phone's.
+- Show booking times in the **facility's** `timezone`, not the phone's, through `FacilityTime` (`lib/core/time`). It knows India's zone; any other zone is shown as UTC and labelled so, until a time-zone database is added.
 - Countdowns (payment and approval deadlines) are computed from the server's deadline, and the screen refreshes from the API when one reaches zero.
 
 ## Pagination

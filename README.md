@@ -20,6 +20,6 @@ The last command formats, analyses and tests; it must pass before every push.
 
 Start at [docs/README.md](docs/README.md).
 
-> **Status:** foundation and sign-in are built. Search, booking, payment and the owner area are not.
+> **Status:** sign-in, Explore, facility details and choose-time are built. Booking, payment and the owner area are not. See [docs/overview/mvp-status.md](docs/overview/mvp-status.md).
 
 Copy `env/local.example.json` to `env/local.json` first, and run with `flutter run --dart-define-from-file=env/local.json`.

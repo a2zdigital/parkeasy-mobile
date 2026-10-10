@@ -46,8 +46,7 @@ class AppTextStyles extends ThemeExtension<AppTextStyles> {
     );
   }
 
-  /// Bundled with the app; see docs/design/brand-assets.md. Until the font
-  /// files are added the platform's default typeface is used.
+  /// Bundled with the app in assets/fonts (weights 400, 500, 600, 700).
   static const String fontFamily = 'Inter';
 
   final TextStyle display;
