@@ -4,7 +4,7 @@ A decision that is not made yet. **Never decide one in code.** If a ticket depen
 
 | ID | Decision | Needed for | Status |
 |---|---|---|---|
-| MD-01 | Logo and app icon as vector assets | Launch screen, store listing | Open; colours and typography are decided ([design/tokens.md](../design/tokens.md)); a placeholder mark is used until the files arrive |
+| MD-01 | Final logo and app icon artwork | Launch screen, store listing | Open; placeholders are in `assets/brand/`. Save the real images under the names in [brand-assets.md](../design/brand-assets.md) |
 | MD-02 | Map provider (Google Maps, Mapbox, or list-only first) and who owns the key and its cost | Search | Open |
 | MD-03 | Languages after English (Kannada, Hindi) | Text, layout | Open; all text goes through localisation from day one |
 | MD-04 | Minimum Android and iOS versions | Build settings, packages | Open; working assumption Android 7 (API 24), iOS 15 |

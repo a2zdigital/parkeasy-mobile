@@ -1,4 +1,4 @@
-// Runs every check CI runs: format, analysis, tests.
+// Runs every check CI runs: app name, format, code generation, analysis, tests.
 //
 //     dart run tool/check.dart
 //
@@ -20,6 +20,11 @@ Future<void> main() async {
         'test',
         'tool',
       ],
+    ),
+    (
+      'Generate',
+      'dart',
+      ['run', 'build_runner', 'build', '--delete-conflicting-outputs'],
     ),
     ('Analyse', 'flutter', ['analyze', '--fatal-infos']),
     ('Test', 'flutter', ['test']),

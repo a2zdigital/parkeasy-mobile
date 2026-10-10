@@ -2,7 +2,7 @@
 
 Decision records: [ADR-0002](../adr/0002-technology-stack.md), [ADR-0003](../adr/0003-feature-first-structure.md).
 
-> **Status:** Confirmed. No code exists yet; the first feature (sign-in) will be the worked example.
+> **Status:** Confirmed. The models and core API types exist; no repository, notifier or screen does yet. Sign-in will be the worked example.
 
 ## The flow of one screen
 
@@ -32,7 +32,8 @@ flowchart LR
 | `lib/core/money` | The money type and its formatting |
 | `lib/core/theme` | Colour, typography, spacing and radius tokens; the `ThemeData` |
 | `lib/core/widgets` | Components used by more than one feature |
-| `lib/features/<f>/data` | Repository, request and response models |
+| `lib/features/<f>/data` | The repository |
+| `lib/features/<f>/data/models` | Request and response models and their enums, one type per file. See [data-model.md](../architecture/data-model.md) |
 | `lib/features/<f>/state` | Notifiers and their state classes |
 | `lib/features/<f>/ui` | Screens and the widgets only this feature uses |
 | `lib/l10n` | ARB files |
@@ -42,12 +43,12 @@ flowchart LR
 | From | May import |
 |---|---|
 | `core/*` | Other `core/*`, packages. Never a feature. |
-| `features/a/ui` | `features/a/state`, `features/a/data` models, `core/*` |
+| `features/a/ui` | `features/a/state`, models from any feature's `data/models`, `core/*` |
 | `features/a/state` | `features/a/data`, `core/*`, and another feature's **state** when it genuinely needs it (for example the session) |
-| `features/a/data` | `core/*` |
+| `features/a/data` | `core/*`, and **another feature's `data/models`** |
 | `app/` | Everything; it is where features are wired together |
 
-A feature never imports another feature's `data` or `ui`. If two features need the same model or widget, it moves to `core`. Navigation to another feature goes through a route name, not an import of its screen.
+A feature never imports another feature's repository or `ui`. Models are the exception: they are plain data, so any feature may import another's `data/models` (the owner area shows `Booking`; a booking needs `BookingMode`). If two features need the same widget or logic, it moves to `core`. Navigation to another feature goes through a route name, not an import of its screen.
 
 Imports inside `lib` are package imports (`package:app/...`), never relative. The Dart package is deliberately named `app`, not after the product, because the product's name may change.
 

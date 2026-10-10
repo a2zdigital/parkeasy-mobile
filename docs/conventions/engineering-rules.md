@@ -20,7 +20,7 @@ The mandatory rules, on one page. A pull request that breaks one is not merged.
 | # | Rule |
 |---|---|
 | A1 | Widget → notifier → repository → API client. A widget never calls the API or storage. |
-| A2 | A feature does not import another feature's `data` or `ui`. Shared code moves to `core`. |
+| A2 | A feature does not import another feature's repository or `ui`. Models (`data/models`) may be imported across features. Other shared code moves to `core`. |
 | A3 | `core` imports no feature. |
 | A4 | Only `core/api` uses `dio`; only `core/auth` uses secure storage; only `core/config` reads environment values. |
 | A5 | No new package without approval. |

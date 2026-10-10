@@ -12,6 +12,7 @@ The design system for the app: what it looks like, how it behaves, and how that 
 | [ux-conventions.md](ux-conventions.md) | Loading, empty, error, forms, confirmation, money, time, status |
 | [screens.md](screens.md) | Every screen in the first version, the API call behind it, and what is deferred |
 | [review-notes.md](review-notes.md) | Where the reference material was changed, and why |
+| [brand-assets.md](brand-assets.md) | The logo and icon files: names, sizes, how to replace the placeholders |
 | [reference/](reference/) | The two concept boards this design started from |
 
 ## How to read the reference boards

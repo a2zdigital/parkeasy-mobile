@@ -32,7 +32,7 @@ flutter pub get
 dart run tool/check.dart
 ```
 
-The last command must end with "All checks passed" before you change anything.
+The last command must end with "All checks passed" before you change anything. It also generates the model code (`*.g.dart`, `*.freezed.dart`), which is not in git: until it has run once, the editor shows errors in every model file.
 
 ## The API
 

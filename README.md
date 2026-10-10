@@ -24,4 +24,4 @@ The last command formats, analyses and tests; it must pass before every push.
 
 Start at [docs/README.md](docs/README.md).
 
-> **Status:** project skeleton and conventions only. No feature is built yet.
+> **Status:** conventions, design system and the data model. No screen is built yet.

@@ -1,0 +1,11 @@
+# Code generation settings. Models: docs/architecture/data-model.md
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          field_rename: snake
+          explicit_to_json: true
+          # A null field is left out of request bodies, so one input type
+          # serves both create and partial update.
+          include_if_null: false

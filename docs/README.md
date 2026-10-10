@@ -13,7 +13,7 @@ Working documentation for everyone who builds or tests the app. It is versioned 
 
 **MUST** is mandatory. **SHOULD** is the default; deviate only with a reason in the PR. **MAY** is optional.
 
-> Today everything in `conventions/` and `design/` is **Confirmed** and nothing is **Implemented**: the repository holds the project skeleton only.
+> Today the data model is **Implemented**. Everything else in `conventions/` and `design/` is **Confirmed** and not built yet.
 
 ## New here? Read in this order
 
@@ -39,6 +39,12 @@ Working documentation for everyone who builds or tests the app. It is versioned 
 | [0003](adr/0003-feature-first-structure.md) | Feature-first folder structure |
 | [0004](adr/0004-environments.md) | Environments through `--dart-define-from-file` |
 | [0000](adr/0000-template.md) | Template |
+
+## Architecture
+
+| File | Contents |
+|---|---|
+| [data-model.md](architecture/data-model.md) | Core types, every model, what is stored on the device (**Implemented**) |
 
 ## Conventions
 
@@ -85,3 +91,4 @@ Start at [design/README.md](design/README.md).
 | [ux-conventions.md](design/ux-conventions.md) | States, errors, forms, money, time, status, navigation |
 | [screens.md](design/screens.md) | Screens in the first version and what is deferred |
 | [review-notes.md](design/review-notes.md) | Decisions taken on the reference material |
+| [brand-assets.md](design/brand-assets.md) | Logo and icon file names; how to replace the placeholders |

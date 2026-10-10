@@ -13,6 +13,7 @@ The same rules apply to AI-written code as to human-written code.
 | Dart and Flutter style | [docs/conventions/coding-standards.md](docs/conventions/coding-standards.md) |
 | State | [docs/conventions/state-management.md](docs/conventions/state-management.md) |
 | Calling the API | [docs/conventions/api-client.md](docs/conventions/api-client.md) |
+| A model | [docs/architecture/data-model.md](docs/architecture/data-model.md) |
 | Tests | [docs/conventions/testing.md](docs/conventions/testing.md) |
 | Tokens, storage, permissions | [docs/conventions/security.md](docs/conventions/security.md) |
 | Any screen or widget | [docs/design/README.md](docs/design/README.md) |
@@ -25,7 +26,7 @@ Full index: [docs/README.md](docs/README.md).
 
 - **Never decide an open decision.** Check [docs/overview/open-decisions.md](docs/overview/open-decisions.md). If the task depends on one, stop and ask.
 - Feature-first structure: `lib/app`, `lib/core`, `lib/features/<feature>/{data,state,ui}`. Propose any structural change with the resulting folder tree and wait for approval.
-- A feature never imports another feature's `data` or `ui`. Shared code moves to `lib/core`.
+- A feature never imports another feature's repository or `ui`. Models in `data/models` may be imported across features. Other shared code moves to `lib/core`.
 - Widgets do not call the API or storage. Widget → state (notifier) → repository → API client.
 - The server decides every business rule. The app never calculates a price, a commission or a booking status.
 - Money is never a `double`. Use the money type in `lib/core/money`.
@@ -45,9 +46,10 @@ Full index: [docs/README.md](docs/README.md).
 |---|---|
 | Format, analyse and test | `dart run tool/check.dart` |
 | Format | `dart format lib test tool` |
+| Generate model code | `dart run build_runner build --delete-conflicting-outputs` |
 | One test file | `flutter test test/path/to/file_test.dart` |
 
-Run `dart run tool/check.dart` before reporting work as finished.
+Run `dart run tool/check.dart` before reporting work as finished. Verify with analysis and tests only: do not build the apps or launch screens unless asked; the technical lead checks screens by hand.
 
 ## Every change includes
 

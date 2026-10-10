@@ -96,4 +96,4 @@ The map depends on open decision MD-02. The explore screen is specified so that 
 |---|---|
 | `AppLogo` | Renders the logo asset in the variant asked for (mark, or mark with wordmark; on light or on navy). The wordmark is part of the image: the name is never drawn as text beside the mark |
 
-Logo files are not in the repository yet. Until they are delivered as vector assets, `AppLogo` shows the mark placeholder and the name from `appDisplayName`.
+The files in `assets/brand/` are placeholders until the real artwork is saved under the same names. See [brand-assets.md](brand-assets.md).
