@@ -45,6 +45,27 @@ class FakeHttpAdapter implements HttpClientAdapter {
   /// list) do not consume answers meant for the step under test.
   final Map<String, Object?> stubs = {};
 
+  int _inFlight = 0;
+
+  /// Completes when no request is in flight and none has started for a
+  /// few consecutive checks: the code under test has finished reacting.
+  /// Waits for the work itself, not for a fixed time, so it is as fast as
+  /// the machine and never too short on a slow one.
+  Future<void> idle() async {
+    var quiet = 0;
+    var seen = requests.length;
+    final deadline = DateTime.now().add(const Duration(seconds: 5));
+    while (quiet < 4 && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      if (_inFlight == 0 && requests.length == seen) {
+        quiet++;
+      } else {
+        quiet = 0;
+        seen = requests.length;
+      }
+    }
+  }
+
   void respond(int status, Object? body, {Map<String, String>? headers}) {
     _answers.add(
       ResponseBody.fromString(
@@ -77,6 +98,15 @@ class FakeHttpAdapter implements HttpClientAdapter {
     Future<void>? cancelFuture,
   ) async {
     requests.add(options);
+    _inFlight++;
+    try {
+      return await _answer(options);
+    } finally {
+      _inFlight--;
+    }
+  }
+
+  Future<ResponseBody> _answer(RequestOptions options) async {
     if (options.method == 'GET' && stubs.containsKey(options.path)) {
       return ResponseBody.fromString(
         jsonEncode(stubs[options.path]),

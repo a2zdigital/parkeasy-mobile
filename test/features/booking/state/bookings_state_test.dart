@@ -11,8 +11,7 @@ import '../../../support/harness.dart';
 void main() {
   late Harness harness;
   late ProviderContainer container;
-  Future<void> settle() =>
-      Future<void>.delayed(const Duration(milliseconds: 40));
+  Future<void> settle() => harness.http.idle();
 
   setUp(() {
     harness = Harness();
@@ -90,7 +89,7 @@ void main() {
           'data': bookingJson(status: status, checkedInAt: checkedIn),
         });
         c.listen(bookingDetailsProvider(bookingId), (_, _) {});
-        await settle();
+        await h.http.idle();
 
         expect(
           c.read(bookingDetailsProvider(bookingId)).value!.canCancel,

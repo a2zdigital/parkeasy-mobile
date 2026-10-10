@@ -71,7 +71,7 @@ void main() {
       harness.http.respond(401, errorUnauthenticated);
 
       await controller().restore();
-      await Future<void>.delayed(Duration.zero);
+      await harness.http.idle();
 
       expect(state(), isA<SignedOut>());
       expect(harness.tokens.token, isNull);
@@ -163,8 +163,7 @@ void main() {
       container.read(apiClientProvider).get('/bookings'),
       throwsA(anything),
     );
-    await Future<void>.delayed(Duration.zero);
-    await Future<void>.delayed(Duration.zero);
+    await harness.http.idle();
 
     expect(state(), isA<SignedOut>());
     expect(harness.tokens.token, isNull);

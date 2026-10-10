@@ -15,9 +15,7 @@ void main() {
   ChooseTimeState state() => container.read(chooseTimeProvider(lotId)).value!;
   ChooseTimeNotifier notifier() =>
       container.read(chooseTimeProvider(lotId).notifier);
-  // Long enough for the faked HTTP round trips to finish.
-  Future<void> settle() =>
-      Future<void>.delayed(const Duration(milliseconds: 40));
+  Future<void> settle() => harness.http.idle();
 
   setUp(() {
     // 09:47 on Monday 2 November 2026 in India.

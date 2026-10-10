@@ -12,8 +12,7 @@ void main() {
 
   ExploreState state() => container.read(exploreProvider);
   ExploreNotifier notifier() => container.read(exploreProvider.notifier);
-  Future<void> settle() =>
-      Future<void>.delayed(const Duration(milliseconds: 40));
+  Future<void> settle() => harness.http.idle();
 
   setUp(() {
     harness = Harness();
