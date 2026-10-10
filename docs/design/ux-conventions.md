@@ -85,7 +85,7 @@ Booking status and payment status are shown as separate chips when both matter. 
 
 ## Navigation
 
-- Customer tabs: **Explore**, **Bookings**, **Activity**, **Profile**. Owner area: **Dashboard**, **Bookings**, **Facilities**, **Earnings**, reached from Profile and remembered as the user's last role.
+- Customer tabs: **Explore**, **Bookings**, **Activity**, **Profile**. Owner area: **Bookings** (opening on requests waiting for an answer), **Facilities**, **Earnings**, reached from Profile, with an action in each owner screen's top bar to go back.
 - A tab keeps its own history; pressing the current tab returns to its first screen.
 - The booking flow is a linear stack with a `StepHeader`; back goes one step back and keeps the choices.
 - The system back gesture always works. A screen with unsaved input asks before discarding.

@@ -64,8 +64,6 @@
   "tabBookings": "Bookings",
   "tabActivity": "Activity",
   "tabProfile": "Profile",
-  "notBuiltTitle": "Not built yet",
-  "notBuiltBody": "This screen arrives in a later build.",
   "profileTitle": "Profile",
   "profileNameMissing": "No name yet",
   "profilePhone": "Phone",
@@ -379,5 +377,149 @@
   "errPaymentAlreadyCompleted": "This booking is already paid.",
   "errBookingExpired": "This booking is no longer waiting for payment. Book again to get a space.",
   "errApprovalRequired": "The owner hasn't accepted this request yet. You can pay once they do.",
-  "errPaymentProviderUnavailable": "The payment service isn't responding. Try again in a moment."
+  "errPaymentProviderUnavailable": "The payment service isn't responding. Try again in a moment.",
+  "activityEmptyTitle": "Nothing yet",
+  "activityEmptyBody": "Updates about your bookings appear here.",
+  "activityMarkAllRead": "Mark all read",
+  "activityUnread": "Unread",
+  "activityUnreadCount": "{count} unread",
+  "@activityUnreadCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "profileOwnerArea": "Owner area",
+  "profileOwnerAreaHint": "List your parking and manage bookings.",
+  "ownerExit": "Back to finding parking",
+  "ownerApplyTitle": "Become an owner",
+  "ownerApplyBody": "Tell us about your parking business. We review each application before you can list a facility.",
+  "ownerBusinessName": "Business name",
+  "ownerBusinessNameRequired": "Enter your business name.",
+  "ownerContactPhone": "Contact phone",
+  "ownerApplySubmit": "Send application",
+  "ownerPendingTitle": "Application under review",
+  "ownerPendingBody": "We're reviewing {name}. You'll get a notification when it's decided.",
+  "@ownerPendingBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerRejectedTitle": "Application not approved",
+  "ownerRejectedBody": "Contact support if you'd like to apply again.",
+  "ownerApprovedTitle": "You're approved",
+  "ownerApprovedBody": "{name} can now manage facilities and bookings.",
+  "@ownerApprovedBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerOpen": "Open owner area",
+  "ownerTabBookings": "Bookings",
+  "ownerTabFacilities": "Facilities",
+  "ownerTabEarnings": "Earnings",
+  "ownerFilterAll": "All",
+  "ownerFilterRequests": "Requests",
+  "ownerFilterConfirmed": "Confirmed",
+  "ownerFilterCompleted": "Completed",
+  "ownerBookingsEmptyTitle": "No bookings here",
+  "ownerBookingsEmptyBody": "Bookings at your facilities appear here.",
+  "ownerRequestsEmptyTitle": "No requests waiting",
+  "ownerRequestsEmptyBody": "New booking requests appear here for you to answer.",
+  "ownerNotVerified": "Your owner account isn't approved yet. You can use the owner area once it is.",
+  "ownerVehicle": "Vehicle",
+  "ownerPayment": "Payment",
+  "ownerPaidOnline": "Pays online",
+  "ownerPaysAtFacility": "Pays at the facility",
+  "ownerApprove": "Approve request",
+  "ownerReject": "Reject request",
+  "ownerRejectConfirmTitle": "Reject this request?",
+  "ownerRejectConfirmBody": "The customer is told and the space is released. This can't be undone.",
+  "ownerCheckIn": "Check in",
+  "ownerCheckOut": "Check out",
+  "ownerCheckOutConfirmTitle": "Check this vehicle out?",
+  "ownerCheckOutConfirmBody": "The booking is completed and the space is free for others.",
+  "ownerRecordPayment": "Record {amount} received",
+  "@ownerRecordPayment": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerRecordConfirmTitle": "Record payment received?",
+  "ownerRecordConfirmBody": "Confirm the customer paid {amount} at the facility. This can't be changed afterwards.",
+  "@ownerRecordConfirmBody": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerRecordConfirm": "Record payment",
+  "ownerDueAtFacility": "{amount} to collect at the facility",
+  "@ownerDueAtFacility": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerCollected": "{amount} collected at the facility",
+  "@ownerCollected": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerCheckedInAt": "Checked in at {time}",
+  "@ownerCheckedInAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "errCheckInNotAllowed": "This booking can't be checked in now. Check-in opens shortly before its start time.",
+  "errCheckOutNotAllowed": "This booking isn't checked in, so it can't be checked out.",
+  "errInvalidBookingState": "This booking has changed. Pull down to refresh.",
+  "errApprovalExpired": "The time to answer this request has passed.",
+  "errCollectionNotAllowed": "A payment can't be recorded for this booking.",
+  "errCollectionExists": "The payment for this booking is already recorded.",
+  "facilitiesEmptyTitle": "No facilities yet",
+  "facilitiesEmptyBody": "Adding and editing facilities in the app arrives in a later build.",
+  "facilityDraft": "Draft",
+  "facilityPending": "In review",
+  "facilityApproved": "Live",
+  "facilityRejected": "Not approved",
+  "facilityInactive": "Paused",
+  "earningsPayable": "We owe you",
+  "earningsOwed": "You owe us",
+  "earningsPayableHint": "Your share of bookings paid online.",
+  "earningsOwedHint": "Commission on bookings paid at the facility.",
+  "earningsOnline": "Paid online",
+  "earningsOnSite": "Paid at the facility",
+  "earningsCollected": "Collected",
+  "earningsCommission": "Commission",
+  "earningsEarned": "Your share",
+  "earningsRefunded": "Refunded",
+  "earningsEntries": "By booking",
+  "earningsEntriesEmpty": "Entries appear here as bookings are paid.",
+  "entryEarned": "Earned",
+  "entryReversed": "Refunded",
+  "entryOwedOnsite": "Commission owed",
+  "entryRate": "{rate}% commission",
+  "@entryRate": {
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  }
 }

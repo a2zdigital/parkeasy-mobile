@@ -1,6 +1,5 @@
-import 'package:app/app/customer_shell.dart';
-import 'package:app/app/not_built_screen.dart';
 import 'package:app/app/routes.dart';
+import 'package:app/app/tab_shell.dart';
 import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
 import 'package:app/features/auth/state/session_controller.dart';
 import 'package:app/features/auth/state/session_state.dart';
@@ -13,12 +12,17 @@ import 'package:app/features/booking/ui/booking_details_screen.dart';
 import 'package:app/features/booking/ui/bookings_screen.dart';
 import 'package:app/features/booking/ui/choose_time_screen.dart';
 import 'package:app/features/booking/ui/review_screen.dart';
+import 'package:app/features/notifications/ui/activity_screen.dart';
+import 'package:app/features/owner/ui/owner_application_screen.dart';
+import 'package:app/features/owner/ui/owner_booking_screen.dart';
+import 'package:app/features/owner/ui/owner_bookings_screen.dart';
+import 'package:app/features/owner/ui/owner_earnings_screen.dart';
+import 'package:app/features/owner/ui/owner_facilities_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
 import 'package:app/features/payment/ui/payment_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
 import 'package:app/features/profile/ui/profile_screen.dart';
 import 'package:app/features/search/ui/explore_screen.dart';
-import 'package:app/l10n/l10n.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -134,8 +138,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.activity,
-                builder: (context, state) =>
-                    NotBuiltScreen(title: context.l10n.tabActivity),
+                builder: (context, state) => const ActivityScreen(),
               ),
             ],
           ),
@@ -144,6 +147,47 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.profile,
                 builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: Routes.owner,
+        builder: (context, state) => const OwnerApplicationScreen(),
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            OwnerShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerBookings,
+                builder: (context, state) => const OwnerBookingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) =>
+                        OwnerBookingScreen(id: state.pathParameters['id']!),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerFacilities,
+                builder: (context, state) => const OwnerFacilitiesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerEarnings,
+                builder: (context, state) => const OwnerEarningsScreen(),
               ),
             ],
           ),

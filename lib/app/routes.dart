@@ -28,6 +28,15 @@ abstract final class Routes {
   /// Paying for a booking online.
   static String pay(String id) => '${booking(id)}/pay';
 
+  /// The way into the owner area: apply, or see the application.
+  static const String owner = '/owner';
+  static const String ownerBookings = '/owner/bookings';
+  static const String ownerFacilities = '/owner/facilities';
+  static const String ownerEarnings = '/owner/earnings';
+
+  /// A booking at one of the owner's facilities.
+  static String ownerBooking(String id) => '$ownerBookings/$id';
+
   static const Set<String> _signedOut = {launch, phone, code};
 
   /// Where the session allows the user to be. Returns the location to go

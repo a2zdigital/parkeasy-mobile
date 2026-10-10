@@ -9,6 +9,8 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
 - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
 - **design:** Design system: principles, tokens with checked contrast, components, UX conventions, screen list and review notes.
+- **owner:** Owner area: apply to become an owner; see bookings at your facilities; approve or reject requests; check customers in and out; record payment taken at the facility; see facilities and earnings.
+- **activity:** Notifications with an unread badge; mark read; open the booking a notification is about.
 - **payment:** Pay for a booking online with Razorpay. The booking is confirmed only when the server confirms the payment. Test servers offer a simulated payment instead.
 - **booking:** Review and book a space (pay at the facility or online), see the booking with its status and reference, cancel it, and list your bookings.
 - **explore:** Find facilities near the city centre, filter by vehicle type, open a facility, and see the price and availability for a chosen time.

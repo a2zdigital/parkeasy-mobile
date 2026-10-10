@@ -38,6 +38,10 @@ A screen that loads uses `AsyncValue<T>`, which already has loading, data and er
 - A read retries by invalidating its provider (pull to refresh, "Try again").
 - A write that needs an idempotency key creates the key once per user action and keeps it in the notifier's state until that action succeeds or the user abandons it. See [api-client.md](api-client.md).
 
+## Paged lists
+
+A list fetched with a cursor extends `CursorListNotifier<T>` (`lib/core/state/cursor_list.dart`) and implements only `fetchPage`. It supplies first load, refresh, load more, the failure of each, and protection against late answers. Draw it with `CursorListView`. Filters are separate providers watched in `watchInputs`, so changing one starts the list again. Examples: notifications and the owner's lists.
+
 ## Time
 
 Nothing whose result affects behaviour calls `DateTime.now()`. Read `clockProvider`, so a test can set the time.

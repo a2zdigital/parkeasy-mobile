@@ -31,6 +31,8 @@ flowchart LR
 | `lib/core/providers.dart` | The providers every feature shares: configuration, token store, API client, clock |
 | `lib/core/config` | `AppConfig` |
 | `lib/core/money` | The money type and its formatting |
+| `lib/core/state` | State logic shared by features: the cursor-paged list |
+| `lib/core/payment` | The checkout interface and its Razorpay implementation |
 | `lib/core/time` | Facility time: showing and choosing times on the facility's clock |
 | `lib/core/theme` | Colour, typography, spacing and radius tokens; the `ThemeData` |
 | `lib/core/widgets` | Components used by more than one feature |

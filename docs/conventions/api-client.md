@@ -2,7 +2,7 @@
 
 The contract is `docs/api/openapi.yaml` in the API repository, with a guided tour in its `docs/api/getting-started.md`. This page says how the app implements the client side. When they disagree, the OpenAPI file is right.
 
-> **Status:** **Implemented**: `ApiClient`, `ApiException`, error codes, pagination types, idempotency keys, and the central handling of a refused token. Booking creation is the worked example of idempotency (`CreateBookingNotifier`): the key is kept while the outcome is unknown and dropped on a definite answer or when the request changes. **Planned:** automatic single retry of `GET`s, the force-update and suspended screens, the shared paginated-list notifier.
+> **Status:** **Implemented**: `ApiClient`, `ApiException`, error codes, pagination types, idempotency keys, and the central handling of a refused token. Booking creation is the worked example of idempotency (`CreateBookingNotifier`): the key is kept while the outcome is unknown and dropped on a definite answer or when the request changes. **Planned:** automatic single retry of `GET`s, the force-update and suspended screens.
 
 ## One client
 

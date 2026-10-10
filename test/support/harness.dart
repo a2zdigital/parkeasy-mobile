@@ -15,6 +15,8 @@ class Harness {
       now = now ?? DateTime.utc(2026, 11, 2, 4) {
     // Explore loads as soon as the user is in; by default it finds nothing.
     http.stubs['/parking-lots'] = searchJson(const []);
+    // The Activity badge asks for this whenever the customer area is shown.
+    http.stubs['/notifications/unread-count'] = unreadJson(0);
   }
 
   final FakeHttpAdapter http;
@@ -318,5 +320,81 @@ Map<String, dynamic> paymentJson({
       provider: provider,
       payable: orderStatus == 'created' || orderStatus == 'pending',
     ),
+  },
+};
+
+Map<String, dynamic> unreadJson(int count) => {
+  'data': {'unread_count': count},
+};
+
+Map<String, dynamic> notificationJson({
+  String id = 'n1',
+  String type = 'booking.confirmed',
+  String title = 'Booking confirmed',
+  bool read = false,
+  String? forBooking = bookingId,
+}) => {
+  'id': id,
+  'type': type,
+  'title': title,
+  'body': 'Your booking BK-K2M5XCN4 is confirmed.',
+  'payload': forBooking == null ? <Object?>[] : {'booking_id': forBooking},
+  'is_read': read,
+  'read_at': read ? '2026-11-02T04:20:00Z' : null,
+  'created_at': '2026-11-02T04:18:00Z',
+};
+
+/// A cursor-paged list of anything.
+Map<String, dynamic> pageJson(List<Object?> items, {String? nextCursor}) => {
+  'data': items,
+  'meta': {
+    'per_page': 20,
+    'next_cursor': nextCursor,
+    'has_more': nextCursor != null,
+  },
+};
+
+Map<String, dynamic> ownerJson({String status = 'approved', String? reason}) =>
+    {
+      'data': {
+        'id': '01M4JQSZSNAVTVCMS8A7AJ0OWN',
+        'business_name': 'Ravi Parking Services',
+        'contact_phone': '+919000000002',
+        'verification_status': status,
+        'rejection_reason': reason,
+        'verified_at': status == 'approved' ? '2026-10-10T10:00:00Z' : null,
+        'created_at': '2026-10-09T10:00:00Z',
+      },
+    };
+
+Map<String, dynamic> collectionJson({bool collected = false}) => {
+  'data': {
+    'payment_mode': 'on_site',
+    'amount_due': '80.00',
+    'currency': 'INR',
+    'collection': collected
+        ? {
+            'id': 'c1',
+            'booking_id': bookingId,
+            'amount': '80.00',
+            'currency': 'INR',
+            'collected_at': '2026-11-02T04:40:00Z',
+          }
+        : null,
+  },
+};
+
+Map<String, dynamic> earningsJson() => {
+  'data': {
+    'currency': 'INR',
+    'payable_balance': '136.00',
+    'commission_owed': '18.00',
+    'online': {
+      'collected': '160.00',
+      'commission': '24.00',
+      'earned': '136.00',
+      'refunded': '0.00',
+    },
+    'on_site': {'collected': '120.00', 'commission': '18.00'},
   },
 };

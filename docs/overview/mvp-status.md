@@ -15,22 +15,21 @@ Last updated: 2026-10-10.
 | Review and book | Everything being committed to on one screen; pay at the facility or online; instant booking or a request to the owner; safe to retry without double-booking |
 | Booking | Status, what to do next, reference for the gate, price, amount due at the facility; cancel after confirming, with the refund outcome shown |
 | My bookings | Newest first, with status, time, total and reference; paging; pull to refresh |
+| Activity | Notifications newest first, unread badge on the tab, mark one or all read, open the booking a notification is about |
+| Owner area | Apply and see the application's status; bookings at your facilities filtered by status, opening on requests waiting; approve, reject, check in, record payment taken at the facility, check out; facilities with their review state (read-only); earnings summary and entries |
 | Pay online | A "Pay ₹…" button on a booking waiting for payment; Razorpay checkout opened with the order our API creates; the booking is confirmed only when our API confirms the payment; clear outcomes for paid, failed, window closed and still confirming. On a test server the payment is simulated |
 | Profile | Name, phone, email, sign out |
 | Under everything | Loading, empty and error states; no-network handling; a refused token signs out; text scales to 200% |
 
 Verified by automated tests only (logic and screens against a faked network). **Not yet run on a device by the team.**
 
-## Needed for a first test version (MVP)
-
-In build order. The API already supports all of these.
+## Still to build
 
 | # | Feature | Notes |
 |---|---|---|
-| 1 | Activity | Notifications list, unread count, mark read |
-| 2 | Owner area | Apply, bookings (approve, reject, check in, record payment, check out), earnings; facility editor last |
+| 1 | Owner facility editor | Create a facility, add spaces and rates, set opening hours, submit for review. Until then an owner's facilities are created through the API or the demo data; the app lists them and their review state |
 
-**The shortest complete journey works now:** find a facility → choose a time → book to pay at the facility → see the booking → cancel it. That is enough for a first device test of the customer side.
+**Both sides now work end to end against the API.** Customer: sign in → find → choose a time → book → pay online or at the facility → see the booking → cancel. Owner: apply → (approved by an admin) → answer requests → check in → record payment → check out → see earnings.
 
 ## Needed from outside the code
 
@@ -55,4 +54,6 @@ In build order. The API already supports all of these.
 | The cancel confirmation cannot say in advance whether a refund is due; the booking shows it after cancelling | The API reports refund eligibility only in the cancellation result |
 | The review screen describes the cancellation rule in general terms | The API does not expose the free-cancellation period to customers |
 | Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |
-| The Activity tab shows "Not built yet" | Next feature |
+| A notification about a booking opens it as the customer's booking, except a new request, which opens the owner's view. An owner tapping "booking confirmed" or "cancelled" for their facility sees "couldn't find that booking" | Notifications do not say whether they are for the customer or the owner |
+| The owner area has no dashboard; it opens on booking requests | Simpler, and requests are what an owner must act on |
+| Owner earnings entries show times in India's zone | An entry carries no facility |
