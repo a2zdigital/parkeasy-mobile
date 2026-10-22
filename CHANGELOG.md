@@ -5,6 +5,7 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 ## [Unreleased]
 
 ### Added
+- **auth:** Refined the sign-in entry and phone screens, and show the verified mobile number while a new user completes their profile.
 - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
 - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
