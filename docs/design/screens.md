@@ -8,10 +8,10 @@ Every screen in the first version, and the API call behind it. A screen is in sc
 
 | # | Screen | Main content | API |
 |---|---|---|---|
-| C1 | Launch | Navy, logo, sign-in or account-creation hint, "Get started" | — |
-| C2 | Phone number | Mobile number, SMS verification and account-creation explanation; "Send code" | `POST /auth/otp/request` |
+| C1 | Launch | Navy, logo, one line, "Get started" | — |
+| C2 | Phone number | `PhoneField`, "Send code" | `POST /auth/otp/request` |
 | C3 | Verification code | `OtpField`, resend countdown | `POST /auth/otp/verify` |
-| C4 | Your name (new users) | Verified mobile number, name, optional email | `PATCH /me` |
+| C4 | Your name (new users) | Name, optional email | `PATCH /me` |
 | C5 | Explore | Search field, filter chips (vehicle type, amenities), results as `FacilityCard`s nearest first; map view when MD-02 is decided | `GET /parking-lots` |
 | C6 | Facility details | Name, address, distance, hours, amenities, rates per vehicle type, booking mode and payment modes; `ActionBar` "Choose time" | `GET /parking-lots/{id}` |
 | C7 | Choose time | Vehicle type, start and end (`DateTimeField`), live availability and price | `GET …/availability`, `POST /bookings/quote` |

@@ -5,8 +5,6 @@ import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
-import 'package:app/core/widgets/app_card.dart';
-import 'package:app/core/widgets/app_logo.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/features/auth/state/phone_number.dart';
@@ -54,49 +52,13 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Gap.xl(),
-          const AppLogo(
-            variant: AppLogoVariant.fullOnLight,
-            height: AppSize.touchTarget,
-          ),
-          const Gap.xl(),
+          const Gap.lg(),
           Text(l10n.phoneTitle, style: context.text.h1),
           const Gap.sm(),
           Text(
             l10n.phoneBody,
             style: context.text.body.copyWith(
               color: context.colors.textSecondary,
-            ),
-          ),
-          const Gap.xl(),
-          AppCard(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ExcludeSemantics(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: context.colors.primaryContainer,
-                      borderRadius: AppRadius.smallAll,
-                    ),
-                    child: SizedBox.square(
-                      dimension: AppSize.touchTarget,
-                      child: Icon(
-                        Icons.sms_outlined,
-                        size: AppSize.icon,
-                        color: context.colors.primaryPressed,
-                      ),
-                    ),
-                  ),
-                ),
-                const Gap.md(),
-                Expanded(
-                  child: Text(
-                    l10n.phoneAccountHint,
-                    style: context.text.bodySmall,
-                  ),
-                ),
-              ],
             ),
           ),
           const Gap.xl(),
