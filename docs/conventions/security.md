@@ -5,6 +5,7 @@
 - The access token is stored only with `flutter_secure_storage`. Never in shared preferences, a file, a log or a crash report.
 - Only `core/auth` reads or writes it.
 - On `UNAUTHENTICATED`, or on sign-out, delete the token and every cached piece of user data.
+- Sign-out clears the local token without waiting for server revocation; the server request is best-effort.
 - There is no refresh token; the user signs in again when the token ends.
 
 ## What must never be logged or reported
