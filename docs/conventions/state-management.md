@@ -36,7 +36,6 @@ A screen that loads uses `AsyncValue<T>`, which already has loading, data and er
 ## Retrying
 
 - A read retries by invalidating its provider (pull to refresh, "Try again").
-- Startup restoration shows secure-storage platform failures as a retryable error instead of leaving the loading state unresolved.
 - A write that needs an idempotency key creates the key once per user action and keeps it in the notifier's state until that action succeeds or the user abandons it. See [api-client.md](api-client.md).
 
 ## Paged lists

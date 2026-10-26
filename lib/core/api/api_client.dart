@@ -53,14 +53,7 @@ class ApiClient {
     String path, {
     Object? body,
     String? idempotencyKey,
-    void Function()? onRequestPrepared,
-  }) => _send(
-    'POST',
-    path,
-    body: body,
-    idempotencyKey: idempotencyKey,
-    onRequestPrepared: onRequestPrepared,
-  );
+  }) => _send('POST', path, body: body, idempotencyKey: idempotencyKey);
 
   Future<Map<String, dynamic>> put(String path, {Object? body}) =>
       _send('PUT', path, body: body);
@@ -83,7 +76,6 @@ class ApiClient {
     Map<String, Object?>? query,
     Object? body,
     String? idempotencyKey,
-    void Function()? onRequestPrepared,
   }) async {
     final token = await _tokenStore.read();
     final headers = <String, Object?>{
@@ -93,7 +85,6 @@ class ApiClient {
     };
 
     try {
-      onRequestPrepared?.call();
       final response = await _dio.request<Object?>(
         path,
         data: body,

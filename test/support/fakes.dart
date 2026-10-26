@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -68,18 +67,6 @@ class FakeHttpAdapter implements HttpClientAdapter {
     }
   }
 
-  Future<void> waitForRequests(int count) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 5));
-    while (requests.length < count && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 5));
-    }
-    if (requests.length < count) {
-      throw StateError(
-        'Expected $count HTTP requests; got ${requests.length}.',
-      );
-    }
-  }
-
   void respond(int status, Object? body, {Map<String, String>? headers}) {
     _answers.add(
       ResponseBody.fromString(
@@ -92,27 +79,6 @@ class FakeHttpAdapter implements HttpClientAdapter {
           for (final entry in (headers ?? const <String, String>{}).entries)
             entry.key: [entry.value],
         },
-      ),
-    );
-  }
-
-  void respondLater(
-    int status,
-    Object? body, {
-    required Completer<void> release,
-  }) {
-    _answers.add(
-      _DeferredAnswer(
-        ResponseBody.fromString(
-          body is String ? body : jsonEncode(body),
-          status,
-          headers: {
-            Headers.contentTypeHeader: [
-              body is String ? 'text/html' : Headers.jsonContentType,
-            ],
-          },
-        ),
-        release.future,
       ),
     );
   }
@@ -155,10 +121,6 @@ class FakeHttpAdapter implements HttpClientAdapter {
       throw StateError('No fake answer queued for ${options.path}.');
     }
     final answer = _answers.removeAt(0);
-    if (answer is _DeferredAnswer) {
-      await answer.release;
-      return answer.response;
-    }
     if (answer is DioExceptionType) {
       throw DioException(requestOptions: options, type: answer);
     }
@@ -167,13 +129,6 @@ class FakeHttpAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
-}
-
-class _DeferredAnswer {
-  const _DeferredAnswer(this.response, this.release);
-
-  final ResponseBody response;
-  final Future<void> release;
 }
 
 /// Stands in for the payment provider's window: records what it was asked
