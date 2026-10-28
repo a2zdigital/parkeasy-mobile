@@ -89,16 +89,266 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('says so when nothing is found', (tester) async {
-    await signedIn(tester, Harness(token: validToken()));
+  testWidgets('shows an empty state with a blank location search field', (
+    tester,
+  ) async {
+    final h = Harness(token: validToken());
+    await signedIn(tester, h);
 
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller?.text, isEmpty);
+    expect(field.decoration?.hintText, 'Enter a location');
+    expect(
+      h.http.requests.any(
+        (request) => request.uri.path == '/api/v1/places/search',
+      ),
+      isFalse,
+    );
     expect(find.text('No parking found'), findsOneWidget);
-    expect(find.textContaining('within 25 km'), findsOneWidget);
+    expect(
+      find.text(
+        'No parking is available near this location yet. Try another location.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('typing and clearing do not search for places', (tester) async {
+    final h = Harness(token: validToken());
+    await signedIn(tester, h);
+
+    await tester.enterText(find.byType(TextField), 'Whitefield');
+    await tester.pump();
+
+    var field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller?.text, 'Whitefield');
+    expect(find.text('Near Bengaluru'), findsOneWidget);
+    expect(
+      h.http.requests.where(
+        (request) => request.uri.path == '/api/v1/places/search',
+      ),
+      isEmpty,
+    );
+
+    await tester.tap(find.byTooltip('Clear location search'));
+    await tester.pump();
+
+    field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller?.text, isEmpty);
+    expect(field.decoration?.hintText, 'Enter a location');
+    expect(find.text('Near Bengaluru'), findsOneWidget);
+    expect(
+      h.http.requests.where(
+        (request) => request.uri.path == '/api/v1/places/search',
+      ),
+      isEmpty,
+    );
+  });
+
+  testWidgets('submitting the field requests place matches', (tester) async {
+    final h = Harness(token: validToken());
+    h.http.stubs['/places/search'] = {
+      'data': [
+        {
+          'id': 'whitefield',
+          'name': 'Whitefield',
+          'address': 'Whitefield, Bengaluru, Karnataka, India',
+          'latitude': 12.9698,
+          'longitude': 77.75,
+        },
+      ],
+    };
+    await signedIn(tester, h);
+
+    await tester.enterText(find.byType(TextField), 'Whitefield');
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pumpAndSettle();
+
+    final placeRequest = h.http.requests.singleWhere(
+      (request) => request.uri.path == '/api/v1/places/search',
+    );
+    expect(placeRequest.method, 'GET');
+    expect(placeRequest.uri.queryParameters['query'], 'Whitefield');
+    expect(
+      find.text('Whitefield, Bengaluru, Karnataka, India'),
+      findsOneWidget,
+    );
+    expect(find.text('Near Bengaluru'), findsOneWidget);
+  });
+
+  testWidgets('shows a friendly message when no places match', (tester) async {
+    final h = Harness(token: validToken());
+    h.http.stubs['/places/search'] = {'data': <Object>[]};
+    await signedIn(tester, h);
+
+    await tester.enterText(find.byType(TextField), 'Nowhere');
+    await tester.tap(find.byTooltip('Find location'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No matching places found. Try another location.'),
+      findsOneWidget,
+    );
+    expect(find.text('Near Bengaluru'), findsOneWidget);
+  });
+
+  testWidgets('searches near a selected place', (tester) async {
+    final h = Harness(token: validToken());
+    h.http.stubs['/parking-lots'] = searchJson([summaryJson()]);
+    h.http.stubs['/places/search'] = {
+      'data': [
+        {
+          'id': 'whitefield',
+          'name': 'Whitefield',
+          'address': 'Whitefield, Bengaluru, Karnataka, India',
+          'latitude': 12.9698,
+          'longitude': 77.75,
+        },
+      ],
+    };
+    await signedIn(tester, h);
+
+    await tester.enterText(find.byType(TextField), 'Whitefield');
+    await tester.tap(find.byTooltip('Find location'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Near Bengaluru'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      'Whitefield',
+    );
+    expect(
+      find.text('Whitefield, Bengaluru, Karnataka, India'),
+      findsOneWidget,
+    );
+    expect(find.text('Google Maps'), findsOneWidget);
+
+    await tester.tap(find.text('Whitefield').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Near Whitefield'), findsOneWidget);
+    expect(find.text('MG Road Metro Parking'), findsOneWidget);
+    final parkingSearch = h.http.requests.lastWhere(
+      (request) => request.uri.path == '/api/v1/parking-lots',
+    );
+    expect(parkingSearch.uri.queryParameters['lat'], '12.9698');
+    expect(parkingSearch.uri.queryParameters['lng'], '77.75');
+    expect(parkingSearch.uri.queryParameters['radius_km'], '25.0');
+    expect(parkingSearch.uri.queryParameters['page'], '1');
+
+    await tester.tap(find.text('Use default location'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Near Bengaluru'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      isEmpty,
+    );
+  });
+
+  testWidgets('shows a place-search failure with its own request reference', (
+    tester,
+  ) async {
+    final h = Harness(token: validToken());
+    await signedIn(tester, h);
+
+    h.http.respond(503, {
+      'error': {
+        'code': 'SERVICE_UNAVAILABLE',
+        'message': 'Place lookup unavailable.',
+        'request_id': 'place-search-ref',
+      },
+    });
+    await tester.enterText(find.byType(TextField), 'Whitefield');
+    await tester.tap(find.byTooltip('Find location'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Something went wrong on our side. Try again in a moment.'),
+      findsOneWidget,
+    );
+    expect(find.text('Reference: place-search-ref'), findsOneWidget);
+    expect(
+      h.http.requests.where(
+        (request) => request.uri.path == '/api/v1/places/search',
+      ),
+      hasLength(1),
+    );
+    expect(
+      h.http.requests.where(
+        (request) => request.uri.path == '/api/v1/parking-lots',
+      ),
+      hasLength(1),
+      reason: 'Place-search failure must not trigger another parking search.',
+    );
+  });
+
+  testWidgets('shows a parking-search failure with its own request reference', (
+    tester,
+  ) async {
+    final h = Harness(token: validToken());
+    h.http.stubs.remove('/parking-lots');
+    h.http.respond(200, {'data': userJson()});
+    h.http.respond(500, {
+      'error': {
+        'code': 'INTERNAL_ERROR',
+        'message': 'Search failed.',
+        'request_id': 'parking-search-ref',
+      },
+    });
+    await tester.pumpWidget(
+      ProviderScope(overrides: h.overrides, child: const App()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Something went wrong on our side. Try again in a moment.'),
+      findsOneWidget,
+    );
+    expect(find.text('Reference: parking-search-ref'), findsOneWidget);
+    expect(
+      h.http.requests.where(
+        (request) => request.uri.path == '/api/v1/parking-lots',
+      ),
+      hasLength(1),
+    );
+    expect(
+      h.http.requests.where(
+        (request) => request.uri.path == '/api/v1/places/search',
+      ),
+      isEmpty,
+    );
+  });
+
+  testWidgets('shows the no-match state when a vehicle filter has no results', (
+    tester,
+  ) async {
+    final h = Harness(token: validToken());
+    h.http.stubs['/parking-lots'] = searchJson([
+      summaryJson(vehicles: ['car']),
+    ]);
+    await signedIn(tester, h);
+    h.http.stubs.remove('/parking-lots');
+    h.http.respond(200, searchJson(const []));
+
+    await tester.tap(find.text('Car'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No matching parking found'), findsOneWidget);
+    expect(
+      find.text('Try another vehicle type or increase the search radius.'),
+      findsOneWidget,
+    );
+    final request = h.http.requests.lastWhere(
+      (item) => item.uri.path == '/api/v1/parking-lots',
+    );
+    expect(request.uri.queryParameters['filter[vehicle_type]'], 'car');
+    expect(request.uri.queryParameters['radius_km'], '25.0');
   });
 
   testWidgets('explains a failed search and recovers on retry', (tester) async {
     final h = Harness(token: validToken());
-    h.http.stubs.clear();
+    h.http.stubs.remove('/parking-lots');
     h.http.respond(200, {'data': userJson()});
     h.http.fail(DioExceptionType.connectionError);
     await tester.pumpWidget(

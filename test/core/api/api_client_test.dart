@@ -149,6 +149,12 @@ void main() {
       expect((await failure(client.get('/me'))).code, ApiErrorCode.network);
     });
 
+    test('unknown transport failures are not reported as offline', () async {
+      http.fail(DioExceptionType.unknown);
+
+      expect((await failure(client.get('/me'))).code, ApiErrorCode.unknown);
+    });
+
     test('a refused token is reported once to the session', () async {
       tokens.token = validToken();
       var reports = 0;

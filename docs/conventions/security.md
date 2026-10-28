@@ -39,8 +39,7 @@ No key is in the project. The Razorpay SDK is installed, and it needs none from 
 
 | When this is added | The key goes |
 |---|---|
-| Google Maps SDK (MD-02) | Restricted per platform; `android/secrets.properties` → manifest placeholder; `ios/Flutter/Secrets.xcconfig` → `Info.plist` variable. Both files untracked; CI writes them from its secrets |
-| Place search or geocoding | A server-side key on our API; the app calls our API |
+| Google Places API (New) place search | A server-side key on our API; the app calls `GET /places/search`, never the provider directly. See the API repository's ADR-0015 for billing and restrictions |
 | Firebase (push, crash reports) | `google-services.json` and `GoogleService-Info.plist` written by CI from its secrets; App Check enabled |
 | Razorpay checkout (**in place**) | Key ID arrives from our API per order; nothing stored in the app. Switching from test to live keys is a server change only; the app is not rebuilt |
 | Release signing | Keystore and passwords from CI secrets; `key.properties` untracked |

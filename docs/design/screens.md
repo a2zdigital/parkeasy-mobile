@@ -2,7 +2,7 @@
 
 Every screen in the first version, and the API call behind it. A screen is in scope only if the API supports it today.
 
-> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, around the configured city centre), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. C13 (Activity). Owner: O1 (apply and status), O3 and O4 (bookings and every booking action), O5 (facilities), O6 (facility editor: details, spaces and rates, opening hours, submit), O7 (earnings). O2 (dashboard) is replaced by the bookings list opening on requests. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
+> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, starts around the configured city centre with an initially empty place-search field), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. C13 (Activity). Owner: O1 (apply and status), O3 and O4 (bookings and every booking action), O5 (facilities), O6 (facility editor: details, spaces and rates, opening hours, submit), O7 (earnings). O2 (dashboard) is replaced by the bookings list opening on requests. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
 
 ## Customer
 
@@ -12,7 +12,7 @@ Every screen in the first version, and the API call behind it. A screen is in sc
 | C2 | Phone number | `PhoneField`, "Send code" | `POST /auth/otp/request` |
 | C3 | Verification code | `OtpField`, resend countdown | `POST /auth/otp/verify` |
 | C4 | Your name (new users) | Name, optional email | `PATCH /me` |
-| C5 | Explore | Search field, filter chips (vehicle type, amenities), results as `FacilityCard`s nearest first; map view when MD-02 is decided | `GET /parking-lots` |
+| C5 | Explore | Initially empty place-search field, filter chips (vehicle type, amenities), results as `FacilityCard`s nearest first; friendly empty and no-match states; map view remains deferred | `GET /places/search`, `GET /parking-lots` |
 | C6 | Facility details | Name, address, distance, hours, amenities, rates per vehicle type, booking mode and payment modes; `ActionBar` "Choose time" | `GET /parking-lots/{id}` |
 | C7 | Choose time | Vehicle type, start and end (`DateTimeField`), live availability and price | `GET …/availability`, `POST /bookings/quote` |
 | C8 | Review and book | `PriceBreakdown`, payment mode, instant or approval notice, cancellation rule; "Book parking" / "Send request" | `POST /bookings` |
@@ -21,7 +21,7 @@ Every screen in the first version, and the API call behind it. A screen is in sc
 | C11 | Bookings | Upcoming and past, `BookingCard`s | `GET /bookings` |
 | C12 | Booking details | Status, reference, times, facility, price, payment; cancel | `GET /bookings/{id}`, `POST …/cancel` |
 | C13 | Activity | Notifications, unread first | `GET /notifications`, read endpoints |
-| C14 | Profile | Name, phone, email, switch to owner area, sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
+| C14 | Profile | Name, phone, email, edit name (phone and email remain read-only), switch to owner area, sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
 
 The journey designed first: **Explore → Facility → Choose time → Review → Pay or pay at facility → Result → Booking details.**
 
@@ -53,6 +53,6 @@ The owner sees a booking's reference, never the customer's name or phone.
 | Fixed time-slot grid, "2 hours save 8%" | The API prices any start and end, by started hour or day, and has no multi-hour discount | Start and end pickers; the quote shows the real price |
 | Owner charts: occupancy, revenue by hour | The API offers an earnings summary and entries, not time series | `MetricTile`s and the entries list |
 | Support chat, invite and earn | Not in scope | A support contact in Profile |
-| Map with price pins | Needs a map provider and key (MD-02) | List first; map added as a second view |
+| Map with price pins | Map UI and a client Maps SDK remain deferred; MD-02 selected only the server-side place-search provider | Search and choose a place, then see the list |
 
 Each of these can be added when the API and the product decision exist. None may be mocked in the meantime.

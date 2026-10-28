@@ -69,6 +69,12 @@
   "profilePhone": "Phone",
   "profileEmail": "Email",
   "profileEmailMissing": "Not added",
+  "profileEdit": "Edit profile",
+  "profileEditTitle": "Edit profile",
+  "profileEditContactNotEditable": "Phone number and email can't be changed here.",
+  "profileEditNameInvalid": "Enter a name between 2 and 120 characters.",
+  "profileSaveChanges": "Save changes",
+  "profileSaved": "Profile updated.",
   "profileSignOut": "Sign out",
   "signOutConfirmTitle": "Sign out?",
   "signOutConfirmBody": "You'll need a new code to sign in again on this phone.",
@@ -108,16 +114,21 @@
       }
     }
   },
+  "exploreLocationLabel": "Search location",
+  "exploreLocationHint": "Enter a location",
+  "exploreLocationHelper": "Choose a matching place to search nearby.",
+  "exploreLocationRequired": "Enter at least two characters to find a place.",
+  "exploreLocationClear": "Clear location search",
+  "exploreSearchLocation": "Find location",
+  "exploreSearchingLocations": "Searching locations",
+  "exploreLocationNoResults": "No matching places found. Try another location.",
+  "exploreUseDefaultLocation": "Use default location",
+  "exploreGoogleMapsAttribution": "Google Maps",
   "exploreAllVehicles": "All vehicles",
   "exploreEmptyTitle": "No parking found",
-  "exploreEmptyBody": "Nothing within {km} km matches. Try another vehicle type.",
-  "@exploreEmptyBody": {
-    "placeholders": {
-      "km": {
-        "type": "int"
-      }
-    }
-  },
+  "exploreEmptyBody": "No parking is available near this location yet. Try another location.",
+  "exploreNoMatchingTitle": "No matching parking found",
+  "exploreNoMatchingBody": "Try another vehicle type or increase the search radius.",
   "exploreLoadMoreFailed": "Couldn't load more.",
   "distanceMetres": "{metres} m",
   "@distanceMetres": {
