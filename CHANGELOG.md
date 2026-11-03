@@ -5,6 +5,8 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 ## [Unreleased]
 
 ### Added
+- **auth:** Show a retryable error instead of leaving startup loading when secure token storage fails.
+- **auth:** Sign out locally without waiting for the server to revoke the session.
 - **auth:** Refined the sign-in entry and phone screens, and show the verified mobile number while a new user completes their profile.
 - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
