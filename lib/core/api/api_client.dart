@@ -139,11 +139,7 @@ class ApiClient {
       case DioExceptionType.badCertificate:
       case DioExceptionType.cancel:
       case DioExceptionType.unknown:
-        return ApiException(
-          code: error.error is FormatException
-              ? ApiErrorCode.unknown
-              : ApiErrorCode.network,
-        );
+        return const ApiException(code: ApiErrorCode.unknown);
     }
   }
 

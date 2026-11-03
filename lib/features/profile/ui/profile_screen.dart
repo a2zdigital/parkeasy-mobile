@@ -47,7 +47,27 @@ class ProfileScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap.xl(),
-          Text(user.name ?? l10n.profileNameMissing, style: context.text.h2),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  user.name ?? l10n.profileNameMissing,
+                  style: context.text.h2,
+                ),
+              ),
+              TextAction(
+                label: l10n.profileEdit,
+                onPressed: () async {
+                  final saved = await context.push<bool>(Routes.profileEdit);
+                  if (saved == true && context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
+                  }
+                },
+              ),
+            ],
+          ),
           const Gap.lg(),
           _Details(
             rows: [

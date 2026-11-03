@@ -2,14 +2,14 @@
 
 What a tester can do on a phone today, and what is still needed before the app is a usable first version. Updated with every feature.
 
-Last updated: 2026-10-10.
+Last updated: 2026-10-27.
 
 ## Built and tested
 
 | Area | What works |
 |---|---|
 | Sign-in | Phone number, SMS code with resend wait, name on first sign-in, staying signed in, sign out |
-| Explore | Facilities around the pilot city centre, nearest first, with distance, starting price, approval and pay-at-facility flags; filter by vehicle type; paging; pull to refresh |
+| Explore | Search locations through the API, select a place, and find facilities around it; configured city centre is the initial/reset location; nearest first with distance, starting price, approval and pay-at-facility flags; vehicle filter, paging and pull to refresh |
 | Facility | Address, booking mode, payment modes, rates per vehicle type, opening hours, amenities |
 | Choose time | Vehicle type, arrival and departure on the facility's clock, live price and availability, reasons a time cannot be booked |
 | Review and book | Everything being committed to on one screen; pay at the facility or online; instant booking or a request to the owner; safe to retry without double-booking |
@@ -55,15 +55,15 @@ What QR and OTP check-in need, in order:
 | SMS provider on the API | Signing in with a real code; today only the fixed development code works, and only against a local API | Technical lead |
 | Razorpay test keys on the API (`PARKEASY_PAYMENT_DRIVER=razorpay`) | Real checkout. **The Razorpay window itself has never been opened**: the SDK is integrated and its logic is tested with a stand-in, but only a device run with test keys proves the native side | Technical lead |
 | Logo and app icon artwork | Replacing the placeholders; launcher icon | Design |
-| Map decision (MD-02) | A map view in Explore | Technical lead |
+| Google Places API (New) key and billing | Google-backed place search outside local/testing | Technical lead |
 | Tester distribution (MD-06) and signing (MD-09) | Giving a build to people outside the team | Technical lead |
 
 ## Known limits of what is built
 
 | Limit | Reason |
 |---|---|
-| Explore searches around a fixed point (the city centre from configuration), not the phone's location | Device location needs a location package and permission texts, which must be tried on real devices |
-| No search by place name | Needs a geocoding service behind our API |
+| Explore starts at the configured city centre and supports typed place search, not phone location | Device location needs a location package and permission texts, which must be tried on real devices |
+| Explore has no map view | The provider choice covers server-side place search; map SDK and map view remain deferred |
 | Search results do not show amenities | The API's search result carries amenity codes without names |
 | Facility time zones other than India are shown in UTC | No time-zone database is bundled; the pilot is India only |
 | The cancel confirmation cannot say in advance whether a refund is due; the booking shows it after cancelling | The API reports refund eligibility only in the cancellation result |
@@ -71,7 +71,7 @@ What QR and OTP check-in need, in order:
 | Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |
 | A notification about a booking opens it as the customer's booking, except a new request, which opens the owner's view. An owner tapping "booking confirmed" or "cancelled" for their facility sees "couldn't find that booking" | Notifications do not say whether they are for the customer or the owner |
 | The owner area has no dashboard; it opens on booking requests | Simpler, and requests are what an owner must act on |
-| A facility's location is typed as latitude and longitude | Picking it on a map needs the map decision (MD-02) |
+| A facility's location is still typed as latitude and longitude | Facility location picking is separate from customer place search and still needs a map workflow |
 | A rate cannot be removed once set, only changed | The API has no call to remove a rate |
 | No facility photos | The API has no image upload |
 | Owner earnings entries show times in India's zone | An entry carries no facility |

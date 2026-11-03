@@ -6,6 +6,14 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 ## [Unreleased]
 
 ### Added
+- **explore:** Search by a selected place and view nearby parking; the configured location remains available as the default.
+- **profile:** Edit the profile name through the existing profile-update endpoint.
+
+### Changed
+- **explore:** Keep the configured default as the active area while starting the editable location search field empty.
+- **explore:** Distinguish empty parking results from filtered no-match results and show a specific no-place-match message.
+- **api:** Report offline only for actual connection failures; unknown transport errors remain unexpected errors.
+
 - **auth:** Show a retryable error instead of leaving startup loading when secure token storage fails.
 - **auth:** Sign out locally without waiting for the server to revoke the session.
 - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).

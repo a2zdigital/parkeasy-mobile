@@ -12,6 +12,7 @@ abstract final class Routes {
   static const String bookings = '/bookings';
   static const String activity = '/activity';
   static const String profile = '/profile';
+  static const String profileEdit = '$profile/edit';
 
   /// A facility's details. The ID is the public, opaque one.
   static String parkingLot(String id) => '$explore/lots/$id';
