@@ -26,10 +26,7 @@ void main() {
       ProviderScope(overrides: h.overrides, child: const App()),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Profile'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Owner area'));
-    await tester.pumpAndSettle();
+    expect(find.text('Requests'), findsOneWidget);
     await tester.tap(find.text('Facilities'));
     await tester.pumpAndSettle();
     return h;
@@ -228,10 +225,6 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(overrides: h.overrides, child: const App()),
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Profile'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Owner area'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField), 'bk-k2m5xcn4');

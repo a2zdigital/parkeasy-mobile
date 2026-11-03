@@ -131,6 +131,8 @@ class OwnerShell extends StatelessWidget {
           icon: Icons.account_balance_wallet_outlined,
           label: l10n.ownerTabEarnings,
         ),
+        TabItem(icon: Icons.notifications_outlined, label: l10n.tabActivity),
+        TabItem(icon: Icons.person_outline, label: l10n.tabProfile),
       ],
     );
   }

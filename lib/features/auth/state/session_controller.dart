@@ -7,6 +7,7 @@ import 'package:app/core/providers.dart';
 import 'package:app/features/auth/data/auth_repository.dart';
 import 'package:app/features/auth/data/models/session.dart';
 import 'package:app/features/auth/data/models/user.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,7 +41,19 @@ class SessionController extends Notifier<SessionState> {
     }
 
     try {
-      state = SignedIn(await ref.read(authRepositoryProvider).currentUser());
+      final user = await ref.read(authRepositoryProvider).currentUser();
+      final storedIntent = await ref
+          .read(tokenStoreProvider)
+          .readRegistrationIntent();
+      var registrationRole = RegistrationRole.fromStorageValue(storedIntent);
+      if (user.isOwner ||
+          registrationRole == null ||
+          (registrationRole == RegistrationRole.customer &&
+              user.isProfileComplete)) {
+        await ref.read(tokenStoreProvider).clearRegistrationIntent();
+        registrationRole = null;
+      }
+      state = SignedIn(user, registrationRole: registrationRole);
     } on ApiException catch (failure) {
       if (failure.code == ApiErrorCode.unauthenticated) {
         await expire();
@@ -51,17 +64,40 @@ class SessionController extends Notifier<SessionState> {
   }
 
   /// After a sign-in code was verified.
-  Future<void> start(Session session) async {
-    await ref
-        .read(tokenStoreProvider)
-        .write(StoredToken(value: session.token, expiresAt: session.expiresAt));
-    state = SignedIn(session.user);
+  Future<void> start(
+    Session session, {
+    RegistrationRole? registrationRole,
+  }) async {
+    final tokenStore = ref.read(tokenStoreProvider);
+    await tokenStore.write(
+      StoredToken(value: session.token, expiresAt: session.expiresAt),
+    );
+    final pendingRole = session.isNewUser
+        ? registrationRole ?? RegistrationRole.customer
+        : null;
+    if (pendingRole == null) {
+      await tokenStore.clearRegistrationIntent();
+    } else {
+      await tokenStore.writeRegistrationIntent(pendingRole.storageValue);
+    }
+    state = SignedIn(session.user, registrationRole: pendingRole);
   }
 
   /// After the profile changed.
   void updateUser(User user) {
-    if (state is SignedIn) {
-      state = SignedIn(user);
+    final current = state;
+    if (current is SignedIn) {
+      state = SignedIn(user, registrationRole: current.registrationRole);
+    }
+  }
+
+  /// Clears the saved onboarding intent only after the backend step succeeds.
+  Future<void> finishRegistration({User? user}) async {
+    final tokenStore = ref.read(tokenStoreProvider);
+    await tokenStore.clearRegistrationIntent();
+    final current = state;
+    if (current is SignedIn) {
+      state = SignedIn(user ?? current.user);
     }
   }
 

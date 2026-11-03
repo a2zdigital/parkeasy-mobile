@@ -12,6 +12,9 @@ import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/features/auth/state/phone_number.dart';
+import 'package:app/features/auth/state/registration_role.dart';
+import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/owner/data/models/parking_owner.dart';
 import 'package:app/features/owner/data/models/verification_status.dart';
 import 'package:app/features/owner/state/owner_application_notifier.dart';
@@ -43,14 +46,22 @@ class _OwnerApplicationScreenState
     super.dispose();
   }
 
-  void _submit() => ref
+  void _submit({String? verifiedPhone}) => ref
       .read(ownerApplicationProvider.notifier)
-      .apply(businessName: _name.text, contactPhone: _phone.text);
+      .apply(
+        businessName: _name.text,
+        contactPhone: verifiedPhone ?? _phone.text,
+      );
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final application = ref.watch(ownerApplicationProvider);
+    final verifiedPhone = switch (ref.watch(sessionControllerProvider)) {
+      SignedIn(user: final user, registrationRole: RegistrationRole.owner) =>
+        user.phone,
+      _ => null,
+    };
 
     return application.when(
       loading: () => AppScaffold(
@@ -100,23 +111,35 @@ class _OwnerApplicationScreenState
                 textInputAction: TextInputAction.next,
                 onChanged: clear,
               ),
-              const Gap.sm(),
-              AppTextField(
-                label: l10n.ownerContactPhone,
-                controller: _phone,
-                enabled: !state.isSubmitting,
-                prefixText: '${PhoneNumber.countryCode} ',
-                helperText: l10n.phoneHelper,
-                errorText: state.isPhoneInvalid ? l10n.phoneInvalid : null,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.done,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(PhoneNumber.nationalLength),
-                ],
-                onChanged: clear,
-                onSubmitted: (_) => _submit(),
-              ),
+              if (verifiedPhone != null) ...[
+                const Gap.sm(),
+                Text(
+                  l10n.ownerVerifiedContact(PhoneNumber.format(verifiedPhone)),
+                  style: context.text.body.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ] else ...[
+                const Gap.sm(),
+                AppTextField(
+                  label: l10n.ownerContactPhone,
+                  controller: _phone,
+                  enabled: !state.isSubmitting,
+                  prefixText: '${PhoneNumber.countryCode} ',
+                  helperText: l10n.phoneHelper,
+                  errorText: state.isPhoneInvalid ? l10n.phoneInvalid : null,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(
+                      PhoneNumber.nationalLength,
+                    ),
+                  ],
+                  onChanged: clear,
+                  onSubmitted: (_) => _submit(),
+                ),
+              ],
               if (failure != null) ...[
                 const Gap.sm(),
                 AppBanner(
@@ -129,7 +152,7 @@ class _OwnerApplicationScreenState
           bottom: PrimaryButton(
             label: l10n.ownerApplySubmit,
             isLoading: state.isSubmitting,
-            onPressed: _submit,
+            onPressed: () => _submit(verifiedPhone: verifiedPhone),
           ),
         );
       },
@@ -177,6 +200,10 @@ class _Status extends ConsumerWidget {
     };
     final isApproved =
         application.verificationStatus == VerificationStatus.approved;
+    final hasOwnerRole = switch (ref.watch(sessionControllerProvider)) {
+      SignedIn(user: final user) => user.isOwner,
+      _ => false,
+    };
 
     return AppScaffold(
       title: l10n.profileOwnerArea,
@@ -200,7 +227,7 @@ class _Status extends ConsumerWidget {
           ],
         ),
       ),
-      bottom: isApproved
+      bottom: isApproved && hasOwnerRole
           ? PrimaryButton(
               label: l10n.ownerOpen,
               onPressed: () => context.go(Routes.ownerBookings),

@@ -186,7 +186,14 @@ void main() {
     await tester.tap(find.text('Bookings'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Upcoming'), findsOneWidget);
+    expect(find.text('Past'), findsOneWidget);
     expect(find.text('No bookings yet'), findsOneWidget);
     expect(find.text('Find parking'), findsOneWidget);
+
+    await tester.tap(find.text('Past'));
+    await tester.pumpAndSettle();
+    expect(find.text('No past bookings'), findsOneWidget);
+    expect(find.text('Find parking'), findsNothing);
   });
 }

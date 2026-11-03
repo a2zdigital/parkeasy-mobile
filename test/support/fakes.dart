@@ -22,6 +22,7 @@ class InMemoryTokenStore implements TokenStore {
   InMemoryTokenStore([this.token]);
 
   StoredToken? token;
+  String? registrationIntent;
 
   @override
   Future<StoredToken?> read() async => token;
@@ -30,7 +31,20 @@ class InMemoryTokenStore implements TokenStore {
   Future<void> write(StoredToken token) async => this.token = token;
 
   @override
-  Future<void> clear() async => token = null;
+  Future<String?> readRegistrationIntent() async => registrationIntent;
+
+  @override
+  Future<void> writeRegistrationIntent(String intent) async =>
+      registrationIntent = intent;
+
+  @override
+  Future<void> clearRegistrationIntent() async => registrationIntent = null;
+
+  @override
+  Future<void> clear() async {
+    token = null;
+    registrationIntent = null;
+  }
 }
 
 StoredToken validToken([String value = 'token-1']) =>

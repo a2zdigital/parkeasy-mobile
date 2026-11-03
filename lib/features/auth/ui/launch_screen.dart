@@ -40,9 +40,19 @@ class LaunchScreen extends StatelessWidget {
           ),
         ],
       ),
-      bottom: PrimaryButton(
-        label: l10n.launchGetStarted,
-        onPressed: () => context.push(Routes.phone),
+      bottom: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PrimaryButton(
+            label: l10n.launchLogIn,
+            onPressed: () => context.push(Routes.phone),
+          ),
+          const Gap.sm(),
+          SecondaryButton(
+            label: l10n.launchCreateAccount,
+            onPressed: () => context.push(Routes.registrationRole),
+          ),
+        ],
       ),
     );
   }

@@ -26,8 +26,8 @@ void main() {
   ) async {
     final h = await launch(tester);
 
-    expect(find.text('Get started'), findsOneWidget);
-    await tester.tap(find.text('Get started'));
+    expect(find.text('Already have an account? Log in'), findsOneWidget);
+    await tester.tap(find.text('Already have an account? Log in'));
     await tester.pumpAndSettle();
 
     // An invalid number is explained and nothing is sent.
@@ -89,7 +89,7 @@ void main() {
 
     await launch(tester, harness: h);
 
-    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Already have an account? Log in'), findsNothing);
     expect(find.text('Explore'), findsWidgets);
   });
 
@@ -120,7 +120,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(h.tokens.token, isNull);
-    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Already have an account? Log in'), findsOneWidget);
   });
 
   testWidgets('offline at start-up: an explanation and a retry, not sign-in', (
@@ -134,7 +134,7 @@ void main() {
       find.text("You're offline. Check your connection and try again."),
       findsOneWidget,
     );
-    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Already have an account? Log in'), findsNothing);
     expect(h.tokens.token, isNotNull);
 
     h.http.respond(200, {'data': userJson()});

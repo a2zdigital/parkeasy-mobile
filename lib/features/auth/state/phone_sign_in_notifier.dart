@@ -2,6 +2,7 @@ import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/providers.dart';
 import 'package:app/features/auth/data/auth_repository.dart';
 import 'package:app/features/auth/state/phone_number.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final phoneSignInProvider =
@@ -11,10 +12,15 @@ final phoneSignInProvider =
 
 /// A code was sent: where, and when another may be requested.
 class CodeSent {
-  const CodeSent({required this.phone, required this.resendAt});
+  const CodeSent({
+    required this.phone,
+    required this.resendAt,
+    this.registrationRole,
+  });
 
   final String phone;
   final DateTime resendAt;
+  final RegistrationRole? registrationRole;
 }
 
 class PhoneSignInState {
@@ -37,7 +43,10 @@ class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
   @override
   PhoneSignInState build() => const PhoneSignInState();
 
-  Future<void> submit(String input) async {
+  Future<void> submit(
+    String input, {
+    RegistrationRole? registrationRole,
+  }) async {
     if (state.isSubmitting) return;
 
     final phone = PhoneNumber.toE164(input);
@@ -54,6 +63,7 @@ class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
       state = PhoneSignInState(
         sent: CodeSent(
           phone: phone,
+          registrationRole: registrationRole,
           resendAt: ref
               .read(clockProvider)()
               .add(Duration(seconds: challenge.resendIn)),
