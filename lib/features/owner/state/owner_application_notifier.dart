@@ -2,7 +2,9 @@ import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/features/auth/data/auth_repository.dart';
 import 'package:app/features/auth/state/phone_number.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/owner/data/models/owner_application_input.dart';
 import 'package:app/features/owner/data/models/parking_owner.dart';
 import 'package:app/features/owner/data/models/verification_status.dart';
@@ -55,13 +57,19 @@ class OwnerApplicationNotifier
 
   Future<void> apply({
     required String businessName,
-    required String contactPhone,
+    String? contactPhone,
   }) async {
     final current = state.valueOrNull;
     if (current == null || current.isSubmitting) return;
 
     final name = businessName.trim();
-    final phone = PhoneNumber.toE164(contactPhone);
+    final session = ref.read(sessionControllerProvider);
+    final verifiedPhone =
+        session is SignedIn &&
+            session.registrationRole == RegistrationRole.owner
+        ? session.user.phone
+        : null;
+    final phone = PhoneNumber.toE164(contactPhone ?? verifiedPhone ?? '');
     if (name.isEmpty || phone == null) {
       state = AsyncData(
         OwnerApplicationState(
@@ -86,6 +94,7 @@ class OwnerApplicationNotifier
         ref.invalidateSelf();
         return;
       }
+
       final fields = failure.code == ApiErrorCode.validationFailed
           ? failure.fieldErrors
           : const <String, List<String>>{};
@@ -114,7 +123,13 @@ class OwnerApplicationNotifier
   Future<void> _refreshRoles() async {
     try {
       final user = await ref.read(authRepositoryProvider).currentUser();
-      ref.read(sessionControllerProvider.notifier).updateUser(user);
+      if (user.isOwner) {
+        await ref
+            .read(sessionControllerProvider.notifier)
+            .finishRegistration(user: user);
+      } else {
+        ref.read(sessionControllerProvider.notifier).updateUser(user);
+      }
     } on ApiException {
       // The role is only used for display; the API enforces access.
     }

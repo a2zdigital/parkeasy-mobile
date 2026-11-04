@@ -44,13 +44,14 @@ class Harness {
 
 Map<String, dynamic> userJson({
   String? name = 'Asha',
+  String? email,
   bool complete = true,
   List<String> roles = const ['customer'],
 }) => {
   'id': '01M4JQSZSNAVTVCMS8A7AJ0USR',
   'name': name,
   'phone': '+919000000001',
-  'email': null,
+  'email': email,
   'status': 'active',
   'roles': roles,
   'is_profile_complete': complete,

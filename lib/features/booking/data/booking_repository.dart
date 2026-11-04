@@ -4,6 +4,7 @@ import 'package:app/core/api/pagination.dart';
 import 'package:app/core/providers.dart';
 import 'package:app/features/booking/data/models/availability.dart';
 import 'package:app/features/booking/data/models/booking.dart';
+import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/booking_window_request.dart';
 import 'package:app/features/booking/data/models/create_booking_request.dart';
 import 'package:app/features/booking/data/models/quote.dart';
@@ -59,12 +60,17 @@ class BookingRepository {
     ),
   );
 
-  /// The signed-in customer's bookings, newest first.
-  Future<CursorPage<Booking>> mine({String? cursor}) async =>
-      CursorPage.fromJson(
-        await _api.get('/bookings', query: {'cursor': cursor}),
-        Booking.fromJson,
-      );
+  /// The signed-in customer's bookings for one API status, newest first.
+  Future<CursorPage<Booking>> mine({
+    required BookingStatus status,
+    String? cursor,
+  }) async => CursorPage.fromJson(
+    await _api.get(
+      '/bookings',
+      query: {'filter[status]': status.wire, 'cursor': cursor},
+    ),
+    Booking.fromJson,
+  );
 
   Future<Booking> find(String id) async =>
       Booking.fromJson(ApiClient.object(await _api.get('/bookings/$id')));

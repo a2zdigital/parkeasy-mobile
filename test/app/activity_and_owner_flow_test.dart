@@ -21,6 +21,16 @@ void main() {
   }
 
   group('activity', () {
+    testWidgets('customer profile has no owner-area entry', (tester) async {
+      final h = Harness(token: validToken());
+      await start(tester, h);
+
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Owner area'), findsNothing);
+      expect(find.text('Owner area'), findsNothing);
+    });
+
     testWidgets('shows the unread badge, the list, and opens the booking', (
       tester,
     ) async {
@@ -51,6 +61,44 @@ void main() {
         h.http.requests.any((r) => r.path == '/notifications/n1/read'),
         isTrue,
       );
+      expect(
+        h.http.requests.any((r) => r.path == '/bookings/$bookingId'),
+        isTrue,
+      );
+      expect(
+        h.http.requests.any((r) => r.path == '/owner/bookings/$bookingId'),
+        isFalse,
+      );
+    });
+
+    testWidgets('opens an owner approval notification in owner bookings', (
+      tester,
+    ) async {
+      final h = Harness(token: validToken());
+      h.http.stubs['/notifications'] = pageJson([
+        notificationJson(type: 'booking.approval_requested'),
+      ]);
+      h.http.stubs['/owner/bookings/$bookingId'] = {
+        'data': bookingJson(status: 'pending_approval'),
+      };
+      h.http.stubs['/owner/bookings/$bookingId/collection'] = collectionJson();
+      await start(tester, h, roles: ['customer', 'owner']);
+      h.http.respond(200, {'data': notificationJson(read: true)});
+
+      await tester.tap(find.text('Activity'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Booking confirmed'));
+      await tester.pumpAndSettle();
+
+      expect(
+        h.http.requests.any((r) => r.path == '/owner/bookings/$bookingId'),
+        isTrue,
+      );
+      expect(
+        h.http.requests.any((r) => r.path == '/bookings/$bookingId'),
+        isFalse,
+      );
+      expect(find.text('Awaiting approval'), findsOneWidget);
     });
 
     testWidgets('says so when there is nothing', (tester) async {
@@ -69,18 +117,56 @@ void main() {
   group('owner area', () {
     const path = '/owner/bookings/$bookingId';
 
+    testWidgets('owner profile has no duplicate Bookings shortcut', (
+      tester,
+    ) async {
+      final h = Harness(token: validToken());
+      h.http.stubs['/owner/bookings'] = pageJson(const []);
+      h.http.stubs['/owner/parking-lots'] = pageJson(const []);
+      h.http.stubs['/owner/earnings'] = earningsJson();
+      h.http.stubs['/notifications/unread-count'] = unreadJson(0);
+      h.http.stubs['/notifications'] = pageJson(const []);
+      await start(tester, h, roles: ['customer', 'owner']);
+
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Owner area'), findsNothing);
+      expect(find.text('List your parking and manage bookings.'), findsNothing);
+
+      await tester.tap(find.text('Bookings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bookings'), findsWidgets);
+
+      await tester.tap(find.text('Facilities'));
+      await tester.pumpAndSettle();
+      expect(find.text('Facilities'), findsWidgets);
+
+      await tester.tap(find.text('Earnings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Earnings'), findsWidgets);
+
+      await tester.tap(find.text('Activity'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nothing yet'), findsOneWidget);
+
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      expect(find.text('Profile'), findsWidgets);
+      expect(find.text('Owner area'), findsNothing);
+    });
+
     testWidgets(
       'someone who has not applied sees the form, then "under review"',
       (tester) async {
         final h = Harness(token: validToken());
-        await start(tester, h);
-        await tester.tap(find.text('Profile'));
-        await tester.pumpAndSettle();
-
+        h.tokens.registrationIntent = 'owner';
+        h.http.respond(200, {'data': userJson()});
         h.http.respond(404, {
           'error': {'code': 'OWNER_PROFILE_NOT_FOUND', 'message': 'None.'},
         });
-        await tester.tap(find.text('Owner area'));
+        await tester.pumpWidget(
+          ProviderScope(overrides: h.overrides, child: const App()),
+        );
         await tester.pumpAndSettle();
         expect(find.text('Become an owner'), findsOneWidget);
 
@@ -92,7 +178,6 @@ void main() {
 
         h.http.respond(201, ownerJson(status: 'pending'));
         await tester.enterText(find.byType(TextField).first, 'Ravi Parking');
-        await tester.enterText(find.byType(TextField).last, '9000000002');
         await tester.tap(
           find.widgetWithText(PrimaryButton, 'Send application'),
         );
@@ -100,6 +185,7 @@ void main() {
 
         expect(find.text('Application under review'), findsOneWidget);
         expect(find.text('Open owner area'), findsNothing);
+        expect(h.tokens.registrationIntent, 'owner');
       },
     );
 
@@ -112,11 +198,6 @@ void main() {
         h.http.stubs[path] = {'data': request};
         h.http.stubs['$path/collection'] = collectionJson();
         await start(tester, h, roles: ['customer', 'owner']);
-
-        await tester.tap(find.text('Profile'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Owner area'));
-        await tester.pumpAndSettle();
 
         // The owner's own tabs, opening on requests that need an answer.
         expect(find.text('Facilities'), findsOneWidget);
@@ -224,10 +305,6 @@ void main() {
           },
         ]);
         await start(tester, h, roles: ['customer', 'owner']);
-        await tester.tap(find.text('Profile'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Owner area'));
-        await tester.pumpAndSettle();
         expect(find.text('No requests waiting'), findsOneWidget);
 
         await tester.tap(find.text('Earnings'));
@@ -250,24 +327,18 @@ void main() {
       },
     );
 
-    testWidgets('an account that is not an approved owner is told so', (
+    testWidgets('a pending applicant sees status, not owner management tabs', (
       tester,
     ) async {
       final h = Harness(token: validToken());
-      await start(tester, h, roles: ['customer', 'owner']);
-      await tester.tap(find.text('Profile'));
-      await tester.pumpAndSettle();
+      h.tokens.registrationIntent = 'owner';
+      h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
+      await start(tester, h);
 
-      h.http.respond(403, {
-        'error': {'code': 'OWNER_NOT_VERIFIED', 'message': 'Not verified.'},
-      });
-      await tester.tap(find.text('Owner area'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.textContaining("Your owner account isn't approved yet"),
-        findsOneWidget,
-      );
+      expect(find.text('Application under review'), findsOneWidget);
+      expect(find.text('Requests'), findsNothing);
+      expect(find.text('Facilities'), findsNothing);
+      expect(find.text('Earnings'), findsNothing);
     });
   });
 }

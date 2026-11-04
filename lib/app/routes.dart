@@ -1,3 +1,4 @@
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_state.dart';
 
 /// Every location in the app. Screens navigate by these, never by typing
@@ -7,11 +8,14 @@ abstract final class Routes {
   static const String launch = '/welcome';
   static const String phone = '/sign-in/phone';
   static const String code = '/sign-in/code';
+  static const String registrationRole = '/register/role';
+  static const String registrationPhone = '/register/phone';
   static const String completeProfile = '/complete-profile';
   static const String explore = '/explore';
   static const String bookings = '/bookings';
   static const String activity = '/activity';
   static const String profile = '/profile';
+  static const String profileEdit = '$profile/edit';
 
   /// A facility's details. The ID is the public, opaque one.
   static String parkingLot(String id) => '$explore/lots/$id';
@@ -33,6 +37,9 @@ abstract final class Routes {
   static const String ownerBookings = '/owner/bookings';
   static const String ownerFacilities = '/owner/facilities';
   static const String ownerEarnings = '/owner/earnings';
+  static const String ownerActivity = '/owner/activity';
+  static const String ownerProfile = '/owner/profile';
+  static const String ownerProfileEdit = '$ownerProfile/edit';
 
   static const String ownerFacilityNew = '$ownerFacilities/new';
 
@@ -49,7 +56,13 @@ abstract final class Routes {
   /// A booking at one of the owner's facilities.
   static String ownerBooking(String id) => '$ownerBookings/$id';
 
-  static const Set<String> _signedOut = {launch, phone, code};
+  static const Set<String> _signedOut = {
+    launch,
+    phone,
+    code,
+    registrationRole,
+    registrationPhone,
+  };
 
   /// Where the session allows the user to be. Returns the location to go
   /// to instead of [location], or null to stay.
@@ -64,9 +77,27 @@ abstract final class Routes {
       case SignedOut():
         return _signedOut.contains(location) ? null : launch;
 
-      case SignedIn(:final user):
+      case SignedIn(:final user, :final registrationRole):
         if (!user.isProfileComplete) {
           return location == completeProfile ? null : completeProfile;
+        }
+
+        if (user.isOwner) {
+          if (location == owner) return ownerBookings;
+          if (_isOwnerRoute(location) ||
+              location == ownerProfile ||
+              location == ownerProfileEdit) {
+            return null;
+          }
+          return ownerBookings;
+        }
+
+        if (registrationRole == RegistrationRole.owner) {
+          return location == owner ? null : owner;
+        }
+
+        if (_isOwnerRoute(location)) {
+          return explore;
         }
         final isOutside =
             location == startUp ||
@@ -75,4 +106,7 @@ abstract final class Routes {
         return isOutside ? explore : null;
     }
   }
+
+  static bool _isOwnerRoute(String location) =>
+      location == owner || location.startsWith('$owner/');
 }

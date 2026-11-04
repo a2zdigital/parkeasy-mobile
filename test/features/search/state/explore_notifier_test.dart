@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:app/core/api/api_error_code.dart';
+import 'package:app/core/config/app_config.dart';
 import 'package:app/features/search/state/explore_notifier.dart';
+import 'package:app/features/search/state/place_search_notifier.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,6 +77,17 @@ void main() {
     expect(state().isEmpty, isTrue);
     expect(state().failure, isNull);
   });
+
+  test(
+    'an invalid parking response is an error, not an empty result',
+    () async {
+      harness.http.respond(200, {'data': 'not-a-list'});
+      await open();
+
+      expect(state().failure?.code, ApiErrorCode.unknown);
+      expect(state().isEmpty, isFalse);
+    },
+  );
 
   test('a failed first load is an error that can be retried', () async {
     harness.http.fail(DioExceptionType.connectionError);
@@ -162,4 +177,180 @@ void main() {
       reason: 'the filter choices stay when a filter finds nothing',
     );
   });
+
+  test('selecting a place searches around its coordinates', () async {
+    harness.http.respond(
+      200,
+      searchJson([
+        summaryJson(vehicles: ['car', 'two_wheeler']),
+      ]),
+    );
+    await open();
+
+    harness.http.respond(200, {
+      'data': [
+        {
+          'id': 'whitefield',
+          'name': 'Whitefield',
+          'address': 'Whitefield, Bengaluru, Karnataka, India',
+          'latitude': 12.9698,
+          'longitude': 77.75,
+        },
+      ],
+    });
+    await container.read(placeSearchProvider.notifier).search('Whitefield');
+
+    expect(harness.http.last.uri.path, '/api/v1/places/search');
+    expect(harness.http.last.uri.queryParameters['query'], 'Whitefield');
+
+    harness.http.respond(
+      200,
+      searchJson([
+        summaryJson(vehicles: ['car', 'two_wheeler']),
+      ]),
+    );
+    await notifier().selectOrigin(
+      const SearchOrigin(
+        latitude: 12.9698,
+        longitude: 77.75,
+        label: 'Whitefield',
+      ),
+    );
+
+    expect(state().origin.label, 'Whitefield');
+    expect(harness.http.last.uri.path, '/api/v1/parking-lots');
+    expect(harness.http.last.uri.queryParameters, {
+      'lat': '12.9698',
+      'lng': '77.75',
+      'radius_km': '25.0',
+      'page': '1',
+    });
+
+    harness.http.respond(200, searchJson(const []));
+    await notifier().selectVehicleType('two_wheeler');
+
+    expect(harness.http.last.uri.queryParameters, {
+      'lat': '12.9698',
+      'lng': '77.75',
+      'radius_km': '25.0',
+      'filter[vehicle_type]': 'two_wheeler',
+      'page': '1',
+    });
+  });
+
+  test('an empty place query is validated without a request', () async {
+    await container.read(placeSearchProvider.notifier).search('  ');
+
+    final placeState = container.read(placeSearchProvider);
+    expect(placeState.isInvalidQuery, isTrue);
+    expect(placeState.failure, isNull);
+    expect(harness.http.requests, isEmpty);
+  });
+
+  test('a failed place search can be retried', () async {
+    final places = container.read(placeSearchProvider.notifier);
+    harness.http.fail(DioExceptionType.connectionError);
+    await places.search('Whitefield');
+
+    expect(
+      container.read(placeSearchProvider).failure?.code,
+      ApiErrorCode.network,
+    );
+    expect(container.read(placeSearchProvider).query, 'Whitefield');
+
+    harness.http.respond(200, {
+      'data': [
+        {
+          'id': 'whitefield',
+          'name': 'Whitefield',
+          'address': 'Whitefield, Bengaluru, Karnataka, India',
+          'latitude': 12.9698,
+          'longitude': 77.75,
+        },
+      ],
+    });
+    await places.search('Whitefield');
+
+    expect(container.read(placeSearchProvider).failure, isNull);
+    expect(container.read(placeSearchProvider).suggestions, hasLength(1));
+  });
+
+  test('an older place search cannot replace newer suggestions', () async {
+    final places = container.read(placeSearchProvider.notifier);
+    final releaseOldResponse = Completer<void>();
+    harness.http.respondLater(200, {
+      'data': [
+        {
+          'id': 'old',
+          'name': 'Old result',
+          'address': 'Old address',
+          'latitude': 12.9,
+          'longitude': 77.6,
+        },
+      ],
+    }, release: releaseOldResponse);
+    final oldSearch = places.search('Old query');
+    await harness.http.waitForRequests(1);
+
+    harness.http.respond(200, {
+      'data': [
+        {
+          'id': 'new',
+          'name': 'New result',
+          'address': 'New address',
+          'latitude': 19.0,
+          'longitude': 72.8,
+        },
+      ],
+    });
+    await places.search('New query');
+    expect(
+      container.read(placeSearchProvider).suggestions.single.name,
+      'New result',
+    );
+
+    releaseOldResponse.complete();
+    await oldSearch;
+    expect(
+      container.read(placeSearchProvider).suggestions.single.name,
+      'New result',
+    );
+  });
+
+  test(
+    'a parking search for an older place cannot replace a newer location',
+    () async {
+      harness.http.respond(200, searchJson(const []));
+      await open();
+
+      final releaseOldResponse = Completer<void>();
+      harness.http.respondLater(
+        200,
+        searchJson([summaryJson(name: 'Old-location result')]),
+        release: releaseOldResponse,
+      );
+      final oldSearch = notifier().selectOrigin(
+        const SearchOrigin(latitude: 13, longitude: 77, label: 'Old location'),
+      );
+      await harness.http.waitForRequests(2);
+
+      harness.http.respond(
+        200,
+        searchJson([summaryJson(name: 'New-location result')]),
+      );
+      await notifier().selectOrigin(
+        const SearchOrigin(
+          latitude: 19,
+          longitude: 72.8,
+          label: 'New location',
+        ),
+      );
+
+      releaseOldResponse.complete();
+      await oldSearch;
+
+      expect(state().origin.label, 'New location');
+      expect(state().items.map((item) => item.name), ['New-location result']);
+    },
+  );
 }

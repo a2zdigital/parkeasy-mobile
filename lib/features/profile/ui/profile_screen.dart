@@ -2,7 +2,6 @@ import 'package:app/app/routes.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/app_buttons.dart';
-import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/confirm_dialog.dart';
 import 'package:app/features/auth/state/phone_number.dart';
@@ -47,54 +46,35 @@ class ProfileScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap.xl(),
-          Text(user.name ?? l10n.profileNameMissing, style: context.text.h2),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  user.name ?? l10n.profileNameMissing,
+                  style: context.text.h2,
+                ),
+              ),
+              TextAction(
+                label: l10n.profileEdit,
+                onPressed: () async {
+                  final saved = await context.push<bool>(
+                    user.isOwner ? Routes.ownerProfileEdit : Routes.profileEdit,
+                  );
+                  if (saved == true && context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
+                  }
+                },
+              ),
+            ],
+          ),
           const Gap.lg(),
           _Details(
             rows: [
               (l10n.profilePhone, PhoneNumber.format(user.phone)),
               (l10n.profileEmail, user.email ?? l10n.profileEmailMissing),
             ],
-          ),
-          const Gap.md(),
-          Semantics(
-            button: true,
-            child: AppCard(
-              onTap: () => context.push(
-                user.isOwner ? Routes.ownerBookings : Routes.owner,
-              ),
-              child: Row(
-                children: [
-                  ExcludeSemantics(
-                    child: Icon(
-                      Icons.storefront_outlined,
-                      size: AppSize.icon,
-                      color: context.colors.primary,
-                    ),
-                  ),
-                  const Gap.md(),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.profileOwnerArea, style: context.text.body),
-                        Text(
-                          l10n.profileOwnerAreaHint,
-                          style: context.text.bodySmall.copyWith(
-                            color: context.colors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ExcludeSemantics(
-                    child: Icon(
-                      Icons.chevron_right,
-                      color: context.colors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
           const Gap.xl(),
           TextAction(

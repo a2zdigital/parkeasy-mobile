@@ -15,7 +15,7 @@ String? ownerAccessText(AppLocalizations l10n, ApiException failure) =>
       _ => null,
     };
 
-/// Leaves the owner area for the customer's.
+/// Opens the owner's shared profile and account actions.
 class ExitOwnerAreaAction extends StatelessWidget {
   const ExitOwnerAreaAction({super.key});
 
@@ -23,6 +23,6 @@ class ExitOwnerAreaAction extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     tooltip: context.l10n.ownerExit,
     icon: const Icon(Icons.swap_horiz_outlined),
-    onPressed: () => context.go(Routes.profile),
+    onPressed: () => context.go(Routes.ownerProfile),
   );
 }

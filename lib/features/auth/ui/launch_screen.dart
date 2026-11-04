@@ -26,7 +26,7 @@ class LaunchScreen extends StatelessWidget {
         children: [
           const AppLogo(
             variant: AppLogoVariant.fullOnDark,
-            height: AppSize.touchTarget,
+            height: AppSize.touchTarget * 2,
           ),
           const Gap.xxl(),
           Text(
@@ -38,11 +38,26 @@ class LaunchScreen extends StatelessWidget {
             l10n.launchTagline,
             style: context.text.body.copyWith(color: colors.onNavy),
           ),
+          const Gap.xl(),
+          Text(
+            l10n.launchAccountHint,
+            style: context.text.bodySmall.copyWith(color: colors.onNavy),
+          ),
         ],
       ),
-      bottom: PrimaryButton(
-        label: l10n.launchGetStarted,
-        onPressed: () => context.push(Routes.phone),
+      bottom: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PrimaryButton(
+            label: l10n.launchLogIn,
+            onPressed: () => context.push(Routes.phone),
+          ),
+          const Gap.sm(),
+          SecondaryButton(
+            label: l10n.launchCreateAccount,
+            onPressed: () => context.push(Routes.registrationRole),
+          ),
+        ],
       ),
     );
   }

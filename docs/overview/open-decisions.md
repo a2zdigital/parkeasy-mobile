@@ -5,7 +5,6 @@ A decision that is not made yet. **Never decide one in code.** If a ticket depen
 | ID | Decision | Needed for | Status |
 |---|---|---|---|
 | MD-01 | Final logo and app icon artwork | Launch screen, store listing | Open; placeholders are in `assets/brand/`. Save the real images under the names in [brand-assets.md](../design/brand-assets.md) |
-| MD-02 | Map provider (Google Maps, Mapbox, or list-only first) and who owns the key and its cost | Search | Open |
 | MD-03 | Languages after English (Kannada, Hindi) | Text, layout | Open; all text goes through localisation from day one |
 | MD-04 | Minimum Android and iOS versions | Build settings, packages | Open; working assumption Android 7 (API 24), iOS 15 |
 | MD-05 | Crash and error reporting (Firebase Crashlytics or Sentry) | Supporting testers and the pilot | Open |
@@ -20,6 +19,7 @@ A decision that is not made yet. **Never decide one in code.** If a ticket depen
 
 | ID | Decision | Where |
 |---|---|---|
+| MD-02 | Google Places API (New) Text Search behind the API; the API team owns its server key and usage cost. Map SDK and map view remain deferred. | [ADR-0015](../../../parkeasy-api/docs/adr/0015-google-places-search.md) |
 | — | Application ID `com.swanlabstechnologies.parkeasy` | Project settings |
 | — | One app for both roles | [ADR-0001](../adr/0001-one-app-two-roles.md) |
 | — | Technology stack | [ADR-0002](../adr/0002-technology-stack.md) |

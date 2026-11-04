@@ -5,20 +5,29 @@ import 'package:flutter/material.dart';
 /// The standard card: white surface, a hairline border, no shadow. With
 /// [onTap] the whole card is one button.
 class AppCard extends StatelessWidget {
-  const AppCard({required this.child, this.onTap, super.key});
+  const AppCard({
+    required this.child,
+    this.onTap,
+    this.selected = false,
+    super.key,
+  });
 
   final Widget child;
   final VoidCallback? onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
 
     return Material(
-      color: colors.surface,
+      color: selected ? colors.primaryContainer : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.cardAll,
-        side: BorderSide(color: colors.border),
+        side: BorderSide(
+          color: selected ? colors.primary : colors.border,
+          width: selected ? AppSize.focusBorderWidth : AppSize.borderWidth,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

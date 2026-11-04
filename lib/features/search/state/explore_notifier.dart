@@ -1,4 +1,5 @@
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/config/app_config.dart';
 import 'package:app/core/providers.dart';
 import 'package:app/features/parking_lot/data/models/code_name.dart';
 import 'package:app/features/parking_lot/data/models/parking_lot_summary.dart';
@@ -11,6 +12,7 @@ final exploreProvider = NotifierProvider<ExploreNotifier, ExploreState>(
 
 class ExploreState {
   const ExploreState({
+    required this.origin,
     this.items = const [],
     this.isLoading = false,
     this.failure,
@@ -22,6 +24,7 @@ class ExploreState {
     this.vehicleTypes = const [],
   });
 
+  final SearchOrigin origin;
   final List<ParkingLotSummary> items;
 
   /// The first page is loading and there is nothing to show yet.
@@ -56,10 +59,11 @@ class ExploreNotifier extends Notifier<ExploreState> {
   ExploreState build() {
     _disposed = false;
     ref.onDispose(() => _disposed = true);
+    final origin = ref.read(appConfigProvider).searchOrigin;
     Future.microtask(() {
       if (!_disposed) load();
     });
-    return const ExploreState(isLoading: true);
+    return ExploreState(isLoading: true, origin: origin);
   }
 
   /// Loads the first page for the current filter. Also the pull-to-refresh
@@ -68,6 +72,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
     final generation = ++_generation;
     final hadItems = state.items.isNotEmpty;
     state = ExploreState(
+      origin: state.origin,
       items: state.items,
       isLoading: !hadItems,
       page: state.page,
@@ -81,6 +86,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         items: result.items,
         page: result.page,
         hasMore: result.hasMore,
@@ -93,6 +99,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         // A failed refresh keeps the list; a failed first load shows the error.
         items: state.items,
         failure: hadItems ? null : failure,
@@ -110,6 +117,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
 
     final generation = _generation;
     state = ExploreState(
+      origin: state.origin,
       items: state.items,
       page: state.page,
       hasMore: state.hasMore,
@@ -123,6 +131,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         items: [...state.items, ...result.items],
         page: result.page,
         hasMore: result.hasMore,
@@ -133,6 +142,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         items: state.items,
         page: state.page,
         hasMore: state.hasMore,
@@ -148,6 +158,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
     if (code == state.vehicleType) return;
 
     state = ExploreState(
+      origin: state.origin,
       isLoading: true,
       vehicleType: code,
       vehicleTypes: state.vehicleTypes,
@@ -155,15 +166,35 @@ class ExploreNotifier extends Notifier<ExploreState> {
     await load();
   }
 
+  Future<void> selectOrigin(SearchOrigin origin) async {
+    if (origin.latitude == state.origin.latitude &&
+        origin.longitude == state.origin.longitude) {
+      return;
+    }
+
+    state = ExploreState(
+      origin: origin,
+      isLoading: true,
+      vehicleType: state.vehicleType,
+      vehicleTypes: state.vehicleTypes,
+    );
+    await load();
+  }
+
+  Future<void> useDefaultOrigin() async {
+    await selectOrigin(ref.read(appConfigProvider).searchOrigin);
+  }
+
   Future<({List<ParkingLotSummary> items, int page, bool hasMore})> _fetch(
     int page,
   ) async {
+    final origin = state.origin;
     final config = ref.read(appConfigProvider);
     final result = await ref
         .read(searchRepositoryProvider)
         .near(
-          latitude: config.searchOrigin.latitude,
-          longitude: config.searchOrigin.longitude,
+          latitude: origin.latitude,
+          longitude: origin.longitude,
           radiusKm: config.searchRadiusKm,
           vehicleType: state.vehicleType,
           page: page,

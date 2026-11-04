@@ -9,9 +9,34 @@
     }
   },
   "launchTagline": "Find parking nearby, see the price, and book in a minute.",
+  "launchAccountHint": "Sign in or create an account with your mobile number.",
   "launchGetStarted": "Get started",
-  "phoneTitle": "Enter your phone number",
-  "phoneBody": "We'll send a code by SMS to check it's you.",
+  "phoneTitle": "Sign in or create an account",
+  "phoneBody": "Enter your mobile number. We'll send a one-time code by SMS.",
+  "phoneAccountHint": "New here? Your account is created after you verify your number.",
+  "launchLogIn": "Already have an account? Log in",
+  "launchCreateAccount": "Create a new account",
+  "registrationRoleTitle": "Choose how to use the app",
+  "registrationRoleQuestion": "How would you like to use {appName}?",
+  "@registrationRoleQuestion": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "registrationOwnerTitle": "Parking Owner",
+  "registrationOwnerDescription": "List and manage your parking facilities and bookings.",
+  "registrationCustomerTitle": "Customer",
+  "registrationCustomerDescription": "Find nearby parking and manage your bookings.",
+  "ownerVerifiedContact": "Your verified mobile number ({phone}) will be used as the contact number.",
+  "@ownerVerifiedContact": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
   "phoneLabel": "Phone number",
   "phoneHelper": "10 digits, without the country code",
   "phoneInvalid": "Enter a valid 10-digit mobile number.",
@@ -53,9 +78,10 @@
   },
   "otpResent": "A new code is on its way.",
   "otpChangeNumber": "Change number",
-  "nameTitle": "What should we call you?",
-  "nameBody": "Your name appears on your bookings.",
-  "nameLabel": "Full name",
+  "nameTitle": "Complete your profile",
+  "nameBody": "Add a name for your bookings and save it to finish setting up your profile.",
+  "nameVerifiedPhone": "Verified mobile number",
+  "nameLabel": "Full name (required)",
   "nameRequired": "Enter your name.",
   "emailLabel": "Email (optional)",
   "emailInvalid": "Enter a valid email address.",
@@ -69,6 +95,15 @@
   "profilePhone": "Phone",
   "profileEmail": "Email",
   "profileEmailMissing": "Not added",
+  "profileEdit": "Edit profile",
+  "profileEditTitle": "Edit profile",
+  "profileEditContactNotEditable": "Phone number and email can't be changed here.",
+  "profileEditPhoneNotEditable": "Phone number can't be changed here.",
+  "profileEditNameInvalid": "Enter a name between 2 and 120 characters.",
+  "profileEditEmailInvalid": "Enter a valid email address.",
+  "profileEditEmailRejected": "This email address could not be saved. Check that it is valid and not already in use.",
+  "profileSaveChanges": "Save changes",
+  "profileSaved": "Profile updated.",
   "profileSignOut": "Sign out",
   "signOutConfirmTitle": "Sign out?",
   "signOutConfirmBody": "You'll need a new code to sign in again on this phone.",
@@ -108,16 +143,21 @@
       }
     }
   },
+  "exploreLocationLabel": "Search location",
+  "exploreLocationHint": "Enter a location",
+  "exploreLocationHelper": "Choose a matching place to search nearby.",
+  "exploreLocationRequired": "Enter at least two characters to find a place.",
+  "exploreLocationClear": "Clear location search",
+  "exploreSearchLocation": "Find location",
+  "exploreSearchingLocations": "Searching locations",
+  "exploreLocationNoResults": "No matching places found. Try another location.",
+  "exploreUseDefaultLocation": "Use default location",
+  "exploreGoogleMapsAttribution": "Google Maps",
   "exploreAllVehicles": "All vehicles",
   "exploreEmptyTitle": "No parking found",
-  "exploreEmptyBody": "Nothing within {km} km matches. Try another vehicle type.",
-  "@exploreEmptyBody": {
-    "placeholders": {
-      "km": {
-        "type": "int"
-      }
-    }
-  },
+  "exploreEmptyBody": "No parking is available near this location yet. Try another location.",
+  "exploreNoMatchingTitle": "No matching parking found",
+  "exploreNoMatchingBody": "Try another vehicle type or increase the search radius.",
   "exploreLoadMoreFailed": "Couldn't load more.",
   "distanceMetres": "{metres} m",
   "@distanceMetres": {
@@ -275,6 +315,10 @@
   "bookingsEmptyTitle": "No bookings yet",
   "bookingsEmptyBody": "When you book parking, it appears here.",
   "bookingsFind": "Find parking",
+  "bookingsUpcoming": "Upcoming",
+  "bookingsPast": "Past",
+  "bookingsPastEmptyTitle": "No past bookings",
+  "bookingsPastEmptyBody": "Bookings that have ended or were cancelled appear here.",
   "bookingTitle": "Booking",
   "bookingReference": "Reference",
   "bookingTotal": "Total",
@@ -395,7 +439,7 @@
   "ownerExit": "Back to finding parking",
   "ownerApplyTitle": "Become an owner",
   "ownerApplyBody": "Tell us about your parking business. We review each application before you can list a facility.",
-  "ownerBusinessName": "Business name",
+  "ownerBusinessName": "Business name (required)",
   "ownerBusinessNameRequired": "Enter your business name.",
   "ownerContactPhone": "Contact phone",
   "ownerApplySubmit": "Send application",

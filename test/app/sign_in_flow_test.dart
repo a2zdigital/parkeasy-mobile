@@ -26,9 +26,20 @@ void main() {
   ) async {
     final h = await launch(tester);
 
-    expect(find.text('Get started'), findsOneWidget);
-    await tester.tap(find.text('Get started'));
+    expect(find.text('Already have an account? Log in'), findsOneWidget);
+    expect(
+      find.text('Sign in or create an account with your mobile number.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Already have an account? Log in'));
     await tester.pumpAndSettle();
+    expect(find.text('Sign in or create an account'), findsOneWidget);
+    expect(
+      find.text(
+        'New here? Your account is created after you verify your number.',
+      ),
+      findsOneWidget,
+    );
 
     // An invalid number is explained and nothing is sent.
     await tester.enterText(find.byType(TextField), '12345');
@@ -65,15 +76,32 @@ void main() {
     await tester.enterText(find.byType(TextField), '123456');
     await tester.pumpAndSettle();
 
-    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Complete your profile'), findsOneWidget);
+    expect(find.text('Verified mobile number'), findsOneWidget);
+    expect(find.text('+91 90000 00001'), findsOneWidget);
     expect(h.tokens.token?.value, '12|secret');
 
     await tester.tap(find.widgetWithText(PrimaryButton, 'Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Enter your name.'), findsOneWidget);
 
-    h.http.respond(200, {'data': userJson(name: 'Asha Rao')});
+    h.http.fail(DioExceptionType.connectionError);
     await tester.enterText(find.byType(TextField).first, 'Asha Rao');
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Complete your profile'), findsOneWidget);
+    expect(
+      find.text("You're offline. Check your connection and try again."),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+      'Asha Rao',
+    );
+    expect(find.text('Explore'), findsNothing);
+
+    h.http.respond(200, {'data': userJson(name: 'Asha Rao')});
     await tester.tap(find.widgetWithText(PrimaryButton, 'Continue'));
     await tester.pumpAndSettle();
 
@@ -89,7 +117,7 @@ void main() {
 
     await launch(tester, harness: h);
 
-    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Already have an account? Log in'), findsNothing);
     expect(find.text('Explore'), findsWidgets);
   });
 
@@ -120,7 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(h.tokens.token, isNull);
-    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Already have an account? Log in'), findsOneWidget);
   });
 
   testWidgets('offline at start-up: an explanation and a retry, not sign-in', (
@@ -134,7 +162,7 @@ void main() {
       find.text("You're offline. Check your connection and try again."),
       findsOneWidget,
     );
-    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Already have an account? Log in'), findsNothing);
     expect(h.tokens.token, isNotNull);
 
     h.http.respond(200, {'data': userJson()});

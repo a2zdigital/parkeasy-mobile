@@ -12,12 +12,16 @@ class ProfileRepository {
 
   final ApiClient _api;
 
-  /// Changes the signed-in user's name and email. A null email is left
-  /// as it is.
-  Future<User> update({required String name, String? email}) async {
+  /// Changes the signed-in user's name and, when [includeEmail] is true,
+  /// their email. A null included email clears it.
+  Future<User> update({
+    String? name,
+    String? email,
+    bool includeEmail = false,
+  }) async {
     final envelope = await _api.patch(
       '/me',
-      body: {'name': name, if (email != null) 'email': email},
+      body: {if (name != null) 'name': name, if (includeEmail) 'email': email},
     );
     return User.fromJson(ApiClient.object(envelope));
   }

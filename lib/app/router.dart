@@ -1,11 +1,13 @@
 import 'package:app/app/routes.dart';
 import 'package:app/app/tab_shell.dart';
 import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_controller.dart';
 import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/auth/ui/launch_screen.dart';
 import 'package:app/features/auth/ui/otp_screen.dart';
 import 'package:app/features/auth/ui/phone_screen.dart';
+import 'package:app/features/auth/ui/registration_role_screen.dart';
 import 'package:app/features/auth/ui/start_up_screen.dart';
 import 'package:app/features/booking/state/booking_draft.dart';
 import 'package:app/features/booking/ui/booking_details_screen.dart';
@@ -25,6 +27,7 @@ import 'package:app/features/owner/ui/pool_form_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
 import 'package:app/features/payment/ui/payment_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
+import 'package:app/features/profile/ui/edit_profile_screen.dart';
 import 'package:app/features/profile/ui/profile_screen.dart';
 import 'package:app/features/search/ui/explore_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -38,10 +41,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     ref.read(sessionControllerProvider),
   );
   ref
-    ..listen(
-      sessionControllerProvider,
-      (_, next) => sessionChanged.value = next,
-    )
+    ..listen(sessionControllerProvider, (previous, next) {
+      final routingChanged = switch ((previous, next)) {
+        (
+          SignedIn(user: final a, registrationRole: final roleA),
+          SignedIn(user: final b, registrationRole: final roleB),
+        ) =>
+          a.isProfileComplete != b.isProfileComplete ||
+              !listEquals(a.roles, b.roles) ||
+              roleA != roleB,
+        _ => previous?.runtimeType != next.runtimeType,
+      };
+      if (routingChanged) {
+        sessionChanged.value = next;
+      }
+    })
     ..onDispose(sessionChanged.dispose);
 
   final router = GoRouter(
@@ -61,6 +75,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.phone,
         builder: (context, state) => const PhoneScreen(),
+      ),
+      GoRoute(
+        path: Routes.registrationRole,
+        builder: (context, state) => const RegistrationRoleScreen(),
+      ),
+      GoRoute(
+        path: Routes.registrationPhone,
+        redirect: (context, state) =>
+            state.extra is RegistrationRole ? null : Routes.registrationRole,
+        builder: (context, state) =>
+            PhoneScreen(registrationRole: state.extra! as RegistrationRole),
       ),
       GoRoute(
         path: Routes.code,
@@ -151,6 +176,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.profile,
                 builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -228,6 +259,28 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.ownerEarnings,
                 builder: (context, state) => const OwnerEarningsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerActivity,
+                builder: (context, state) => const ActivityScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerProfile,
+                builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,3 +1,4 @@
+
 # Changelog
 
 What changed for the people who use or test the app. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Rules: [docs/process/changelog.md](docs/process/changelog.md).
@@ -5,6 +6,20 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 ## [Unreleased]
 
 ### Added
+- **auth:** Separate existing-account login from registration, add pre-OTP customer/owner selection, and complete registration through supported profile and owner-application APIs.
+- **explore:** Search by a selected place and view nearby parking; the configured location remains available as the default.
+- **profile:** Edit the profile name through the existing profile-update endpoint.
+- **profile:** Edit and validate the email address through the existing profile-update endpoint.
+- **booking:** Separate customer bookings into Upcoming and Past tabs using the API's status filters.
+
+### Changed
+- **explore:** Keep the configured default as the active area while starting the editable location search field empty.
+- **explore:** Distinguish empty parking results from filtered no-match results and show a specific no-place-match message.
+- **api:** Report offline only for actual connection failures; unknown transport errors remain unexpected errors.
+
+- **auth:** Show a retryable error instead of leaving startup loading when secure token storage fails.
+- **auth:** Sign out locally without waiting for the server to revoke the session.
+- **auth:** Refined the sign-in entry and phone screens, and show the verified mobile number while a new user completes their profile.
 - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).
 - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
 - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
@@ -22,3 +37,14 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
 - **core:** Data model: money, timestamps, error codes and every API model, tolerant of unknown fields and values.
 - **design:** Placeholder brand images under fixed names in `assets/brand/`.
 - **project:** The app's display name has a single source (`app_identity.json`); the check fails if the name is typed anywhere in code.
+
+### Changed
+- **owner:** Removed the Profile shortcut that duplicated the Bookings tab.
+- **auth:** Route users into separate customer and owner navigation shells using backend-confirmed roles; hide Owner Area from customer Profile and keep pending applicants in the application flow.
+- **profile:** Distinguish invalid email syntax from email addresses rejected by the API, such as an address already in use.
+- **activity:** Open owner approval-request notifications in the owner booking screen while preserving customer booking links.
+- **explore:** Keep the configured default as the active area while starting the editable location search field empty.
+- **explore:** Distinguish empty parking results from filtered no-match results and show a specific no-place-match message.
+- **api:** Report offline only for actual connection failures; unknown transport errors remain unexpected errors.
+- **auth:** Show a retryable error instead of leaving startup loading when secure token storage fails.
+- **auth:** Sign out locally without waiting for the server to revoke the session.
