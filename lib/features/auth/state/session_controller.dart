@@ -8,6 +8,7 @@ import 'package:app/features/auth/data/auth_repository.dart';
 import 'package:app/features/auth/data/models/session.dart';
 import 'package:app/features/auth/data/models/user.dart';
 import 'package:app/features/auth/state/session_state.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final sessionControllerProvider =
@@ -32,22 +33,34 @@ class SessionController extends Notifier<SessionState> {
   Future<void> restore() async {
     state = const SessionUnknown();
 
-    final token = await ref.read(tokenStoreProvider).read();
-    final now = ref.read(clockProvider)().toUtc();
-    if (token == null || token.isExpiredAt(now)) {
-      await expire();
-      return;
-    }
-
     try {
-      state = SignedIn(await ref.read(authRepositoryProvider).currentUser());
-    } on ApiException catch (failure) {
-      if (failure.code == ApiErrorCode.unauthenticated) {
+      final token = await ref.read(tokenStoreProvider).read();
+      final now = ref.read(clockProvider)().toUtc();
+      if (token == null || token.isExpiredAt(now)) {
         await expire();
-      } else {
-        state = SessionRestoreFailed(failure);
+        return;
       }
+
+      try {
+        state = SignedIn(await ref.read(authRepositoryProvider).currentUser());
+      } on ApiException catch (failure) {
+        if (failure.code == ApiErrorCode.unauthenticated) {
+          await expire();
+        } else {
+          state = SessionRestoreFailed(failure);
+        }
+      }
+    } on PlatformException {
+      _failRestoreForStorage();
+    } on MissingPluginException {
+      _failRestoreForStorage();
     }
+  }
+
+  void _failRestoreForStorage() {
+    state = const SessionRestoreFailed(
+      ApiException(code: ApiErrorCode.unknown),
+    );
   }
 
   /// After a sign-in code was verified.
@@ -68,12 +81,30 @@ class SessionController extends Notifier<SessionState> {
   /// The user chose to sign out. The server is told, but signing out on
   /// this device never waits for or depends on the answer.
   Future<void> signOut() async {
+    final requestPrepared = Completer<void>();
+    final logout = ref
+        .read(authRepositoryProvider)
+        .logout(
+          onRequestPrepared: () {
+            if (!requestPrepared.isCompleted) requestPrepared.complete();
+          },
+        );
+    unawaited(_ignoreExpectedLogoutFailure(logout));
     try {
-      await ref.read(authRepositoryProvider).logout();
+      await Future.any<void>([requestPrepared.future, logout]);
     } on ApiException {
-      // Offline or already invalid: the local sign-out still happens.
+      // Offline or already invalid: local sign-out still succeeds.
+    } finally {
+      await expire();
     }
-    await expire();
+  }
+
+  Future<void> _ignoreExpectedLogoutFailure(Future<void> logout) async {
+    try {
+      await logout;
+    } on ApiException {
+      // Remote revocation is best-effort once the local session is cleared.
+    }
   }
 
   /// The token is gone or no longer accepted.

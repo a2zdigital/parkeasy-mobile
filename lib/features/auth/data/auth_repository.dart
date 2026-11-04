@@ -40,5 +40,7 @@ class AuthRepository {
       User.fromJson(ApiClient.object(await _api.get('/me')));
 
   /// Ends this device's session on the server.
-  Future<void> logout() => _api.post('/auth/logout');
+  Future<void> logout({void Function()? onRequestPrepared}) async {
+    await _api.post('/auth/logout', onRequestPrepared: onRequestPrepared);
+  }
 }
