@@ -12,9 +12,9 @@ import '../support/fakes.dart';
 import '../support/harness.dart';
 
 void main() {
-  Future<Harness> openProfile(WidgetTester tester) async {
+  Future<Harness> openProfile(WidgetTester tester, {String? email}) async {
     final harness = Harness(token: validToken())
-      ..http.respond(200, {'data': userJson()});
+      ..http.respond(200, {'data': userJson(email: email)});
     await tester.pumpWidget(
       ProviderScope(overrides: harness.overrides, child: const App()),
     );
@@ -24,7 +24,9 @@ void main() {
     return harness;
   }
 
-  testWidgets('opens name-only profile editing from Profile', (tester) async {
+  testWidgets('opens profile editing with the current name and email', (
+    tester,
+  ) async {
     await openProfile(tester);
 
     expect(find.text('Edit profile'), findsOneWidget);
@@ -33,13 +35,15 @@ void main() {
 
     expect(find.byType(EditProfileScreen), findsOneWidget);
     expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
       'Asha',
     );
     expect(
-      find.text("Phone number and email can't be changed here."),
-      findsOneWidget,
+      tester.widget<TextField>(find.byType(TextField).last).controller?.text,
+      '',
     );
+    expect(find.text("Phone number can't be changed here."), findsOneWidget);
+    expect(find.text('Email (optional)'), findsOneWidget);
   });
 
   testWidgets('validates a blank name without sending an update', (
@@ -48,7 +52,7 @@ void main() {
     final harness = await openProfile(tester);
     await tester.tap(find.text('Edit profile'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '');
+    await tester.enterText(find.byType(TextField).first, '');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
@@ -56,7 +60,7 @@ void main() {
     expect(find.byType(EditProfileScreen), findsOneWidget);
     expect(find.byType(ProfileScreen), findsNothing);
 
-    await tester.enterText(find.byType(TextField), 'A');
+    await tester.enterText(find.byType(TextField).first, 'A');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
@@ -81,7 +85,7 @@ void main() {
     await tester.pumpAndSettle();
 
     harness.http.respond(200, {'data': userJson(name: 'Asha Rao')});
-    await tester.enterText(find.byType(TextField), '  Asha Rao  ');
+    await tester.enterText(find.byType(TextField).first, '  Asha Rao  ');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
@@ -95,6 +99,44 @@ void main() {
     expect(harness.http.lastBody, {'name': 'Asha Rao'});
   });
 
+  testWidgets('validates and saves the email address', (tester) async {
+    final harness = await openProfile(tester);
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).last, 'not-an-email');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enter a valid email address.'), findsOneWidget);
+    expect(
+      harness.http.requests.where(
+        (request) => request.method == 'PATCH' && request.path == '/me',
+      ),
+      isEmpty,
+    );
+
+    harness.http.respond(200, {
+      'data': userJson(name: 'Asha Rao', email: 'deeptimetri6@gmail.com'),
+    });
+    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
+    await tester.enterText(
+      find.byType(TextField).last,
+      '  deeptimetri6@gmail.com ',
+    );
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditProfileScreen), findsNothing);
+    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(find.text('Asha Rao'), findsOneWidget);
+    expect(find.text('deeptimetri6@gmail.com'), findsOneWidget);
+    expect(harness.http.lastBody, {
+      'name': 'Asha Rao',
+      'email': 'deeptimetri6@gmail.com',
+    });
+  });
+
   testWidgets('shows a loading state while the profile update is pending', (
     tester,
   ) async {
@@ -106,7 +148,7 @@ void main() {
     harness.http.respondLater(200, {
       'data': userJson(name: 'Asha Rao'),
     }, release: releaseResponse);
-    await tester.enterText(find.byType(TextField), 'Asha Rao');
+    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
     await tester.tap(find.text('Save changes'));
     await tester.pump();
 
@@ -134,7 +176,7 @@ void main() {
       'data': userJson(name: 'Asha Rao'),
     }, release: releaseResponse);
 
-    await tester.enterText(find.byType(TextField), 'Asha Rao');
+    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
     await tester.tap(find.text('Save changes'));
     await tester.pump();
 
@@ -178,7 +220,7 @@ void main() {
         'request_id': 'profile-update-ref',
       },
     });
-    await tester.enterText(find.byType(TextField), 'Asha Rao');
+    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
@@ -208,7 +250,7 @@ void main() {
         },
       },
     });
-    await tester.enterText(find.byType(TextField), 'Asha Rao');
+    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
@@ -219,5 +261,38 @@ void main() {
       find.text('Enter a name between 2 and 120 characters.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('shows API email validation separately from format errors', (
+    tester,
+  ) async {
+    final harness = await openProfile(tester);
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+
+    harness.http.respond(422, {
+      'error': {
+        'code': 'VALIDATION_FAILED',
+        'message': 'Invalid.',
+        'details': {
+          'email': ['The email has already been taken.'],
+        },
+      },
+    });
+    await tester.enterText(
+      find.byType(TextField).last,
+      'deeptimetri6@gmail.com',
+    );
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditProfileScreen), findsOneWidget);
+    expect(
+      find.text(
+        'This email address could not be saved. Check that it is valid and not already in use.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Enter a valid email address.'), findsNothing);
   });
 }

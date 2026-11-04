@@ -1,5 +1,6 @@
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/features/auth/data/models/user.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 
 /// Whether somebody is signed in. The router shows a different part of
 /// the app for each case.
@@ -26,7 +27,8 @@ class SignedOut extends SessionState {
 }
 
 class SignedIn extends SessionState {
-  const SignedIn(this.user);
+  const SignedIn(this.user, {this.registrationRole});
 
   final User user;
+  final RegistrationRole? registrationRole;
 }

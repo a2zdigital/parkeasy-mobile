@@ -1,7 +1,10 @@
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/profile/data/profile_repository.dart';
+import 'package:app/features/profile/state/profile_validation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final completeProfileProvider =
@@ -27,8 +30,6 @@ class CompleteProfileState {
 
 class CompleteProfileNotifier
     extends AutoDisposeNotifier<CompleteProfileState> {
-  static final RegExp _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
   @override
   CompleteProfileState build() => const CompleteProfileState();
 
@@ -40,8 +41,7 @@ class CompleteProfileNotifier
     final trimmedName = name.trim();
     final trimmedEmail = email.trim();
     final nameMissing = trimmedName.isEmpty;
-    final emailInvalid =
-        trimmedEmail.isNotEmpty && !_email.hasMatch(trimmedEmail);
+    final emailInvalid = !isOptionalProfileEmailValid(trimmedEmail);
     if (nameMissing || emailInvalid) {
       state = CompleteProfileState(
         isNameMissing: nameMissing,
@@ -57,8 +57,19 @@ class CompleteProfileNotifier
           .update(
             name: trimmedName,
             email: trimmedEmail.isEmpty ? null : trimmedEmail,
+            includeEmail: trimmedEmail.isNotEmpty,
           );
-      ref.read(sessionControllerProvider.notifier).updateUser(user);
+      final session = ref.read(sessionControllerProvider);
+      if (session is SignedIn &&
+          session.registrationRole == RegistrationRole.owner) {
+        ref.read(sessionControllerProvider.notifier).updateUser(user);
+      } else if (session is SignedIn && session.registrationRole != null) {
+        await ref
+            .read(sessionControllerProvider.notifier)
+            .finishRegistration(user: user);
+      } else {
+        ref.read(sessionControllerProvider.notifier).updateUser(user);
+      }
       state = const CompleteProfileState();
     } on ApiException catch (failure) {
       // The API's own validation: show it on the fields it names.

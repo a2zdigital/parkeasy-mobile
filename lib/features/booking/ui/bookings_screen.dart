@@ -6,6 +6,7 @@ import 'package:app/core/time/facility_time.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
+import 'package:app/core/widgets/app_filter_chip.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/features/booking/data/models/booking.dart';
@@ -24,6 +25,7 @@ class BookingsScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final state = ref.watch(bookingsProvider);
     final notifier = ref.read(bookingsProvider.notifier);
+    final selectedTab = ref.watch(customerBookingTabProvider);
     final failure = state.failure;
     final loadMoreFailure = state.loadMoreFailure;
 
@@ -45,12 +47,18 @@ class BookingsScreen extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         child: EmptyState(
           icon: Icons.event_note_outlined,
-          title: l10n.bookingsEmptyTitle,
-          body: l10n.bookingsEmptyBody,
-          action: SecondaryButton(
-            label: l10n.bookingsFind,
-            onPressed: () => context.go(Routes.explore),
-          ),
+          title: selectedTab == CustomerBookingTab.upcoming
+              ? l10n.bookingsEmptyTitle
+              : l10n.bookingsPastEmptyTitle,
+          body: selectedTab == CustomerBookingTab.upcoming
+              ? l10n.bookingsEmptyBody
+              : l10n.bookingsPastEmptyBody,
+          action: selectedTab == CustomerBookingTab.upcoming
+              ? SecondaryButton(
+                  label: l10n.bookingsFind,
+                  onPressed: () => context.go(Routes.explore),
+                )
+              : null,
         ),
       );
     } else {
@@ -116,7 +124,45 @@ class BookingsScreen extends ConsumerWidget {
     return AppScaffold(
       title: l10n.tabBookings,
       scrollable: false,
-      body: RefreshIndicator(onRefresh: notifier.load, child: content),
+      body: Column(
+        children: [
+          const Gap.md(),
+          Row(
+            children: [
+              Expanded(
+                child: AppFilterChip(
+                  label: l10n.bookingsUpcoming,
+                  isSelected: selectedTab == CustomerBookingTab.upcoming,
+                  onPressed: selectedTab == CustomerBookingTab.upcoming
+                      ? null
+                      : () =>
+                            ref
+                                    .read(customerBookingTabProvider.notifier)
+                                    .state =
+                                CustomerBookingTab.upcoming,
+                ),
+              ),
+              const Gap.sm(),
+              Expanded(
+                child: AppFilterChip(
+                  label: l10n.bookingsPast,
+                  isSelected: selectedTab == CustomerBookingTab.past,
+                  onPressed: selectedTab == CustomerBookingTab.past
+                      ? null
+                      : () =>
+                            ref
+                                    .read(customerBookingTabProvider.notifier)
+                                    .state =
+                                CustomerBookingTab.past,
+                ),
+              ),
+            ],
+          ),
+          Expanded(
+            child: RefreshIndicator(onRefresh: notifier.load, child: content),
+          ),
+        ],
+      ),
     );
   }
 }

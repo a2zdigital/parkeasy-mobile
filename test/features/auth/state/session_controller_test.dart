@@ -98,6 +98,21 @@ void main() {
       expect(harness.http.last.path, '/me');
     });
 
+    test('restores owner access only from the backend role', () async {
+      start(token: validToken());
+      harness.tokens.registrationIntent = 'owner';
+      harness.http.respond(200, {
+        'data': userJson(roles: ['customer', 'owner']),
+      });
+
+      await controller().restore();
+
+      final restored = state() as SignedIn;
+      expect(restored.user.isOwner, isTrue);
+      expect(restored.registrationRole, isNull);
+      expect(harness.tokens.registrationIntent, isNull);
+    });
+
     test('when the API refuses the token: signed out, token removed', () async {
       start(token: validToken());
       harness.http.respond(401, errorUnauthenticated);
@@ -182,6 +197,7 @@ void main() {
 
     test('tells the server, removes the token and signs out', () async {
       start(token: validToken());
+      harness.tokens.registrationIntent = 'owner';
       harness.http.respond(200, {'data': <String, Object?>{}});
 
       await controller().signOut();
@@ -190,6 +206,7 @@ void main() {
       expect(harness.http.last.path, '/auth/logout');
       expect(harness.http.last.headers['authorization'], 'Bearer token-1');
       expect(harness.tokens.token, isNull);
+      expect(harness.tokens.registrationIntent, isNull);
       expect(state(), isA<SignedOut>());
     });
 

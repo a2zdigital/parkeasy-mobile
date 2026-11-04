@@ -23,34 +23,128 @@ void main() {
     BookingsState state() => container.read(bookingsProvider);
 
     test('loads newest first and pages by cursor', () async {
-      harness.http.respond(
-        200,
-        bookingsJson([bookingJson()], nextCursor: 'next-1'),
-      );
+      for (var index = 0; index < 3; index++) {
+        harness.http.respond(
+          200,
+          bookingsJson([bookingJson()], nextCursor: 'next-1'),
+        );
+      }
       container.listen(bookingsProvider, (_, _) {});
       await settle();
 
       expect(state().items, hasLength(1));
       expect(state().hasMore, isTrue);
 
-      harness.http.respond(
-        200,
-        bookingsJson([bookingJson(id: 'second', reference: 'BK-2')]),
-      );
+      for (var index = 0; index < 3; index++) {
+        harness.http.respond(
+          200,
+          bookingsJson([bookingJson(id: 'second', reference: 'BK-2')]),
+        );
+      }
       await container.read(bookingsProvider.notifier).loadMore();
 
-      expect(harness.http.last.uri.queryParameters['cursor'], 'next-1');
+      final bookingRequests = harness.http.requests.where(
+        (request) => request.path == '/bookings',
+      );
+      expect(
+        bookingRequests.map(
+          (request) => request.uri.queryParameters['filter[status]'],
+        ),
+        [
+          'pending_approval',
+          'awaiting_payment',
+          'confirmed',
+          'pending_approval',
+          'awaiting_payment',
+          'confirmed',
+        ],
+      );
+      expect(
+        bookingRequests
+            .skip(3)
+            .map((request) => request.uri.queryParameters['cursor']),
+        ['next-1', 'next-1', 'next-1'],
+      );
       expect(state().items.map((b) => b.reference), ['BK-K2M5XCN4', 'BK-2']);
       expect(state().hasMore, isFalse);
     });
 
+    test('requests documented terminal statuses in the Past tab', () async {
+      harness.http.stubs['/bookings'] = bookingsJson(const []);
+      container.listen(bookingsProvider, (_, _) {});
+      await settle();
+      container.read(customerBookingTabProvider.notifier).state =
+          CustomerBookingTab.past;
+      await settle();
+
+      expect(
+        harness.http.requests
+            .where((request) => request.path == '/bookings')
+            .skip(3)
+            .map((request) => request.uri.queryParameters['filter[status]']),
+        ['rejected', 'cancelled', 'completed', 'expired', 'no_show'],
+      );
+    });
+
+    test(
+      'keeps pages on load failure and retries only failed status streams',
+      () async {
+        for (var index = 0; index < 3; index++) {
+          harness.http.respond(
+            200,
+            bookingsJson([bookingJson()], nextCursor: 'next-$index'),
+          );
+        }
+        container.listen(bookingsProvider, (_, _) {});
+        await settle();
+
+        harness.http
+          ..fail(DioExceptionType.receiveTimeout)
+          ..respond(
+            200,
+            bookingsJson([bookingJson(id: 'second', reference: 'BK-2')]),
+          )
+          ..respond(
+            200,
+            bookingsJson([bookingJson(id: 'third', reference: 'BK-3')]),
+          );
+        await container.read(bookingsProvider.notifier).loadMore();
+
+        expect(state().items, hasLength(3));
+        expect(state().loadMoreFailure?.code, ApiErrorCode.timeout);
+        expect(state().hasMore, isTrue);
+
+        harness.http.respond(
+          200,
+          bookingsJson([bookingJson(id: 'fourth', reference: 'BK-4')]),
+        );
+        await container.read(bookingsProvider.notifier).loadMore();
+
+        final bookingRequests = harness.http.requests.where(
+          (request) => request.path == '/bookings',
+        );
+        expect(bookingRequests, hasLength(7));
+        expect(
+          bookingRequests.last.uri.queryParameters['filter[status]'],
+          'pending_approval',
+        );
+        expect(bookingRequests.last.uri.queryParameters['cursor'], 'next-0');
+        expect(state().items, hasLength(4));
+        expect(state().loadMoreFailure, isNull);
+        expect(state().hasMore, isFalse);
+      },
+    );
+
     test('no bookings is empty, not an error; a failure is an error', () async {
-      harness.http.respond(200, bookingsJson(const []));
+      harness.http.stubs['/bookings'] = bookingsJson(const []);
       container.listen(bookingsProvider, (_, _) {});
       await settle();
       expect(state().isEmpty, isTrue);
 
+      harness.http.stubs.remove('/bookings');
       harness.http.fail(DioExceptionType.connectionError);
+      harness.http.respond(200, bookingsJson(const []));
+      harness.http.respond(200, bookingsJson(const []));
       container.invalidate(bookingsProvider);
       await settle();
       expect(state().failure?.code, ApiErrorCode.network);

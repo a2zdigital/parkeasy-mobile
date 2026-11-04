@@ -16,9 +16,9 @@ import 'package:intl/intl.dart';
 class ActivityScreen extends ConsumerWidget {
   const ActivityScreen({super.key});
 
-  /// Notification types sent to the owner of a facility. Everything else
-  /// about a booking is opened as the customer's booking.
-  static const _ownerTypes = {'booking.approval_requested'};
+  /// This notification is sent to the owner; other booking notifications
+  /// open the customer's booking.
+  static const _ownerBookingTypes = {'booking.approval_requested'};
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,11 +52,10 @@ class ActivityScreen extends ConsumerWidget {
             notifier.markRead(notification);
             final bookingId = notification.bookingId;
             if (bookingId != null) {
-              context.push(
-                _ownerTypes.contains(notification.type)
-                    ? Routes.ownerBooking(bookingId)
-                    : Routes.booking(bookingId),
-              );
+              final route = _ownerBookingTypes.contains(notification.type)
+                  ? Routes.ownerBooking(bookingId)
+                  : Routes.booking(bookingId);
+              context.push(route);
             }
           },
         ),

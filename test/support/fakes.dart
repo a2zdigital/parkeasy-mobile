@@ -22,6 +22,7 @@ class InMemoryTokenStore implements TokenStore {
   InMemoryTokenStore([this.token]);
 
   StoredToken? token;
+  String? registrationIntent;
 
   @override
   Future<StoredToken?> read() async => token;
@@ -30,7 +31,20 @@ class InMemoryTokenStore implements TokenStore {
   Future<void> write(StoredToken token) async => this.token = token;
 
   @override
-  Future<void> clear() async => token = null;
+  Future<String?> readRegistrationIntent() async => registrationIntent;
+
+  @override
+  Future<void> writeRegistrationIntent(String intent) async =>
+      registrationIntent = intent;
+
+  @override
+  Future<void> clearRegistrationIntent() async => registrationIntent = null;
+
+  @override
+  Future<void> clear() async {
+    token = null;
+    registrationIntent = null;
+  }
 }
 
 StoredToken validToken([String value = 'token-1']) =>
@@ -100,6 +114,7 @@ class FakeHttpAdapter implements HttpClientAdapter {
     int status,
     Object? body, {
     required Completer<void> release,
+    Map<String, String>? headers,
   }) {
     _answers.add(
       _DeferredAnswer(
@@ -110,6 +125,8 @@ class FakeHttpAdapter implements HttpClientAdapter {
             Headers.contentTypeHeader: [
               body is String ? 'text/html' : Headers.jsonContentType,
             ],
+            for (final entry in (headers ?? const <String, String>{}).entries)
+              entry.key: [entry.value],
           },
         ),
         release.future,

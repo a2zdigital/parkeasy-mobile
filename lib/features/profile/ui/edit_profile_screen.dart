@@ -23,25 +23,37 @@ class EditProfileScreen extends ConsumerStatefulWidget {
 
 class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _name;
+  late final TextEditingController _email;
+  late final String _initialName;
+  late final String? _initialEmail;
 
   @override
   void initState() {
     super.initState();
     final session = ref.read(sessionControllerProvider);
-    _name = TextEditingController(
-      text: session is SignedIn ? session.user.name ?? '' : '',
-    );
+    _initialName = session is SignedIn ? session.user.name ?? '' : '';
+    _initialEmail = session is SignedIn ? session.user.email : null;
+    _name = TextEditingController(text: _initialName);
+    _email = TextEditingController(text: _initialEmail ?? '');
   }
 
   @override
   void dispose() {
     _name.dispose();
+    _email.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
     if (ref.read(editProfileProvider).isSubmitting) return;
-    await ref.read(editProfileProvider.notifier).save(name: _name.text);
+    await ref
+        .read(editProfileProvider.notifier)
+        .save(
+          name: _name.text,
+          email: _email.text,
+          initialName: _initialName,
+          initialEmail: _initialEmail,
+        );
     if (mounted && ref.read(editProfileProvider).didSave) {
       context.pop(true);
     }
@@ -70,8 +82,24 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 : null,
             keyboardType: TextInputType.name,
             textCapitalization: TextCapitalization.words,
-            textInputAction: TextInputAction.done,
+            textInputAction: TextInputAction.next,
             autofillHints: const [AutofillHints.name],
+            onChanged: (_) =>
+                ref.read(editProfileProvider.notifier).clearProblems(),
+          ),
+          const Gap.lg(),
+          AppTextField(
+            label: l10n.emailLabel,
+            controller: _email,
+            enabled: !state.isSubmitting,
+            errorText: state.isEmailInvalid
+                ? l10n.profileEditEmailInvalid
+                : state.isEmailRejected
+                ? l10n.profileEditEmailRejected
+                : null,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autofillHints: const [AutofillHints.email],
             onChanged: (_) =>
                 ref.read(editProfileProvider.notifier).clearProblems(),
             onSubmitted: state.isSubmitting ? null : (_) => _save(),
@@ -79,7 +107,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           const Gap.lg(),
           AppBanner(
             tone: StatusTone.info,
-            message: l10n.profileEditContactNotEditable,
+            message: l10n.profileEditPhoneNotEditable,
           ),
           if (failure != null) ...[
             const Gap.md(),

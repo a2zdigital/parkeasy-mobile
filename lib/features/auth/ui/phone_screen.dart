@@ -11,6 +11,7 @@ import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/features/auth/state/phone_number.dart';
 import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +19,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 class PhoneScreen extends ConsumerStatefulWidget {
-  const PhoneScreen({super.key});
+  const PhoneScreen({this.registrationRole, super.key});
+
+  final RegistrationRole? registrationRole;
 
   @override
   ConsumerState<PhoneScreen> createState() => _PhoneScreenState();
@@ -33,8 +36,9 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
     super.dispose();
   }
 
-  void _submit() =>
-      ref.read(phoneSignInProvider.notifier).submit(_controller.text);
+  void _submit() => ref
+      .read(phoneSignInProvider.notifier)
+      .submit(_controller.text, registrationRole: widget.registrationRole);
 
   @override
   Widget build(BuildContext context) {

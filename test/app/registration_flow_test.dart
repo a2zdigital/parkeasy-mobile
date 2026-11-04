@@ -53,7 +53,7 @@ void main() {
     harness.http.respond(200, sessionJson(newUser: true));
     await tester.enterText(find.byType(TextField), '123456');
     await tester.pumpAndSettle();
-    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Complete your profile'), findsOneWidget);
     expect(harness.tokens.registrationIntent, role.storageValue);
   }
 
@@ -194,7 +194,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Explore'), findsWidgets);
-    expect(find.text('What should we call you?'), findsNothing);
+    expect(find.text('Complete your profile'), findsNothing);
     expect(find.text('Parking Owner'), findsNothing);
     expect(harness.tokens.registrationIntent, isNull);
     expect(harness.http.requests.map((request) => request.path).take(2), [
@@ -219,7 +219,7 @@ void main() {
       },
     );
 
-    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Complete your profile'), findsOneWidget);
     expect(
       find.text('Something went wrong on our side. Try again in a moment.'),
       findsOneWidget,

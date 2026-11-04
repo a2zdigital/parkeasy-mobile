@@ -15,6 +15,9 @@ class StoredToken {
 abstract interface class TokenStore {
   Future<StoredToken?> read();
   Future<void> write(StoredToken token);
+  Future<String?> readRegistrationIntent();
+  Future<void> writeRegistrationIntent(String intent);
+  Future<void> clearRegistrationIntent();
   Future<void> clear();
 }
 
@@ -34,6 +37,7 @@ class SecureTokenStore implements TokenStore {
 
   static const _tokenKey = 'auth.token';
   static const _expiryKey = 'auth.token_expires_at';
+  static const _registrationIntentKey = 'auth.registration_intent';
 
   final FlutterSecureStorage _storage;
 
@@ -59,8 +63,21 @@ class SecureTokenStore implements TokenStore {
   }
 
   @override
+  Future<String?> readRegistrationIntent() =>
+      _storage.read(key: _registrationIntentKey);
+
+  @override
+  Future<void> writeRegistrationIntent(String intent) =>
+      _storage.write(key: _registrationIntentKey, value: intent);
+
+  @override
+  Future<void> clearRegistrationIntent() =>
+      _storage.delete(key: _registrationIntentKey);
+
+  @override
   Future<void> clear() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _expiryKey);
+    await clearRegistrationIntent();
   }
 }
