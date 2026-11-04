@@ -26,7 +26,7 @@ class LaunchScreen extends StatelessWidget {
         children: [
           const AppLogo(
             variant: AppLogoVariant.fullOnDark,
-            height: AppSize.touchTarget,
+            height: AppSize.touchTarget * 2,
           ),
           const Gap.xxl(),
           Text(
@@ -37,6 +37,11 @@ class LaunchScreen extends StatelessWidget {
           Text(
             l10n.launchTagline,
             style: context.text.body.copyWith(color: colors.onNavy),
+          ),
+          const Gap.xl(),
+          Text(
+            l10n.launchAccountHint,
+            style: context.text.bodySmall.copyWith(color: colors.onNavy),
           ),
         ],
       ),

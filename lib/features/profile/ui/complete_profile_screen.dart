@@ -4,8 +4,12 @@ import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
+import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
+import 'package:app/features/auth/state/phone_number.dart';
+import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/profile/state/complete_profile_notifier.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +46,11 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
     final l10n = context.l10n;
     final state = ref.watch(completeProfileProvider);
     final failure = state.failure;
+    final session = ref.watch(sessionControllerProvider);
+    final phone = switch (session) {
+      SignedIn(:final user) => PhoneNumber.format(user.phone),
+      _ => null,
+    };
     void clear(String _) =>
         ref.read(completeProfileProvider.notifier).clearProblems();
 
@@ -49,7 +58,7 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Gap.xxl(),
+          const Gap.xl(),
           Text(l10n.nameTitle, style: context.text.h1),
           const Gap.sm(),
           Text(
@@ -58,6 +67,37 @@ class _CompleteProfileScreenState extends ConsumerState<CompleteProfileScreen> {
               color: context.colors.textSecondary,
             ),
           ),
+          if (phone != null) ...[
+            const Gap.xl(),
+            AppCard(
+              child: Row(
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.verified_user_outlined,
+                      size: AppSize.icon,
+                      color: context.colors.primary,
+                    ),
+                  ),
+                  const Gap.md(),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.nameVerifiedPhone,
+                          style: context.text.bodySmall.copyWith(
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                        Text(phone, style: context.text.body),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const Gap.xl(),
           AppTextField(
             label: l10n.nameLabel,
