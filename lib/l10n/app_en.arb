@@ -9,7 +9,6 @@
     }
   },
   "launchTagline": "Find parking nearby, see the price, and book in a minute.",
-  "launchAccountHint": "Sign in or create an account with your mobile number.",
   "launchGetStarted": "Get started",
   "launchPointNearby": "Find parking near where you are going",
   "launchPointPrice": "The full price before you book",
@@ -20,6 +19,7 @@
   "launchLogIn": "Log in",
   "launchCreateAccount": "Create account",
   "launchBrowse": "Browse parking first",
+  "launchAccountHint": "Sign in or create an account with your mobile number.",
   "registrationRoleTitle": "Choose how to use the app",
   "registrationRoleQuestion": "How would you like to use {appName}?",
   "@registrationRoleQuestion": {
