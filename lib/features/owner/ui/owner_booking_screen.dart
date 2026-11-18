@@ -1,3 +1,4 @@
+import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/money/money_format.dart';
@@ -12,15 +13,19 @@ import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/confirm_dialog.dart';
 import 'package:app/core/widgets/state_views.dart';
+import 'package:app/core/widgets/title_with_status.dart';
+import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
 import 'package:app/features/owner/data/owner_repository.dart';
 import 'package:app/features/owner/state/owner_booking_notifier.dart';
+import 'package:app/features/owner/ui/move_bay_sheet.dart';
 import 'package:app/features/owner/ui/owner_common.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 /// A booking as the facility's owner sees it. It shows the reference and
 /// the terms, never who the customer is.
@@ -137,20 +142,25 @@ class OwnerBookingScreen extends ConsumerWidget {
             child: ListView(
               children: [
                 const Gap.md(),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: BookingStatusChip(booking: booking),
-                ),
-                const Gap.md(),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        l10n.bookingReference,
-                        style: text.label.copyWith(color: colors.textSecondary),
+                      TitleWithStatus(
+                        title: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.bookingReference,
+                              style: text.label.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                            ),
+                            SelectableText(booking.reference, style: text.h2),
+                          ],
+                        ),
+                        status: BookingStatusChip(booking: booking),
                       ),
-                      SelectableText(booking.reference, style: text.h2),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: AppSpace.md),
                         child: Divider(),
@@ -164,6 +174,15 @@ class OwnerBookingScreen extends ConsumerWidget {
                           color: colors.textSecondary,
                         ),
                       ),
+                      if (booking.spaceLabel case final bay?) ...[
+                        const Gap.xs(),
+                        Text(
+                          '${l10n.bookingSpace} $bay',
+                          style: text.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                       const Gap.sm(),
                       Text(
                         booking.paymentMode == PaymentMode.onSite
@@ -220,6 +239,44 @@ class OwnerBookingScreen extends ConsumerWidget {
                             title: l10n.ownerRecordConfirmTitle,
                             body: l10n.ownerRecordConfirmBody(total),
                             confirm: l10n.ownerRecordConfirm,
+                          ),
+                  ),
+                ],
+                // A numbered bay that broke, or a customer who needs an
+                // accessible one: move the booking to another free bay.
+                if (booking.spaceLabel != null &&
+                    booking.checkedOutAt == null &&
+                    (booking.status == BookingStatus.pendingApproval ||
+                        booking.status == BookingStatus.awaitingPayment ||
+                        booking.status == BookingStatus.confirmed)) ...[
+                  const Gap.sm(),
+                  TextAction(
+                    label: l10n.bayMoveAction,
+                    onPressed: state.isBusy
+                        ? null
+                        : () async {
+                            final moved = await showMoveBaySheet(
+                              context,
+                              booking,
+                            );
+                            if (moved == null || !context.mounted) return;
+                            ref.invalidate(ownerBookingProvider(booking.id));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.bayMoveDone(moved))),
+                            );
+                          },
+                  ),
+                ],
+                // Gate check-in by the customer's code or QR code, for a
+                // booking that can be checked in now.
+                if (state.canCheckIn) ...[
+                  const Gap.md(),
+                  SecondaryButton(
+                    label: l10n.ownerCheckInByCode,
+                    onPressed: state.isBusy
+                        ? null
+                        : () => context.push(
+                            Routes.ownerBookingCheckIn(booking.id),
                           ),
                   ),
                 ],

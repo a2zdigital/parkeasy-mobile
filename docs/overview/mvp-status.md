@@ -70,7 +70,7 @@ What QR and OTP check-in need, in order:
 | The review screen describes the cancellation rule in general terms | The API does not expose the free-cancellation period to customers |
 | Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |
 | A notification about a booking opens it as the customer's booking, except a new request, which opens the owner's view. An owner tapping "booking confirmed" or "cancelled" for their facility sees "couldn't find that booking" | Notifications do not say whether they are for the customer or the owner |
-| The owner area has no dashboard; it opens on booking requests | Simpler, and requests are what an owner must act on |
+| The owner area has no dashboard; it opens on all bookings | Owners can see automatically approved bookings as well as legacy requests |
 | A facility's location is still typed as latitude and longitude | Facility location picking is separate from customer place search and still needs a map workflow |
 | A rate cannot be removed once set, only changed | The API has no call to remove a rate |
 | No facility photos | The API has no image upload |

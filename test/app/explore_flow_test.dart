@@ -46,6 +46,7 @@ void main() {
     expect(find.text('MG Road Metro Parking'), findsOneWidget);
     expect(find.text('420 m · 12 MG Road'), findsOneWidget);
     expect(find.text('From ₹40 / hour'), findsOneWidget);
+    expect(find.text('CCTV'), findsNWidgets(2), reason: 'amenity names');
     expect(find.text('6.0 km · 12 MG Road'), findsOneWidget);
     expect(find.text('Daily rate only'), findsOneWidget);
     expect(find.text('Needs approval'), findsOneWidget);
@@ -87,6 +88,24 @@ void main() {
     expect(find.text('2 hours × ₹40.00'), findsOneWidget);
     expect(find.text('₹80.00'), findsNWidgets(2));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a facility shows its photos in order', (tester) async {
+    final h = Harness(token: validToken());
+    h.http.stubs['/parking-lots'] = searchJson([summaryJson()]);
+    final lot = lotJson();
+    (lot['data']! as Map<String, dynamic>)['photos'] = [
+      {'id': 'p1', 'url': 'https://files.test/p1.jpg'},
+      {'id': 'p2', 'url': 'https://files.test/p2.jpg'},
+    ];
+    h.http.stubs[lotPath] = lot;
+    await signedIn(tester, h);
+
+    await tester.tap(find.text('MG Road Metro Parking'));
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Photo 1 of 2'), findsOneWidget);
+    expect(find.bySemanticsLabel('Photo 2 of 2'), findsOneWidget);
   });
 
   testWidgets('shows an empty state with a blank location search field', (

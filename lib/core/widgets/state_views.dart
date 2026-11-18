@@ -102,7 +102,17 @@ class _Centered extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ExcludeSemantics(
-            child: Icon(icon, size: AppSize.touchTarget, color: iconColor),
+            child: Container(
+              width: AppSize.touchTarget,
+              height: AppSize.touchTarget,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: onNavy
+                    ? colors.onNavy.withValues(alpha: 0.12)
+                    : iconColor.withValues(alpha: 0.1),
+              ),
+              child: Icon(icon, size: AppSize.icon, color: iconColor),
+            ),
           ),
           const Gap.lg(),
           Text(

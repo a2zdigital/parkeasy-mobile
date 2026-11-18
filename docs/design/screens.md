@@ -20,10 +20,12 @@ Every screen in the first version, and the API call behind it. A screen is in sc
 | C10 | Booking result | Confirmed, request sent, or payment failed, each with its next step | `GET /bookings/{id}` |
 | C11 | Bookings | Upcoming active statuses and past terminal statuses, `BookingCard`s | `GET /bookings?filter[status]=…` |
 | C12 | Booking details | Status, reference, times, facility, price, payment; cancel | `GET /bookings/{id}`, `POST …/cancel` |
-| C13 | Activity | Notifications, unread first | `GET /notifications`, read endpoints |
+| C13 | Activity | All, Bookings, Facilities, Payments and Account filters; unread indicators, mark-read actions and notification destinations | `GET /notifications`, read endpoints |
 | C14 | Profile | Name, phone, email, edit name and email (phone remains read-only), sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
 
 The journey designed first: **Explore → Facility → Choose time → Review → Pay or pay at facility → Result → Booking details.**
+
+Activity categories use the API notification `type` and `payload.audience`; unknown user-facing types remain available under All. The API contract is open-ended, so this mobile project cannot confirm whether every requested profile, security, commission or facility-availability event is currently emitted. Staff-audience and technical monitoring notifications are excluded from the mobile Activity list; the Flutter app has no admin dashboard.
 
 The mobile API does not accept a requested role during OTP registration: new accounts receive the `customer` role. Owner onboarding uses `POST /owner/application` with the business name and the already verified phone number; the backend grants the `owner` role only after approval. The selected owner option is onboarding intent only and never grants access.
 

@@ -25,7 +25,6 @@ class _RegistrationRoleScreenState extends State<RegistrationRoleScreen> {
     final l10n = context.l10n;
 
     return AppScaffold(
-      title: l10n.registrationRoleTitle,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -36,6 +35,7 @@ class _RegistrationRoleScreenState extends State<RegistrationRoleScreen> {
           ),
           const Gap.lg(),
           _RoleOption(
+            icon: Icons.local_parking,
             title: l10n.registrationOwnerTitle,
             description: l10n.registrationOwnerDescription,
             selected: _selected == RegistrationRole.owner,
@@ -43,6 +43,7 @@ class _RegistrationRoleScreenState extends State<RegistrationRoleScreen> {
           ),
           const Gap.md(),
           _RoleOption(
+            icon: Icons.directions_car_outlined,
             title: l10n.registrationCustomerTitle,
             description: l10n.registrationCustomerDescription,
             selected: _selected == RegistrationRole.customer,
@@ -62,12 +63,14 @@ class _RegistrationRoleScreenState extends State<RegistrationRoleScreen> {
 
 class _RoleOption extends StatelessWidget {
   const _RoleOption({
+    required this.icon,
     required this.title,
     required this.description,
     required this.selected,
     required this.onTap,
   });
 
+  final IconData icon;
   final String title;
   final String description;
   final bool selected;
@@ -83,6 +86,18 @@ class _RoleOption extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
+          ExcludeSemantics(
+            child: Container(
+              width: AppSize.touchTarget,
+              height: AppSize.touchTarget,
+              decoration: BoxDecoration(
+                color: context.colors.primaryContainer,
+                borderRadius: AppRadius.controlAll,
+              ),
+              child: Icon(icon, color: context.colors.primary),
+            ),
+          ),
+          const Gap.md(),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

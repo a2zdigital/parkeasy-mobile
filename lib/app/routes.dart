@@ -16,6 +16,10 @@ abstract final class Routes {
   static const String activity = '/activity';
   static const String profile = '/profile';
   static const String profileEdit = '$profile/edit';
+  static const String profileHelp = '$profile/help';
+
+  /// The gate, for someone an owner made an attendant.
+  static const String gate = '$profile/gate';
 
   /// A facility's details. The ID is the public, opaque one.
   static String parkingLot(String id) => '$explore/lots/$id';
@@ -40,6 +44,8 @@ abstract final class Routes {
   static const String ownerActivity = '/owner/activity';
   static const String ownerProfile = '/owner/profile';
   static const String ownerProfileEdit = '$ownerProfile/edit';
+  static const String ownerProfileHelp = '$ownerProfile/help';
+  static const String ownerProfileDocuments = '$ownerProfile/documents';
 
   static const String ownerFacilityNew = '$ownerFacilities/new';
 
@@ -56,6 +62,14 @@ abstract final class Routes {
   /// A booking at one of the owner's facilities.
   static String ownerBooking(String id) => '$ownerBookings/$id';
 
+  /// Gate check-in by the customer's code, opened from that booking.
+  static String ownerBookingCheckIn(String id) =>
+      '${ownerBooking(id)}/check-in';
+
+  /// A numbered pool's bays.
+  static String ownerPoolSpaces(String facilityId, String poolId) =>
+      '${ownerFacilityPool(facilityId, poolId: poolId)}/spaces';
+
   static const Set<String> _signedOut = {
     launch,
     phone,
@@ -64,18 +78,41 @@ abstract final class Routes {
     registrationPhone,
   };
 
+  /// What a guest may see without an account: search and a facility's
+  /// public details. Choosing a time, booking and everything personal
+  /// needs sign-in.
+  static bool isGuestBrowsable(String location) =>
+      location == explore ||
+      RegExp(r'^/explore/lots/[^/]+$').hasMatch(location);
+
+  /// A customer location worth returning to after signing in.
+  static bool isReturnable(String location) =>
+      location.startsWith(explore) ||
+      location.startsWith(bookings) ||
+      location.startsWith(activity) ||
+      location.startsWith(profile);
+
   /// Where the session allows the user to be. Returns the location to go
   /// to instead of [location], or null to stay.
   ///
+  /// [returnTo] is where a guest was going when they were asked to sign
+  /// in; a signed-in customer arriving from the sign-in screens goes there.
+  ///
   /// A pure function of its inputs, so the whole access policy of the app
   /// is tested without building a widget.
-  static String? redirect(SessionState session, String location) {
+  static String? redirect(
+    SessionState session,
+    String location, {
+    String? returnTo,
+  }) {
     switch (session) {
       case SessionUnknown() || SessionRestoreFailed():
         return location == startUp ? null : startUp;
 
       case SignedOut():
-        return _signedOut.contains(location) ? null : launch;
+        return _signedOut.contains(location) || isGuestBrowsable(location)
+            ? null
+            : launch;
 
       case SignedIn(:final user, :final registrationRole):
         if (!user.isProfileComplete) {
@@ -103,6 +140,13 @@ abstract final class Routes {
             location == startUp ||
             location == completeProfile ||
             _signedOut.contains(location);
+        // Back to what a guest was doing when sign-in was needed; the
+        // router forgets it once used.
+        if (returnTo != null &&
+            isReturnable(returnTo) &&
+            location != returnTo) {
+          return returnTo;
+        }
         return isOutside ? explore : null;
     }
   }

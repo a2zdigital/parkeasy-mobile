@@ -24,7 +24,7 @@ void main() {
     Harness harness,
     RegistrationRole role,
   ) async {
-    await tester.tap(find.text('Create a new account'));
+    await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
 
     expect(
@@ -76,10 +76,10 @@ void main() {
     final harness = Harness();
     await launch(tester, harness);
 
-    expect(find.text('Already have an account? Log in'), findsOneWidget);
-    expect(find.text('Create a new account'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Create account'), findsOneWidget);
 
-    await tester.tap(find.text('Create a new account'));
+    await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
     expect(find.text('Parking Owner'), findsOneWidget);
     expect(find.text('Customer'), findsOneWidget);
@@ -166,8 +166,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Application under review'), findsOneWidget);
-    expect(harness.http.last.path, '/owner/application');
-    expect(harness.http.lastBody, {
+    // The screen then lists the application's documents; the application
+    // itself is the last write.
+    final applied = harness.http.requests.lastWhere((r) => r.method == 'POST');
+    expect(applied.path, '/owner/application');
+    expect(applied.data, {
       'business_name': 'Asha Parking',
       'contact_phone': '+919000000001',
     });
@@ -180,7 +183,7 @@ void main() {
     final harness = Harness();
     await launch(tester, harness);
 
-    await tester.tap(find.text('Already have an account? Log in'));
+    await tester.tap(find.text('Log in'));
     await tester.pumpAndSettle();
     harness.http.respond(202, {
       'data': {'expires_in': 300, 'resend_in': 30},
@@ -284,7 +287,7 @@ void main() {
       await launch(tester, harness);
 
       expect(find.text('Application under review'), findsOneWidget);
-      expect(find.text('Already have an account? Log in'), findsNothing);
+      expect(find.text('Log in'), findsNothing);
       expect(harness.tokens.registrationIntent, 'owner');
     },
   );

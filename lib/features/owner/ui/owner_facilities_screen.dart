@@ -8,6 +8,7 @@ import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/cursor_list_view.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/core/widgets/status_chip.dart';
+import 'package:app/core/widgets/title_with_status.dart';
 import 'package:app/features/owner/data/models/approval_status.dart';
 import 'package:app/features/owner/data/models/owner_parking_lot.dart';
 import 'package:app/features/owner/state/owner_lists.dart';
@@ -50,7 +51,6 @@ class OwnerFacilitiesScreen extends ConsumerWidget {
           icon: const Icon(Icons.add),
           onPressed: () => context.push(Routes.ownerFacilityNew),
         ),
-        const ExitOwnerAreaAction(),
       ],
       scrollable: false,
       body: CursorListView<OwnerParkingLot>(
@@ -80,9 +80,15 @@ class OwnerFacilitiesScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                StatusChip(tone: tone, label: label),
-                const Gap.sm(),
-                Text(facility.lot.name, style: context.text.h3),
+                TitleWithStatus(
+                  title: Text(
+                    facility.lot.name,
+                    style: context.text.h3,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  status: StatusChip(tone: tone, label: label),
+                ),
                 const Gap.xs(),
                 Text(
                   '${facility.lot.addressLine} · ${l10n.lotSpaces(spaces)}',

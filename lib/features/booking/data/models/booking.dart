@@ -28,6 +28,13 @@ abstract class Booking with _$Booking {
     @Default(false) bool paymentRequired,
     required BookingLotRef parkingLot,
     required String vehicleType,
+
+    /// The numbered bay given to this booking; null where any space will do.
+    String? spaceLabel,
+
+    /// The gate code (also the QR code's text). Only the customer gets it,
+    /// while the booking is confirmed and not yet checked in.
+    String? checkInCode,
     @UtcDateTimeConverter() required DateTime startAt,
     @UtcDateTimeConverter() required DateTime endAt,
     required String timezone,
@@ -43,6 +50,16 @@ abstract class Booking with _$Booking {
     @UtcDateTimeConverter() DateTime? cancelledAt,
     String? cancellationReason,
     bool? refundEligible,
+
+    /// The score the customer gave, once rated. Null from older API builds too.
+    int? myRating,
+
+    /// A paid booking cancelled by this time is refunded in full.
+    @UtcDateTimeConverter() DateTime? freeCancellationUntil,
+
+    /// What cancelling now would do, decided by the server. Null from older
+    /// API builds.
+    bool? refundIfCancelledNow,
     @UtcDateTimeConverter() required DateTime createdAt,
   }) = _Booking;
 

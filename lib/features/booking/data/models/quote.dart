@@ -27,6 +27,10 @@ abstract class Quote with _$Quote {
     @MoneyAmountConverter() required Decimal baseAmount,
     @MoneyAmountConverter() required Decimal totalAmount,
     required String currency,
+
+    /// A paid booking cancelled by this time is refunded in full. Absent
+    /// from older API builds.
+    @UtcDateTimeConverter() DateTime? freeCancellationUntil,
   }) = _Quote;
 
   factory Quote.fromJson(Map<String, dynamic> json) => _$QuoteFromJson(json);

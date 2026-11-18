@@ -15,6 +15,9 @@ abstract class OwnerParkingLot with _$OwnerParkingLot {
     required ApprovalStatus approvalStatus,
     String? rejectionReason,
     @Default(false) bool isActive,
+
+    /// Paused by the owner: hidden from search, no new bookings.
+    @Default(false) bool isPaused,
     @UtcDateTimeConverter() DateTime? submittedAt,
     @UtcDateTimeConverter() DateTime? reviewedAt,
     @UtcDateTimeConverter() required DateTime createdAt,

@@ -15,11 +15,18 @@ import 'package:app/core/widgets/state_views.dart';
 import 'package:app/core/widgets/status_chip.dart';
 import 'package:app/features/booking/state/booking_draft.dart';
 import 'package:app/features/booking/state/choose_time_notifier.dart';
+import 'package:app/features/booking/ui/bay_picker.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+/// The bay the customer picked on this facility's choose-time screen, by
+/// ID; null for "any free bay". Forgotten when the screen closes.
+final chosenBayProvider = StateProvider.autoDispose.family<String?, String>(
+  (ref, lotId) => null,
+);
 
 class ChooseTimeScreen extends ConsumerWidget {
   const ChooseTimeScreen({required this.lotId, super.key});
@@ -51,6 +58,12 @@ class ChooseTimeScreen extends ConsumerWidget {
       ),
       data: (state) {
         final pricing = state.pricing;
+        // A chosen bay counts only while it is still free for this window.
+        final chosenId = ref.watch(chosenBayProvider(lotId));
+        final bays = pricing is Priced ? pricing.availability.bays : null;
+        final bay = bays
+            ?.where((b) => b.id == chosenId && b.available)
+            .firstOrNull;
         // Continue is offered only for a window the API priced and has
         // space for; otherwise the screen explains why not.
         final draft = pricing is Priced && pricing.availability.isAvailable
@@ -60,6 +73,7 @@ class ChooseTimeScreen extends ConsumerWidget {
                 startAt: state.startAt,
                 endAt: state.endAt,
                 quote: pricing.quote,
+                bay: bay,
               )
             : null;
 
@@ -68,6 +82,9 @@ class ChooseTimeScreen extends ConsumerWidget {
           body: _Form(
             state: state,
             notifier: ref.read(chooseTimeProvider(lotId).notifier),
+            chosenBayId: bay?.id,
+            onChooseBay: (id) =>
+                ref.read(chosenBayProvider(lotId).notifier).state = id,
           ),
           bottom: draft == null
               ? null
@@ -83,10 +100,17 @@ class ChooseTimeScreen extends ConsumerWidget {
 }
 
 class _Form extends StatelessWidget {
-  const _Form({required this.state, required this.notifier});
+  const _Form({
+    required this.state,
+    required this.notifier,
+    required this.chosenBayId,
+    required this.onChooseBay,
+  });
 
   final ChooseTimeState state;
   final ChooseTimeNotifier notifier;
+  final String? chosenBayId;
+  final ValueChanged<String?> onChooseBay;
 
   /// Opens the date picker, then the time picker, working in the
   /// facility's clock, and returns the chosen instant in UTC.
@@ -172,6 +196,16 @@ class _Form extends StatelessWidget {
         ),
         const Gap.xl(),
         _PricingView(pricing: state.pricing, onRetry: notifier.retry),
+        if (state.pricing case Priced(:final availability)
+            when availability.isAvailable &&
+                (availability.bays?.isNotEmpty ?? false)) ...[
+          const Gap.xl(),
+          BayPicker(
+            bays: availability.bays!,
+            chosenId: chosenBayId,
+            onChoose: onChooseBay,
+          ),
+        ],
         const Gap.xl(),
       ],
     );

@@ -6,9 +6,10 @@ import 'package:app/core/time/facility_time.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
-import 'package:app/core/widgets/app_filter_chip.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
+import 'package:app/core/widgets/app_segmented_control.dart';
 import 'package:app/core/widgets/state_views.dart';
+import 'package:app/core/widgets/title_with_status.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/state/bookings_notifier.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
@@ -17,11 +18,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class BookingsScreen extends ConsumerWidget {
+class BookingsScreen extends ConsumerStatefulWidget {
   const BookingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookingsScreen> createState() => _BookingsScreenState();
+}
+
+class _BookingsScreenState extends ConsumerState<BookingsScreen> {
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () => ref.read(bookingsProvider.notifier).load(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(bookingsProvider);
     final notifier = ref.read(bookingsProvider.notifier);
@@ -127,36 +149,14 @@ class BookingsScreen extends ConsumerWidget {
       body: Column(
         children: [
           const Gap.md(),
-          Row(
-            children: [
-              Expanded(
-                child: AppFilterChip(
-                  label: l10n.bookingsUpcoming,
-                  isSelected: selectedTab == CustomerBookingTab.upcoming,
-                  onPressed: selectedTab == CustomerBookingTab.upcoming
-                      ? null
-                      : () =>
-                            ref
-                                    .read(customerBookingTabProvider.notifier)
-                                    .state =
-                                CustomerBookingTab.upcoming,
-                ),
-              ),
-              const Gap.sm(),
-              Expanded(
-                child: AppFilterChip(
-                  label: l10n.bookingsPast,
-                  isSelected: selectedTab == CustomerBookingTab.past,
-                  onPressed: selectedTab == CustomerBookingTab.past
-                      ? null
-                      : () =>
-                            ref
-                                    .read(customerBookingTabProvider.notifier)
-                                    .state =
-                                CustomerBookingTab.past,
-                ),
-              ),
+          AppSegmentedControl<CustomerBookingTab>(
+            segments: [
+              (CustomerBookingTab.upcoming, l10n.bookingsUpcoming),
+              (CustomerBookingTab.past, l10n.bookingsPast),
             ],
+            selected: selectedTab,
+            onChanged: (tab) =>
+                ref.read(customerBookingTabProvider.notifier).state = tab,
           ),
           Expanded(
             child: RefreshIndicator(onRefresh: notifier.load, child: content),
@@ -186,34 +186,48 @@ class _BookingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BookingStatusChip(booking: booking),
+            TitleWithStatus(
+              title: Text(
+                booking.parkingLot.name,
+                style: text.h3,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              status: BookingStatusChip(booking: booking),
+            ),
             const Gap.sm(),
-            Text(
-              booking.parkingLot.name,
-              style: text.h3,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const Gap.xs(),
-            Text(
-              '${FacilityTime.dayAndTime(booking.startAt, booking.timezone, locale)} – '
-              '${FacilityTime.time(booking.endAt, booking.timezone, locale)}',
-              style: text.bodySmall.copyWith(color: colors.textSecondary),
-            ),
-            const Gap.md(),
-            Wrap(
-              spacing: AppSpace.lg,
-              runSpacing: AppSpace.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
               children: [
-                Text(formatMoney(booking.total), style: text.price),
-                Text(
-                  booking.reference,
-                  style: text.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                    fontFeatures: text.price.fontFeatures,
+                Icon(
+                  Icons.schedule,
+                  size: AppSize.iconSmall,
+                  color: colors.textSecondary,
+                ),
+                const Gap.sm(),
+                Expanded(
+                  child: Text(
+                    '${FacilityTime.dayAndTime(booking.startAt, booking.timezone, locale)} – '
+                    '${FacilityTime.time(booking.endAt, booking.timezone, locale)}',
+                    style: text.bodySmall.copyWith(color: colors.textSecondary),
                   ),
                 ),
+              ],
+            ),
+            const Gap.md(),
+            const Divider(height: AppSize.borderWidth),
+            const Gap.md(),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    booking.reference,
+                    style: text.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                      fontFeatures: text.price.fontFeatures,
+                    ),
+                  ),
+                ),
+                Text(formatMoney(booking.total), style: text.price),
               ],
             ),
           ],

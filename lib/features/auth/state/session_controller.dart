@@ -12,6 +12,13 @@ import 'package:app/features/auth/state/session_state.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Work that must run before signing out, while the token still works,
+/// such as removing this device's push token. Features add to it; the
+/// session does not depend on them.
+final beforeSignOutProvider = Provider<List<Future<void> Function()>>(
+  (ref) => [],
+);
+
 final sessionControllerProvider =
     NotifierProvider<SessionController, SessionState>(SessionController.new);
 
@@ -116,6 +123,10 @@ class SessionController extends Notifier<SessionState> {
   /// The user chose to sign out. The server is told, but signing out on
   /// this device never waits for or depends on the answer.
   Future<void> signOut() async {
+    // While the token is still valid, for example to stop pushes here.
+    for (final task in [...ref.read(beforeSignOutProvider)]) {
+      await task();
+    }
     final requestPrepared = Completer<void>();
     final logout = ref
         .read(authRepositoryProvider)

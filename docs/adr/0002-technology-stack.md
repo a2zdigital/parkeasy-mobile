@@ -17,6 +17,11 @@
 | Decimal arithmetic | `decimal` | Money is never a `double` |
 | Localisation | `flutter_localizations` + `intl` (ARB files) | Built into Flutter |
 | Payments | `razorpay_flutter`, used only behind `CheckoutLauncher` in `lib/core/payment` | The API's payment provider |
+| Files | `file_picker`, behind `FilePickerService` in `lib/core/files` | Owner documents and facility photos |
+| Device location | `geolocator`, behind `LocationService` in `lib/core/location` | "Use my location" in Explore; foreground only |
+| Maps | `flutter_map` with OpenStreetMap tiles (`latlong2` for its points), behind `pickLocationOnMap` in `lib/core/maps` | Owners place their facility's pin. Follows the OSM tile usage policy: identifying User-Agent, max zoom 19, on-device caching, no prefetching, attribution always shown. Heavy production traffic needs a commercial OSM-based tile provider (switch the URL in `mapTileLayerProvider`). |
+| QR codes | `qr_flutter` (show), `mobile_scanner` (scan, behind `QrScanner` in `lib/core/scanning`) | Gate check-in |
+| Push | `firebase_core`, `firebase_messaging`, behind `PushMessaging` in `lib/core/push` | The API sends through FCM; off when the Firebase files are absent ([firebase-setup.md](../sop/firebase-setup.md)) |
 | Tests | `flutter_test`, `mocktail` | No code generation for mocks |
 
 Packages are added when the first feature needs them, not in advance. Each addition follows [dependencies.md](../conventions/dependencies.md).

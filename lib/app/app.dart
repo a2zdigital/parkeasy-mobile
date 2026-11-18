@@ -2,6 +2,7 @@ import 'package:app/app/router.dart';
 import 'package:app/core/config/app_identity.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/notifications/state/push_registration.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,8 @@ class _AppState extends ConsumerState<App> {
     Future.microtask(
       () => ref.read(sessionControllerProvider.notifier).restore(),
     );
+    // Registers this device for push after each sign-in, when configured.
+    ref.read(pushRegistrationProvider).start();
   }
 
   @override

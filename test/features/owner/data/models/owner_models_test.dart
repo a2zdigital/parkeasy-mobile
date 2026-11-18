@@ -4,6 +4,7 @@ import 'package:app/features/owner/data/models/earning_entry.dart';
 import 'package:app/features/owner/data/models/earning_kind.dart';
 import 'package:app/features/owner/data/models/onsite_collection_state.dart';
 import 'package:app/features/owner/data/models/operating_hour_input.dart';
+import 'package:app/features/owner/data/models/owner_document.dart';
 import 'package:app/features/owner/data/models/owner_earnings.dart';
 import 'package:app/features/owner/data/models/owner_parking_lot.dart';
 import 'package:app/features/owner/data/models/parking_lot_input.dart';
@@ -18,6 +19,25 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../../parking_lot/data/models/parking_lot_test.dart' show lotJson;
 
 void main() {
+  test('OwnerDocument reads the linked facility name', () {
+    final document = OwnerDocument.fromJson({
+      'id': '01M4JQSZSNAVTVCMS8A7AJ0DOC',
+      'type': 'licence',
+      'file_name': 'parking-permit.pdf',
+      'mime_type': 'application/pdf',
+      'size_bytes': 120,
+      'url': 'https://files.test/parking-permit',
+      'created_at': '2026-10-10T10:00:00Z',
+      'parking_lot': {
+        'id': '01M4JQSZSNAVTVCMS8A7AJ0WJ9',
+        'name': 'MG Road Metro Parking',
+      },
+    });
+
+    expect(document.type, OwnerDocumentType.licence);
+    expect(document.parkingLotName, 'MG Road Metro Parking');
+  });
+
   test('OwnerParkingLot reads the facility and its review from one object', () {
     final owned = OwnerParkingLot.fromJson({
       ...lotJson(),

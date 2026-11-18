@@ -1,3 +1,4 @@
+import 'package:app/core/theme/app_colors.dart';
 import 'package:flutter/widgets.dart';
 
 /// Spacing on a 4-point grid. Values: docs/design/tokens.md.
@@ -23,6 +24,9 @@ abstract final class AppSize {
   static const double controlHeight = 48;
   static const double inputHeight = 52;
   static const double icon = 24;
+
+  /// The tinted square behind a row's icon.
+  static const double iconTile = 36;
   static const double iconSmall = 20;
   static const double spinner = 20;
   static const double borderWidth = 1;
@@ -43,6 +47,26 @@ abstract final class AppRadius {
   );
   static const BorderRadius cardAll = BorderRadius.all(Radius.circular(card));
   static const BorderRadius pillAll = BorderRadius.all(Radius.circular(pill));
+}
+
+/// Elevation. Cards sit on the canvas with a hairline border and a very
+/// soft navy shadow; nothing else floats except sheets and dialogs.
+abstract final class AppShadows {
+  static List<BoxShadow> card(AppColors colors) => [
+    BoxShadow(
+      color: colors.shadow.withValues(alpha: 0.05),
+      blurRadius: 12,
+      offset: const Offset(0, 2),
+    ),
+  ];
+
+  static List<BoxShadow> raised(AppColors colors) => [
+    BoxShadow(
+      color: colors.shadow.withValues(alpha: 0.12),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
+    ),
+  ];
 }
 
 /// Durations and curves. Motion explains a change of state, nothing else.

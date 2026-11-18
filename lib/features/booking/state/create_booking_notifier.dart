@@ -79,6 +79,7 @@ class CreateBookingNotifier
               // The price the customer saw. The API refuses with
               // QUOTE_EXPIRED if it no longer matches; it never trusts it.
               expectedTotalAmount: arg.quote.totalAmount,
+              parkingSpaceId: arg.bay?.id,
             ),
             idempotencyKey: key,
           );

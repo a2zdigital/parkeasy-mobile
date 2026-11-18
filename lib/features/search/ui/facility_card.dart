@@ -47,6 +47,15 @@ class FacilityCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+            if (lot.amenityDetails.isNotEmpty) ...[
+              const Gap.xs(),
+              Text(
+                lot.amenityDetails.map((amenity) => amenity.name).join(' · '),
+                style: text.bodySmall.copyWith(color: colors.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
             const Gap.md(),
             Wrap(
               spacing: AppSpace.sm,

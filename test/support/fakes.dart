@@ -4,8 +4,13 @@ import 'dart:typed_data';
 
 import 'package:app/core/auth/token_store.dart';
 import 'package:app/core/config/app_config.dart';
+import 'package:app/core/files/picked_file.dart';
+import 'package:app/core/location/location_service.dart';
 import 'package:app/core/payment/checkout_launcher.dart';
+import 'package:app/core/push/push_messaging.dart';
+import 'package:app/core/scanning/qr_scanner.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 
 final testConfig = AppConfig.validated(
   apiBaseUrl: 'http://api.test',
@@ -168,6 +173,33 @@ class FakeHttpAdapter implements HttpClientAdapter {
         },
       );
     }
+    // A gate pass nobody stubbed: the API has none, and the app falls back
+    // to the plain code. Never takes an answer queued for something else.
+    if (options.method == 'GET' && options.path.endsWith('/check-in-pass')) {
+      return ResponseBody.fromString(
+        jsonEncode({
+          'error': {'code': 'NOT_FOUND', 'message': 'Not found.'},
+        }),
+        404,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
+    // Background lists nobody stubbed are empty, never taking an answer
+    // queued for the step under test: the gate facilities on Profile and a
+    // facility's attendants.
+    if (options.method == 'GET' &&
+        (options.path == '/gate/facilities' ||
+            options.path.endsWith('/attendants'))) {
+      return ResponseBody.fromString(
+        jsonEncode({'data': <Object>[]}),
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    }
     if (_answers.isEmpty) {
       throw StateError('No fake answer queued for ${options.path}.');
     }
@@ -193,6 +225,38 @@ class _DeferredAnswer {
   final Future<void> release;
 }
 
+/// Stands in for the system file picker: hands back [next] (null = the
+/// user cancelled) and records the extensions it was asked for.
+class FakeFilePicker implements FilePickerService {
+  PickedFile? next;
+
+  /// Set to make the next pick fail the way the platform picker can.
+  PickProblem? problem;
+  final List<List<String>> asked = [];
+
+  /// Whether each pick asked for the photo gallery.
+  final List<bool> askedImages = [];
+
+  @override
+  Future<PickedFile?> pick({
+    required List<String> extensions,
+    bool images = false,
+  }) async {
+    asked.add(extensions);
+    askedImages.add(images);
+    final problem = this.problem;
+    if (problem != null) {
+      this.problem = null;
+      throw PickException(problem);
+    }
+    return next;
+  }
+}
+
+/// A small file of [sizeBytes] bytes.
+PickedFile pickedFile(String name, {int sizeBytes = 2048}) =>
+    PickedFile(name: name, bytes: Uint8List(sizeBytes));
+
 /// Stands in for the payment provider's window: records what it was asked
 /// to open and reports the outcome the test chose.
 class FakeCheckoutLauncher implements CheckoutLauncher {
@@ -205,5 +269,79 @@ class FakeCheckoutLauncher implements CheckoutLauncher {
   Future<CheckoutOutcome> open(CheckoutRequest request) async {
     opened.add(request);
     return outcome;
+  }
+}
+
+/// The phone's location: a fixed [position], or [failure] when set.
+class FakeLocationService implements LocationService {
+  DevicePosition position = (latitude: 12.9352, longitude: 77.6245);
+  LocationFailure? failure;
+  int asked = 0;
+  int settingsOpened = 0;
+
+  @override
+  Future<DevicePosition> current() async {
+    asked++;
+    final failure = this.failure;
+    if (failure != null) throw LocationException(failure);
+    return position;
+  }
+
+  @override
+  Future<void> openSettings() async => settingsOpened++;
+}
+
+/// Firebase as the test sets it up. By default not configured, as in a
+/// build without the Firebase files: nothing is registered or sent.
+class FakePushMessaging implements PushMessaging {
+  bool configured = false;
+  bool allowed = true;
+  String? currentToken = 'fcm-token-0000000000000001';
+  int deleted = 0;
+  PushData? launchedBy;
+  final refreshes = StreamController<String>.broadcast();
+  final opened = StreamController<PushData>.broadcast();
+  final foreground = StreamController<PushData>.broadcast();
+
+  @override
+  Future<bool> start() async => configured;
+
+  @override
+  Future<bool> requestPermission() async => configured && allowed;
+
+  @override
+  Future<String?> token() async => configured ? currentToken : null;
+
+  @override
+  Stream<String> get tokenRefreshes => refreshes.stream;
+
+  @override
+  Stream<PushData> get openedMessages => opened.stream;
+
+  @override
+  Stream<PushData> get foregroundMessages => foreground.stream;
+
+  @override
+  Future<PushData?> launchMessage() async => launchedBy;
+
+  @override
+  Future<void> deleteToken() async => deleted++;
+
+  Future<void> close() async {
+    await refreshes.close();
+    await opened.close();
+    await foreground.close();
+  }
+}
+
+/// The camera: returns [next] as if that QR code was scanned.
+class FakeQrScanner implements QrScanner {
+  String? next;
+  int scans = 0;
+
+  @override
+  Future<String?> scan(BuildContext context) async {
+    scans++;
+    return next;
   }
 }

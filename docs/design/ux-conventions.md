@@ -61,7 +61,7 @@ The label, tone and icon for each status the API returns. This table is implemen
 
 | Booking `status` | Label | Tone | What the screen offers |
 |---|---|---|---|
-| `pending_approval` | Awaiting approval | warning | Countdown to the approval deadline; cancel |
+| `pending_approval` | Awaiting approval (legacy) | warning | Countdown to the approval deadline; cancel |
 | `awaiting_payment` | Payment pending | warning | Countdown to the payment deadline; "Pay ₹…"; cancel |
 | `confirmed` | Confirmed | success | Reference for the gate; directions; cancel until the start |
 | `confirmed` and checked in | Parked | success | Reference; end time |

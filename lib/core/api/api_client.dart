@@ -5,6 +5,7 @@ import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/auth/auth_events.dart';
 import 'package:app/core/auth/token_store.dart';
 import 'package:app/core/config/app_config.dart';
+import 'package:app/core/files/picked_file.dart';
 import 'package:dio/dio.dart';
 
 /// The only class that talks HTTP. Repositories call it; nothing else
@@ -68,6 +69,24 @@ class ApiClient {
   Future<Map<String, dynamic>> patch(String path, {Object? body}) =>
       _send('PATCH', path, body: body);
 
+  Future<Map<String, dynamic>> delete(String path, {Object? body}) =>
+      _send('DELETE', path, body: body);
+
+  /// A multipart POST: one file under [field] plus plain [fields].
+  Future<Map<String, dynamic>> upload(
+    String path, {
+    required String field,
+    required PickedFile file,
+    Map<String, String> fields = const {},
+  }) => _send(
+    'POST',
+    path,
+    body: FormData.fromMap({
+      ...fields,
+      field: MultipartFile.fromBytes(file.bytes, filename: file.name),
+    }),
+  );
+
   /// The `data` object of a response, for endpoints that return one item.
   static Map<String, dynamic> object(Map<String, dynamic> envelope) {
     final data = envelope['data'];
@@ -101,7 +120,10 @@ class ApiClient {
         options: Options(
           method: method,
           headers: headers,
-          contentType: body == null ? null : Headers.jsonContentType,
+          // Multipart bodies set their own content type and boundary.
+          contentType: body == null || body is FormData
+              ? null
+              : Headers.jsonContentType,
         ),
       );
 

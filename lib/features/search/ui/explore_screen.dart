@@ -1,9 +1,13 @@
 import 'package:app/app/routes.dart';
 import 'package:app/core/config/app_config.dart';
+import 'package:app/core/location/location_service.dart';
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/providers.dart';
+import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/api_error_text.dart';
+import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_filter_chip.dart';
@@ -28,6 +32,41 @@ class ExploreScreen extends ConsumerStatefulWidget {
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   late final TextEditingController _locationController;
+  bool _locating = false;
+  LocationFailure? _locationFailure;
+
+  /// Searches around the phone's position. Asks for location permission
+  /// the first time; place search stays available if it is refused.
+  Future<void> _useMyLocation() async {
+    final label = context.l10n.exploreMyLocation;
+    setState(() {
+      _locating = true;
+      _locationFailure = null;
+    });
+    try {
+      final position = await ref.read(locationServiceProvider).current();
+      if (!mounted) return;
+      _locationController.clear();
+      ref.read(placeSearchProvider.notifier).clear();
+      setState(() => _locating = false);
+      await ref
+          .read(exploreProvider.notifier)
+          .selectOrigin(
+            SearchOrigin(
+              latitude: position.latitude,
+              longitude: position.longitude,
+              label: label,
+            ),
+          );
+    } on LocationException catch (error) {
+      if (mounted) {
+        setState(() {
+          _locating = false;
+          _locationFailure = error.failure;
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -116,7 +155,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         ? l10n.exploreLocationRequired
                         : null,
                     prefixIcon: Icon(
-                      Icons.search,
+                      Icons.place_outlined,
                       size: AppSize.iconSmall,
                       color: context.colors.textSecondary,
                     ),
@@ -162,6 +201,39 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     },
                     onSubmitted: placeNotifier.search,
                   ),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: TextButton.icon(
+                      onPressed: _locating ? null : _useMyLocation,
+                      icon: _locating
+                          ? SizedBox.square(
+                              dimension: AppSize.spinner,
+                              child: CircularProgressIndicator(
+                                strokeWidth: AppSize.focusBorderWidth,
+                                semanticsLabel: l10n.exploreLocating,
+                              ),
+                            )
+                          : const Icon(Icons.my_location),
+                      label: Text(l10n.exploreUseMyLocation),
+                    ),
+                  ),
+                  if (_locationFailure case final failure?)
+                    AppBanner(
+                      tone: StatusTone.warning,
+                      message: switch (failure) {
+                        LocationFailure.serviceOff => l10n.locationServiceOff,
+                        LocationFailure.denied => l10n.locationDenied,
+                        LocationFailure.deniedForever =>
+                          l10n.locationDeniedForever,
+                        LocationFailure.unavailable => l10n.locationUnavailable,
+                      },
+                    ),
+                  if (_locationFailure == LocationFailure.deniedForever)
+                    TextAction(
+                      label: l10n.locationOpenSettings,
+                      onPressed: () =>
+                          ref.read(locationServiceProvider).openSettings(),
+                    ),
                   if (state.origin.latitude != config.searchOrigin.latitude ||
                       state.origin.longitude != config.searchOrigin.longitude)
                     Align(
@@ -352,10 +424,13 @@ class _Results extends StatelessWidget {
         itemBuilder: (context, index) {
           if (index < state.items.length) {
             final lot = state.items[index];
-            return FacilityCard(
+            final card = FacilityCard(
               lot: lot,
               onTap: () => context.push(Routes.parkingLot(lot.id)),
             );
+            return index < 8
+                ? FadeSlideIn(key: ValueKey(lot.id), index: index, child: card)
+                : card;
           }
 
           if (state.isLoadingMore) {

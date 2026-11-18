@@ -1,6 +1,7 @@
 import 'package:app/core/api/json_converters.dart';
 import 'package:app/core/money/money.dart';
 import 'package:app/features/parking_lot/data/models/booking_mode.dart';
+import 'package:app/features/parking_lot/data/models/code_name.dart';
 import 'package:app/features/parking_lot/data/models/pool_summary.dart';
 import 'package:decimal/decimal.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -26,6 +27,9 @@ abstract class ParkingLotSummary with _$ParkingLotSummary {
     @Default(false) bool acceptsOnlinePayment,
     @Default(false) bool acceptsOnsitePayment,
     @Default(<String>[]) List<String> amenities,
+
+    /// The same amenities with display names. Absent from older API builds.
+    @Default(<CodeName>[]) List<CodeName> amenityDetails,
     @Default(<PoolSummary>[]) List<PoolSummary> pools,
     @MoneyAmountConverter() Decimal? fromHourlyRate,
     required String currency,

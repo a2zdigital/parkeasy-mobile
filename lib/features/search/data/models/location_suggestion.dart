@@ -12,6 +12,12 @@ abstract class LocationSuggestion with _$LocationSuggestion {
     required String address,
     @FlexibleDoubleConverter() required double latitude,
     @FlexibleDoubleConverter() required double longitude,
+    // The address split by the provider, when it gives the parts. Null
+    // means unknown; the app then splits the formatted address itself.
+    @JsonKey(name: 'address_line') String? addressLine,
+    String? city,
+    String? state,
+    @JsonKey(name: 'postal_code') String? postalCode,
   }) = _LocationSuggestion;
 
   factory LocationSuggestion.fromJson(Map<String, dynamic> json) =>

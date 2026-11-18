@@ -67,6 +67,8 @@ The API sends `"80.00"` with a `currency`. Parse it into `Money` (`core/money`, 
 
 Lists return `meta.next_cursor` and `meta.has_more`; pass `cursor` and `per_page`. Facility search is ordered by distance and uses `page`. One shared paginated-list notifier in `core` serves both.
 
+The customer bookings list refreshes from the API when the app returns to the foreground. It displays the server's status; it never infers expiry from a deadline locally.
+
 ## Idempotency
 
 `POST /bookings` and `POST /bookings/{id}/payment-orders` need an `Idempotency-Key`.

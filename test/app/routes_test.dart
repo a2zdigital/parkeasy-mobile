@@ -51,20 +51,23 @@ void main() {
     }
   });
 
-  test('signed out: only the sign-in screens are reachable', () {
+  test('signed out: sign-in screens and guest browsing are reachable', () {
     for (final location in [
       Routes.launch,
       Routes.phone,
       Routes.code,
       Routes.registrationRole,
       Routes.registrationPhone,
+      Routes.explore,
+      Routes.parkingLot('01M4JQSZSNAVTVCMS8A7AJ0WJ9'),
     ]) {
       expect(Routes.redirect(signedOut, location), isNull, reason: location);
     }
     for (final location in [
       Routes.startUp,
       Routes.completeProfile,
-      Routes.explore,
+      Routes.chooseTime('01M4JQSZSNAVTVCMS8A7AJ0WJ9'),
+      Routes.review('01M4JQSZSNAVTVCMS8A7AJ0WJ9'),
       Routes.bookings,
       Routes.activity,
       Routes.profile,
@@ -75,6 +78,24 @@ void main() {
         reason: location,
       );
     }
+  });
+
+  test('after signing in, a guest returns to what they were booking', () {
+    final lot = Routes.chooseTime('01M4JQSZSNAVTVCMS8A7AJ0WJ9');
+    for (final from in [
+      Routes.code,
+      Routes.launch,
+      Routes.startUp,
+      Routes.explore,
+    ]) {
+      expect(Routes.redirect(complete, from, returnTo: lot), lot);
+    }
+    // Only customer places are returned to.
+    expect(
+      Routes.redirect(complete, Routes.code, returnTo: Routes.ownerEarnings),
+      Routes.explore,
+    );
+    expect(Routes.redirect(complete, Routes.code), Routes.explore);
   });
 
   test('a new user must finish their profile before anything else', () {

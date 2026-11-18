@@ -18,6 +18,7 @@ import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/owner/data/models/parking_owner.dart';
 import 'package:app/features/owner/data/models/verification_status.dart';
 import 'package:app/features/owner/state/owner_application_notifier.dart';
+import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -224,6 +225,9 @@ class _Status extends ConsumerWidget {
               style: context.text.body.copyWith(color: colors.textSecondary),
               textAlign: TextAlign.center,
             ),
+            const Gap.xl(),
+            OwnerDocumentsSection(canRemove: !isApproved),
+            const Gap.xl(),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -20,7 +21,7 @@ class AppCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return Material(
+    final card = Material(
       color: selected ? colors.primaryContainer : colors.surface,
       shape: RoundedRectangleBorder(
         borderRadius: AppRadius.cardAll,
@@ -39,6 +40,14 @@ class AppCard extends StatelessWidget {
         ),
       ),
     );
+    final lifted = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.cardAll,
+        boxShadow: selected ? null : AppShadows.card(colors),
+      ),
+      child: card,
+    );
+    return onTap == null ? lifted : PressScale(child: lifted);
   }
 }
 
