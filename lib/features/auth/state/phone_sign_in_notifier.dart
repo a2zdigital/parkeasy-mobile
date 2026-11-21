@@ -29,6 +29,8 @@ class PhoneSignInState {
     this.isPhoneInvalid = false,
     this.failure,
     this.sent,
+    this.retryAt,
+    this.retryPhone,
   });
 
   final bool isSubmitting;
@@ -37,6 +39,11 @@ class PhoneSignInState {
 
   /// Set once when the code was sent; the screen moves on.
   final CodeSent? sent;
+
+  /// The API refused with a known wait (Retry-After): no new request for
+  /// [retryPhone] before this moment.
+  final DateTime? retryAt;
+  final String? retryPhone;
 }
 
 class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
@@ -51,7 +58,18 @@ class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
 
     final phone = PhoneNumber.toE164(input);
     if (phone == null) {
-      state = const PhoneSignInState(isPhoneInvalid: true);
+      state = PhoneSignInState(
+        isPhoneInvalid: true,
+        retryAt: state.retryAt,
+        retryPhone: state.retryPhone,
+      );
+      return;
+    }
+
+    // Still waiting out a refusal for this number: send nothing.
+    final now = ref.read(clockProvider)();
+    final retryAt = state.retryAt;
+    if (retryAt != null && phone == state.retryPhone && now.isBefore(retryAt)) {
       return;
     }
 
@@ -70,14 +88,23 @@ class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
         ),
       );
     } on ApiException catch (failure) {
-      state = PhoneSignInState(failure: failure);
+      final wait = failure.retryAfter;
+      state = PhoneSignInState(
+        failure: failure,
+        retryAt: wait == null ? null : ref.read(clockProvider)().add(wait),
+        retryPhone: wait == null ? null : phone,
+      );
     }
   }
 
   /// The user edited the field: stop showing the last problem.
   void clearProblems() {
     if (state.isPhoneInvalid || state.failure != null) {
-      state = const PhoneSignInState();
+      // Keep the wait: it belongs to the number, not to the message.
+      state = PhoneSignInState(
+        retryAt: state.retryAt,
+        retryPhone: state.retryPhone,
+      );
     }
   }
 }

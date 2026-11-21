@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:app/app/app.dart';
 import 'package:app/core/files/picked_file.dart';
 import 'package:app/core/widgets/app_buttons.dart';
+import 'package:app/features/booking/ui/rate_booking_card.dart';
 import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -257,6 +258,76 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('4.5 · 12 ratings'), findsOneWidget);
+    });
+
+    testWidgets('a facility lists its reviews, newest first', (tester) async {
+      final h = Harness(token: validToken());
+      h.http.stubs['/parking-lots'] = searchJson([summaryJson()]);
+      final lot = lotJson();
+      (lot['data']! as Map<String, dynamic>)['rating'] = {
+        'average': '4.0',
+        'count': 2,
+      };
+      h.http.stubs['/parking-lots/01M4JQSZSNAVTVCMS8A7AJ0WJ9'] = lot;
+      h.http.stubs['/parking-lots/01M4JQSZSNAVTVCMS8A7AJ0WJ9/ratings'] = {
+        'data': [
+          {
+            'id': 'r2',
+            'score': 5,
+            'comment': 'Easy to find and safe.',
+            'created_at': '2026-11-03T10:00:00Z',
+          },
+          {
+            'id': 'r1',
+            'score': 3,
+            'comment': null,
+            'created_at': '2026-11-01T10:00:00Z',
+          },
+        ],
+        'summary': {'average': '4.0', 'count': 2},
+      };
+      await start(tester, h);
+
+      await tester.tap(find.text('MG Road Metro Parking'));
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        find.text('Easy to find and safe.'),
+        find.byType(Scrollable).first,
+        const Offset(0, -300),
+      );
+
+      expect(find.text('Reviews'), findsOneWidget);
+      expect(find.text('Easy to find and safe.'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is RatingStars && w.score == 5),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate((w) => w is RatingStars && w.score == 3),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Nov'), findsWidgets);
+    });
+
+    testWidgets('a facility without reviews says so', (tester) async {
+      final h = Harness(token: validToken());
+      h.http.stubs['/parking-lots'] = searchJson([summaryJson()]);
+      h.http.stubs['/parking-lots/01M4JQSZSNAVTVCMS8A7AJ0WJ9'] = lotJson();
+      h.http.stubs['/parking-lots/01M4JQSZSNAVTVCMS8A7AJ0WJ9/ratings'] = {
+        'data': <Object?>[],
+        'summary': {'average': null, 'count': 0},
+      };
+      await start(tester, h);
+
+      await tester.tap(find.text('MG Road Metro Parking'));
+      await tester.pumpAndSettle();
+      await tester.dragUntilVisible(
+        find.textContaining('No reviews yet'),
+        find.byType(Scrollable).first,
+        const Offset(0, -300),
+      );
+
+      expect(find.textContaining('No reviews yet'), findsOneWidget);
     });
   });
 

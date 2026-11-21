@@ -1,5 +1,6 @@
 import 'package:app/core/api/json_converters.dart';
 import 'package:app/core/money/money.dart';
+import 'package:app/features/booking/data/models/charge_line.dart';
 import 'package:app/features/booking/data/models/price_line.dart';
 import 'package:app/features/parking_lot/data/models/booking_mode.dart';
 import 'package:decimal/decimal.dart';
@@ -24,6 +25,9 @@ abstract class Quote with _$Quote {
     @Default(false) bool acceptsOnlinePayment,
     @Default(false) bool acceptsOnsitePayment,
     @Default(<PriceLine>[]) List<PriceLine> lines,
+
+    /// The parking charge, then any GST on it. Absent from older API builds.
+    @Default(<ChargeLine>[]) List<ChargeLine> charges,
     @MoneyAmountConverter() required Decimal baseAmount,
     @MoneyAmountConverter() required Decimal totalAmount,
     required String currency,

@@ -353,4 +353,101 @@ void main() {
       expect(state().items.map((item) => item.name), ['New-location result']);
     },
   );
+  group('free spaces for a time window (J-10)', () {
+    final window = SearchWindow(
+      startAt: DateTime.utc(2026, 11, 2, 4, 30),
+      endAt: DateTime.utc(2026, 11, 2, 6, 30),
+    );
+
+    Map<String, dynamic> withSpaces(int left, {String id = 'a'}) {
+      final json = summaryJson(id: id);
+      for (final pool in json['pools'] as List) {
+        (pool as Map<String, dynamic>)
+          ..['capacity'] = 10
+          ..['spaces_left'] = left;
+      }
+      return json;
+    }
+
+    test('sends the window and shows the free spaces', () async {
+      harness.http.respond(200, searchJson([summaryJson()]));
+      await open();
+      harness.http.respond(200, searchJson([withSpaces(3)]));
+
+      await notifier().selectWindow(window);
+
+      expect(harness.http.last.uri.queryParameters, {
+        'lat': '12.9716',
+        'lng': '77.5946',
+        'radius_km': '25.0',
+        'start_at': '2026-11-02T04:30:00.000Z',
+        'end_at': '2026-11-02T06:30:00.000Z',
+        'page': '1',
+      });
+      expect(state().window, window);
+      expect(state().items.single.pools.single.spacesLeft, 3);
+      expect(state().items.single.pools.single.capacity, 10);
+    });
+
+    test(
+      'keeps the window with the vehicle filter and on later pages',
+      () async {
+        harness.http.respond(200, searchJson([summaryJson()]));
+        await open();
+        harness.http.respond(200, searchJson([withSpaces(2)], lastPage: 2));
+        await notifier().selectWindow(window);
+        harness.http.respond(200, searchJson([withSpaces(1)], lastPage: 2));
+        await notifier().selectVehicleType('car');
+        harness.http.respond(
+          200,
+          searchJson([withSpaces(1, id: 'b')], page: 2, lastPage: 2),
+        );
+        await notifier().loadMore();
+
+        final query = harness.http.last.uri.queryParameters;
+        expect(query['filter[vehicle_type]'], 'car');
+        expect(query['start_at'], '2026-11-02T04:30:00.000Z');
+        expect(query['page'], '2');
+        expect(state().items, hasLength(2));
+      },
+    );
+
+    test('clearing the window searches without times again', () async {
+      harness.http.respond(200, searchJson([summaryJson()]));
+      await open();
+      harness.http.respond(200, searchJson([withSpaces(2)]));
+      await notifier().selectWindow(window);
+      harness.http.respond(200, searchJson([summaryJson()]));
+
+      await notifier().selectWindow(null);
+
+      expect(
+        harness.http.last.uri.queryParameters.containsKey('start_at'),
+        isFalse,
+      );
+      expect(state().items.single.pools.single.spacesLeft, isNull);
+    });
+
+    test('no facility with a free space is an empty result', () async {
+      harness.http.respond(200, searchJson([summaryJson()]));
+      await open();
+      harness.http.respond(200, searchJson(const []));
+
+      await notifier().selectWindow(window);
+
+      expect(state().isEmpty, isTrue);
+    });
+
+    test('a window the API refuses is shown as an error', () async {
+      harness.http.respond(200, searchJson([summaryJson()]));
+      await open();
+      harness.http.respond(422, {
+        'error': {'code': 'INVALID_BOOKING_WINDOW', 'message': 'In the past.'},
+      });
+
+      await notifier().selectWindow(window);
+
+      expect(state().failure?.code, ApiErrorCode.invalidBookingWindow);
+    });
+  });
 }

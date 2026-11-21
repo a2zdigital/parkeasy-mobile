@@ -102,6 +102,13 @@ class ProfileScreen extends ConsumerWidget {
                     title: l10n.profileDocuments,
                     onTap: () => context.push(Routes.ownerProfileDocuments),
                   ),
+                if (user.isOwner)
+                  AppListRow(
+                    icon: Icons.receipt_long_outlined,
+                    title: l10n.gstTitle,
+                    subtitle: l10n.profileGstHint,
+                    onTap: () => context.push(Routes.ownerProfileGst),
+                  ),
                 AppListRow(
                   icon: Icons.help_outline,
                   title: l10n.profileHelp,

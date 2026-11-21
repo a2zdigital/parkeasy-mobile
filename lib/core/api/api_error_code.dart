@@ -68,6 +68,7 @@ enum ApiErrorCode {
   paymentPending('PAYMENT_PENDING'),
   paymentNotRequired('PAYMENT_NOT_REQUIRED'),
   paymentAlreadyCompleted('PAYMENT_ALREADY_COMPLETED'),
+  paymentSignatureInvalid('PAYMENT_SIGNATURE_INVALID'),
   paymentModeNotSupported('PAYMENT_MODE_NOT_SUPPORTED'),
   paymentProviderUnavailable('PAYMENT_PROVIDER_UNAVAILABLE'),
   refundNotAllowed('REFUND_NOT_ALLOWED'),

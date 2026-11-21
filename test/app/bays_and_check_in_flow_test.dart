@@ -209,6 +209,81 @@ void main() {
       );
       expect(find.text("Customer's check-in code"), findsOneWidget);
     });
+
+    for (final (reason, apiMessage, shown) in [
+      (
+        'too early',
+        'It is too early to check in this booking.',
+        'Check-in opens 30 minutes before the booking starts.',
+      ),
+      (
+        'ended',
+        'The booked time has already ended.',
+        'This booking has already ended. Check-in is no longer available.',
+      ),
+      (
+        'already checked in',
+        'This booking has already been checked in.',
+        'This booking has already been checked in.',
+      ),
+    ]) {
+      testWidgets('a code refused as $reason says so', (tester) async {
+        final h = await atCheckIn(tester);
+        h.http.respond(409, {
+          'error': {'code': 'CHECK_IN_NOT_ALLOWED', 'message': apiMessage},
+        });
+        await fill(tester, "Customer's check-in code", 'AAAABBBB');
+        await tester.tap(find.widgetWithText(PrimaryButton, 'Check in'));
+        await tester.pumpAndSettle();
+
+        expect(find.text(shown), findsOneWidget);
+        expect(find.textContaining('opens shortly'), findsNothing);
+        expect(find.text("Customer's check-in code"), findsOneWidget);
+      });
+    }
+
+    testWidgets('a code for a booking that is not confirmed says so', (
+      tester,
+    ) async {
+      final h = await atCheckIn(tester);
+      h.http.respond(409, {
+        'error': {'code': 'INVALID_BOOKING_STATE', 'message': 'No.'},
+      });
+      await fill(tester, "Customer's check-in code", 'AAAABBBB');
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Check in'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining("it isn't confirmed"), findsOneWidget);
+    });
+
+    testWidgets('the Check in button is refused as ended on the booking page', (
+      tester,
+    ) async {
+      final h = Harness(token: validToken());
+      final booking = bookingJson();
+      h.http.stubs['/owner/bookings'] = pageJson([booking]);
+      h.http.stubs['/owner/bookings/$bookingId'] = {'data': booking};
+      h.http.stubs['/owner/bookings/$bookingId/collection'] = collectionJson();
+      await start(tester, h, roles: ['customer', 'owner']);
+      await tester.tap(find.text('BK-K2M5XCN4'));
+      await tester.pumpAndSettle();
+
+      h.http.respond(409, {
+        'error': {
+          'code': 'CHECK_IN_NOT_ALLOWED',
+          'message': 'The booked time has already ended.',
+        },
+      });
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Check in'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'This booking has already ended. Check-in is no longer available.',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 
   group('owner bays', () {

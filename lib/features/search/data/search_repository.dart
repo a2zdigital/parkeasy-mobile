@@ -46,6 +46,8 @@ class SearchRepository {
     required double longitude,
     required double radiusKm,
     String? vehicleType,
+    DateTime? startAt,
+    DateTime? endAt,
     int page = 1,
   }) async {
     final envelope = await _api.get(
@@ -55,6 +57,11 @@ class SearchRepository {
         'lng': longitude,
         'radius_km': radiusKm,
         'filter[vehicle_type]': vehicleType,
+        // With a window, only facilities with a free space for all of it.
+        if (startAt != null && endAt != null) ...{
+          'start_at': startAt.toUtc().toIso8601String(),
+          'end_at': endAt.toUtc().toIso8601String(),
+        },
         'page': page,
       },
     );

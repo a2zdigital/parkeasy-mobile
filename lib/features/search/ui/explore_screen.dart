@@ -248,11 +248,17 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         },
                       ),
                     ),
-                  if (state.vehicleTypes.isNotEmpty)
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
+                  // One scrolling row: when, then which vehicle.
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _WindowFilter(
+                          window: state.window,
+                          onChanged: notifier.selectWindow,
+                        ),
+                        if (state.vehicleTypes.isNotEmpty) ...[
+                          const Gap.sm(),
                           AppFilterChip(
                             label: l10n.exploreAllVehicles,
                             isSelected: state.vehicleType == null,
@@ -268,10 +274,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                             ),
                           ],
                         ],
-                      ),
-                    )
-                  else
-                    const Gap.md(),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -426,6 +431,7 @@ class _Results extends StatelessWidget {
             final lot = state.items[index];
             final card = FacilityCard(
               lot: lot,
+              vehicleType: state.vehicleType,
               onTap: () => context.push(Routes.parkingLot(lot.id)),
             );
             return index < 8
@@ -466,6 +472,107 @@ class _Results extends StatelessWidget {
           return const SizedBox.shrink();
         },
       ),
+    );
+  }
+}
+
+/// Arrival and departure for the search. Empty searches without times;
+/// with times, only facilities with a free space for all of it are shown.
+class _WindowFilter extends StatelessWidget {
+  const _WindowFilter({required this.window, required this.onChanged});
+
+  final SearchWindow? window;
+  final ValueChanged<SearchWindow?> onChanged;
+
+  Future<DateTime?> _pickTime(
+    BuildContext context,
+    DateTime day,
+    TimeOfDay initial,
+    String help,
+  ) async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: help,
+    );
+    if (time == null) return null;
+    return DateTime(day.year, day.month, day.day, time.hour, time.minute);
+  }
+
+  Future<void> _choose(BuildContext context) async {
+    final l10n = context.l10n;
+    final now = DateTime.now();
+    final current = window;
+    final day = await showDatePicker(
+      context: context,
+      initialDate: current?.startAt.toLocal() ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: now.add(const Duration(days: 90)),
+      helpText: l10n.exploreWhenDate,
+    );
+    if (day == null || !context.mounted) return;
+
+    final suggested = now.add(const Duration(hours: 1));
+    final start = await _pickTime(
+      context,
+      day,
+      TimeOfDay.fromDateTime(current?.startAt.toLocal() ?? suggested),
+      l10n.exploreWhenArrive,
+    );
+    if (start == null || !context.mounted) return;
+
+    var end = await _pickTime(
+      context,
+      day,
+      TimeOfDay.fromDateTime(
+        current?.endAt.toLocal() ?? start.add(const Duration(hours: 2)),
+      ),
+      l10n.exploreWhenLeave,
+    );
+    if (end == null || !context.mounted) return;
+    // Leaving at an earlier clock time means the next day.
+    if (!end.isAfter(start)) end = end.add(const Duration(days: 1));
+
+    if (start.isBefore(now.subtract(const Duration(minutes: 1)))) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.exploreWhenPast)));
+      return;
+    }
+    onChanged(SearchWindow(startAt: start.toUtc(), endAt: end.toUtc()));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final current = window;
+    final dates = MaterialLocalizations.of(context);
+    String label(DateTime time) {
+      final local = time.toLocal();
+      return '${dates.formatShortMonthDay(local)}, '
+          '${dates.formatTimeOfDay(TimeOfDay.fromDateTime(local))}';
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppFilterChip(
+          label: current == null
+              ? l10n.exploreWhenAnyTime
+              : l10n.exploreWhenRange(
+                  label(current.startAt),
+                  label(current.endAt),
+                ),
+          isSelected: current != null,
+          onPressed: () => _choose(context),
+        ),
+        if (current != null)
+          IconButton(
+            tooltip: l10n.exploreWhenClear,
+            icon: const Icon(Icons.close),
+            onPressed: () => onChanged(null),
+          ),
+      ],
     );
   }
 }

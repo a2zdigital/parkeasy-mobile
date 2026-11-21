@@ -36,6 +36,31 @@ void main() {
 
     expect(document.type, OwnerDocumentType.licence);
     expect(document.parkingLotName, 'MG Road Metro Parking');
+    expect(document.scanStatus, DocumentScanStatus.clean);
+  });
+
+  test('OwnerDocument reads the malware scan and a missing link', () {
+    final document = OwnerDocument.fromJson({
+      'id': '01M4JQSZSNAVTVCMS8A7AJ0DOC',
+      'type': 'identity',
+      'file_name': 'id.pdf',
+      'mime_type': 'application/pdf',
+      'size_bytes': 120,
+      'scan_status': 'infected',
+      'url': null,
+      'created_at': '2026-10-10T10:00:00Z',
+      'parking_lot': null,
+    });
+
+    expect(document.scanStatus, DocumentScanStatus.infected);
+    expect(document.url, isNull);
+    expect(
+      OwnerDocument.fromJson({
+        ...document.toJson(),
+        'scan_status': 'quarantined',
+      }).scanStatus,
+      DocumentScanStatus.unknown,
+    );
   });
 
   test('OwnerParkingLot reads the facility and its review from one object', () {

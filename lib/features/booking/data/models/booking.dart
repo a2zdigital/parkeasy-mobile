@@ -2,6 +2,7 @@ import 'package:app/core/api/json_converters.dart';
 import 'package:app/core/money/money.dart';
 import 'package:app/features/booking/data/models/booking_lot_ref.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
+import 'package:app/features/booking/data/models/charge_line.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/data/models/price_line.dart';
 import 'package:app/features/parking_lot/data/models/booking_mode.dart';
@@ -39,6 +40,9 @@ abstract class Booking with _$Booking {
     @UtcDateTimeConverter() required DateTime endAt,
     required String timezone,
     @Default(<PriceLine>[]) List<PriceLine> priceLines,
+
+    /// What the customer was charged: parking, then any GST on it.
+    @Default(<ChargeLine>[]) List<ChargeLine> charges,
     @MoneyAmountConverter() required Decimal baseAmount,
     @MoneyAmountConverter() required Decimal totalAmount,
     required String currency,

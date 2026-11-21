@@ -22,6 +22,7 @@ class ExploreState {
     this.loadMoreFailure,
     this.vehicleType,
     this.vehicleTypes = const [],
+    this.window,
   });
 
   final SearchOrigin origin;
@@ -46,7 +47,26 @@ class ExploreState {
   /// The vehicle types seen in unfiltered results, offered as filters.
   final List<CodeName> vehicleTypes;
 
+  /// Arrival and departure: when set, only facilities with a free space
+  /// for the whole window are shown, with how many are free.
+  final SearchWindow? window;
+
   bool get isEmpty => !isLoading && failure == null && items.isEmpty;
+}
+
+/// An arrival and departure to search free spaces for.
+class SearchWindow {
+  const SearchWindow({required this.startAt, required this.endAt});
+
+  final DateTime startAt;
+  final DateTime endAt;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchWindow && other.startAt == startAt && other.endAt == endAt;
+
+  @override
+  int get hashCode => Object.hash(startAt, endAt);
 }
 
 class ExploreNotifier extends Notifier<ExploreState> {
@@ -78,6 +98,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       page: state.page,
       hasMore: state.hasMore,
       vehicleType: state.vehicleType,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
     );
 
@@ -91,6 +112,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
         page: result.page,
         hasMore: result.hasMore,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleType == null
             ? _vehicleTypesIn(result.items)
             : state.vehicleTypes,
@@ -107,6 +129,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
         page: state.page,
         hasMore: state.hasMore,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleTypes,
       );
     }
@@ -123,6 +146,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       hasMore: state.hasMore,
       isLoadingMore: true,
       vehicleType: state.vehicleType,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
     );
 
@@ -136,6 +160,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
         page: result.page,
         hasMore: result.hasMore,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleTypes,
       );
     } on ApiException catch (failure) {
@@ -148,6 +173,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
         hasMore: state.hasMore,
         loadMoreFailure: failure,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleTypes,
       );
     }
@@ -161,7 +187,23 @@ class ExploreNotifier extends Notifier<ExploreState> {
       origin: state.origin,
       isLoading: true,
       vehicleType: code,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
+    );
+    await load();
+  }
+
+  /// Searches free spaces for [window]; null searches without times.
+  /// The API validates the window like a booking.
+  Future<void> selectWindow(SearchWindow? window) async {
+    if (window == state.window) return;
+
+    state = ExploreState(
+      origin: state.origin,
+      isLoading: true,
+      vehicleType: state.vehicleType,
+      vehicleTypes: state.vehicleTypes,
+      window: window,
     );
     await load();
   }
@@ -176,6 +218,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       origin: origin,
       isLoading: true,
       vehicleType: state.vehicleType,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
     );
     await load();
@@ -197,6 +240,8 @@ class ExploreNotifier extends Notifier<ExploreState> {
           longitude: origin.longitude,
           radiusKm: config.searchRadiusKm,
           vehicleType: state.vehicleType,
+          startAt: state.window?.startAt,
+          endAt: state.window?.endAt,
           page: page,
         );
     return (items: result.items, page: result.page, hasMore: result.hasMore);

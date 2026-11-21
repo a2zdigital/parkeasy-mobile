@@ -7,21 +7,32 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 /// Razorpay's standard checkout. The only file that imports the SDK.
 class RazorpayCheckoutLauncher implements CheckoutLauncher {
   @override
-  Future<CheckoutOutcome> open(CheckoutRequest request) {
+  Future<CheckoutResult> open(CheckoutRequest request) {
     final razorpay = Razorpay();
-    final result = Completer<CheckoutOutcome>();
+    final result = Completer<CheckoutResult>();
 
-    void finish(CheckoutOutcome outcome) {
+    void finish(CheckoutOutcome outcome, {CheckoutReceipt? receipt}) {
       if (result.isCompleted) return;
       razorpay.clear();
-      result.complete(outcome);
+      result.complete(CheckoutResult(outcome, receipt: receipt));
     }
 
     razorpay
-      ..on(
-        Razorpay.EVENT_PAYMENT_SUCCESS,
-        (PaymentSuccessResponse _) => finish(CheckoutOutcome.completed),
-      )
+      ..on(Razorpay.EVENT_PAYMENT_SUCCESS, (PaymentSuccessResponse response) {
+        final orderId = response.orderId;
+        final paymentId = response.paymentId;
+        final signature = response.signature;
+        finish(
+          CheckoutOutcome.completed,
+          receipt: orderId == null || paymentId == null || signature == null
+              ? null
+              : CheckoutReceipt(
+                  orderId: orderId,
+                  paymentId: paymentId,
+                  signature: signature,
+                ),
+        );
+      })
       ..on(
         Razorpay.EVENT_PAYMENT_ERROR,
         (PaymentFailureResponse response) => finish(

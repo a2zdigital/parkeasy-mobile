@@ -105,7 +105,11 @@ class ReviewScreen extends ConsumerWidget {
             ),
           ),
           const Gap.md(),
-          PriceBreakdown(lines: quote.lines, total: quote.total),
+          PriceBreakdown(
+            lines: quote.lines,
+            total: quote.total,
+            charges: quote.charges,
+          ),
           SectionHeader(l10n.reviewPayment),
           if (quote.acceptsOnsitePayment)
             _PaymentOption(

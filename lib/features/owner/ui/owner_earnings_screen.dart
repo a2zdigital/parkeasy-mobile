@@ -94,6 +94,8 @@ class OwnerEarningsScreen extends ConsumerWidget {
   }
 }
 
+bool _nonZero(Decimal? amount) => amount != null && amount != Decimal.zero;
+
 class _Summary extends StatelessWidget {
   const _Summary({required this.earnings});
 
@@ -136,6 +138,18 @@ class _Summary extends StatelessWidget {
                   money(earnings.online.commission),
                 ),
                 _Line(l10n.earningsRefunded, money(earnings.online.refunded)),
+                if (_nonZero(earnings.online.commissionTax))
+                  _Line(
+                    l10n.earningsCommissionGst,
+                    money(earnings.online.commissionTax!),
+                  ),
+                if (_nonZero(earnings.online.tcs))
+                  _Line(l10n.earningsTcs, money(earnings.online.tcs!)),
+                if (_nonZero(earnings.online.parkingGst))
+                  _Line(
+                    l10n.earningsParkingGst,
+                    money(earnings.online.parkingGst!),
+                  ),
                 _Line(l10n.earningsEarned, money(earnings.online.earned)),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSpace.md),
@@ -148,6 +162,11 @@ class _Summary extends StatelessWidget {
                   l10n.earningsCommission,
                   money(earnings.onSite.commission),
                 ),
+                if (_nonZero(earnings.onSite.commissionTax))
+                  _Line(
+                    l10n.earningsCommissionGst,
+                    money(earnings.onSite.commissionTax!),
+                  ),
               ],
             ),
           ),

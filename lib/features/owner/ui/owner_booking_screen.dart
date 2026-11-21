@@ -36,7 +36,7 @@ class OwnerBookingScreen extends ConsumerWidget {
 
   static String _failureText(AppLocalizations l10n, ApiException failure) =>
       switch (failure.code) {
-        ApiErrorCode.checkInNotAllowed => l10n.errCheckInNotAllowed,
+        ApiErrorCode.checkInNotAllowed => checkInRefusalText(l10n, failure),
         ApiErrorCode.checkOutNotAllowed => l10n.errCheckOutNotAllowed,
         ApiErrorCode.invalidBookingState => l10n.errInvalidBookingState,
         ApiErrorCode.approvalExpired => l10n.errApprovalExpired,
@@ -207,7 +207,11 @@ class OwnerBookingScreen extends ConsumerWidget {
                   ),
                 ),
                 const Gap.md(),
-                PriceBreakdown(lines: booking.priceLines, total: booking.total),
+                PriceBreakdown(
+                  lines: booking.priceLines,
+                  total: booking.total,
+                  charges: booking.charges,
+                ),
                 if (collection != null) ...[
                   const Gap.md(),
                   AppBanner(

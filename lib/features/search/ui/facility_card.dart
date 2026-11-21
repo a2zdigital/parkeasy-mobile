@@ -11,10 +11,19 @@ import 'package:flutter/material.dart';
 
 /// One search result: name, how far, where, and the starting price.
 class FacilityCard extends StatelessWidget {
-  const FacilityCard({required this.lot, required this.onTap, super.key});
+  const FacilityCard({
+    required this.lot,
+    required this.onTap,
+    this.vehicleType,
+    super.key,
+  });
 
   final ParkingLotSummary lot;
   final VoidCallback onTap;
+
+  /// The vehicle type the search is filtered by, if any: its free spaces
+  /// are shown; otherwise each type's.
+  final String? vehicleType;
 
   static String distance(AppLocalizations l10n, double km) => km < 1
       ? l10n.distanceMetres((km * 1000).round())
@@ -26,6 +35,13 @@ class FacilityCard extends StatelessWidget {
     final colors = context.colors;
     final text = context.text;
     final price = lot.fromPrice;
+    // Free spaces, only when the search had arrival and departure times.
+    final counted = [
+      for (final pool in lot.pools)
+        if (pool.spacesLeft != null &&
+            (vehicleType == null || pool.vehicleType.code == vehicleType))
+          pool,
+    ];
 
     return Semantics(
       button: true,
@@ -70,6 +86,24 @@ class FacilityCard extends StatelessWidget {
                         ),
                   style: text.price,
                 ),
+                if (counted.length == 1)
+                  StatusChip(
+                    tone: StatusTone.available,
+                    icon: Icons.local_parking,
+                    label: l10n.exploreSpacesFree(counted.single.spacesLeft!),
+                  )
+                else
+                  for (final pool in counted)
+                    StatusChip(
+                      tone: (pool.spacesLeft ?? 0) > 0
+                          ? StatusTone.available
+                          : StatusTone.neutral,
+                      icon: Icons.local_parking,
+                      label: l10n.exploreSpacesFreeFor(
+                        pool.spacesLeft!,
+                        pool.vehicleType.name,
+                      ),
+                    ),
                 if (lot.bookingMode == BookingMode.ownerApproval)
                   StatusChip(
                     tone: StatusTone.warning,

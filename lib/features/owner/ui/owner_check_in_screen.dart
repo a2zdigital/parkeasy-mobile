@@ -95,10 +95,11 @@ class _OwnerCheckInScreenState extends ConsumerState<OwnerCheckInScreen> {
         _error = switch (failure.code) {
           ApiErrorCode.checkInCodeNotFound => l10n.errCheckInCodeNotFound,
           ApiErrorCode.checkOutNotAllowed => l10n.errCheckOutNotAllowed,
-          ApiErrorCode.checkInNotAllowed || ApiErrorCode.invalidBookingState =>
-            _checkingOut
-                ? l10n.errCheckOutNotAllowed
-                : l10n.errCheckInNotAllowed,
+          ApiErrorCode.checkInNotAllowed || ApiErrorCode.invalidBookingState
+              when _checkingOut =>
+            l10n.errCheckOutNotAllowed,
+          ApiErrorCode.checkInNotAllowed => checkInRefusalText(l10n, failure),
+          ApiErrorCode.invalidBookingState => l10n.errCheckInBookingState,
           _ => ownerAccessText(l10n, failure) ?? l10n.describe(failure),
         };
       });

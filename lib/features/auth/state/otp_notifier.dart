@@ -78,7 +78,14 @@ class OtpNotifier extends AutoDisposeFamilyNotifier<OtpState, CodeSent> {
         wasResent: true,
       );
     } on ApiException catch (failure) {
-      state = OtpState(resendAt: state.resendAt, failure: failure);
+      // A refusal that says how long to wait moves the resend timer there.
+      final wait = failure.retryAfter;
+      state = OtpState(
+        resendAt: wait == null
+            ? state.resendAt
+            : ref.read(clockProvider)().add(wait),
+        failure: failure,
+      );
     }
   }
 

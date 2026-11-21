@@ -46,6 +46,7 @@ abstract final class Routes {
   static const String ownerProfileEdit = '$ownerProfile/edit';
   static const String ownerProfileHelp = '$ownerProfile/help';
   static const String ownerProfileDocuments = '$ownerProfile/documents';
+  static const String ownerProfileGst = '$ownerProfile/gst';
 
   static const String ownerFacilityNew = '$ownerFacilities/new';
 

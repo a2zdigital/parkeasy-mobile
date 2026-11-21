@@ -5,6 +5,7 @@ import 'package:app/core/providers.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/owner/data/models/earning_entry.dart';
+import 'package:app/features/owner/data/models/gst_registration.dart';
 import 'package:app/features/owner/data/models/onsite_collection_state.dart';
 import 'package:app/features/owner/data/models/operating_hour_input.dart';
 import 'package:app/features/owner/data/models/owner_application_input.dart';
@@ -166,6 +167,27 @@ class OwnerRepository {
         await _api.get('/owner/earnings/entries', query: {'cursor': cursor}),
         EarningEntry.fromJson,
       );
+
+  // GST ------------------------------------------------------------------
+
+  Future<List<GstRegistration>> gstRegistrations() async {
+    final data = (await _api.get('/owner/gst-registrations'))['data'];
+    return (data as List<dynamic>)
+        .map((item) => GstRegistration.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<GstRegistration> addGstRegistration({
+    required String gstin,
+    required String legalName,
+  }) async => GstRegistration.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/owner/gst-registrations',
+        body: {'gstin': gstin, 'legal_name': legalName},
+      ),
+    ),
+  );
 
   // Facility editing -------------------------------------------------------
 

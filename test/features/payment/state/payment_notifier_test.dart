@@ -346,4 +346,117 @@ void main() {
       );
     });
   });
+  group('verifying the receipt from checkout', () {
+    const verify = '/bookings/$bookingId/payment/verify';
+    const receipt = CheckoutReceipt(
+      orderId: 'order_abc',
+      paymentId: 'pay_123',
+      signature: 'sig_456',
+    );
+
+    setUp(() => checkout.receipt = receipt);
+
+    test(
+      'sends the receipt once and confirms only on the API answer',
+      () async {
+        harness.http
+          ..respond(201, {'data': orderJson()})
+          ..respond(
+            200,
+            paymentJson(orderStatus: 'succeeded', bookingStatus: 'confirmed'),
+          );
+        await open();
+
+        expect(state().stage, PaymentStage.succeeded);
+        final sent = to(verify).single;
+        expect(sent.method, 'POST');
+        expect(sent.data, {
+          'razorpay_order_id': 'order_abc',
+          'razorpay_payment_id': 'pay_123',
+          'razorpay_signature': 'sig_456',
+        });
+        expect(to(status), isEmpty, reason: 'No polling once verified');
+      },
+    );
+
+    test('a payment not captured yet keeps checking until it is', () async {
+      harness.http
+        ..respond(201, {'data': orderJson()})
+        ..respond(200, paymentJson())
+        ..respond(200, paymentJson())
+        ..respond(
+          200,
+          paymentJson(orderStatus: 'succeeded', bookingStatus: 'confirmed'),
+        );
+      await open();
+
+      expect(state().stage, PaymentStage.succeeded);
+      expect(to(verify), hasLength(1), reason: 'Verified once, then polled');
+      expect(to(status), hasLength(2));
+    });
+
+    test(
+      'a receipt the API refuses is not success, and is not retried',
+      () async {
+        harness.http
+          ..respond(201, {'data': orderJson()})
+          ..respond(422, {
+            'error': {
+              'code': 'PAYMENT_SIGNATURE_INVALID',
+              'message': 'The payment could not be verified.',
+              'request_id': 'req_1',
+            },
+          });
+        await open();
+
+        expect(state().stage, PaymentStage.refused);
+        expect(state().failure?.code, ApiErrorCode.paymentSignatureInvalid);
+        expect(to(verify), hasLength(1));
+        expect(to(status), isEmpty);
+      },
+    );
+
+    test('a lost connection while verifying falls back to checking', () async {
+      harness.http
+        ..respond(201, {'data': orderJson()})
+        ..respond(503, {
+          'error': {
+            'code': 'SERVICE_UNAVAILABLE',
+            'message': 'Try again.',
+            'request_id': 'req_2',
+          },
+        })
+        ..respond(
+          200,
+          paymentJson(orderStatus: 'succeeded', bookingStatus: 'confirmed'),
+        );
+      await open();
+
+      expect(state().stage, PaymentStage.succeeded);
+      expect(to(status), hasLength(1));
+    });
+
+    test('a failed payment reported by the API is shown as failed', () async {
+      harness.http
+        ..respond(201, {'data': orderJson()})
+        ..respond(200, paymentJson(orderStatus: 'failed'));
+      await open();
+
+      expect(state().stage, PaymentStage.failed);
+    });
+
+    test('without a receipt (external wallet) it only polls', () async {
+      checkout.receipt = null;
+      harness.http
+        ..respond(201, {'data': orderJson()})
+        ..respond(
+          200,
+          paymentJson(orderStatus: 'succeeded', bookingStatus: 'confirmed'),
+        );
+      await open();
+
+      expect(state().stage, PaymentStage.succeeded);
+      expect(to(verify), isEmpty);
+    });
+  });
 }

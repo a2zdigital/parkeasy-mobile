@@ -263,12 +263,18 @@ class FakeCheckoutLauncher implements CheckoutLauncher {
   FakeCheckoutLauncher([this.outcome = CheckoutOutcome.completed]);
 
   CheckoutOutcome outcome;
+
+  /// Returned with [CheckoutOutcome.completed]; null like an external wallet.
+  CheckoutReceipt? receipt;
   final List<CheckoutRequest> opened = [];
 
   @override
-  Future<CheckoutOutcome> open(CheckoutRequest request) async {
+  Future<CheckoutResult> open(CheckoutRequest request) async {
     opened.add(request);
-    return outcome;
+    return CheckoutResult(
+      outcome,
+      receipt: outcome == CheckoutOutcome.completed ? receipt : null,
+    );
   }
 }
 

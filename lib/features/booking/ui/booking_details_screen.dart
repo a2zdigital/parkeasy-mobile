@@ -292,7 +292,11 @@ class _Body extends StatelessWidget {
           ),
         ],
         const Gap.md(),
-        PriceBreakdown(lines: booking.priceLines, total: booking.total),
+        PriceBreakdown(
+          lines: booking.priceLines,
+          total: booking.total,
+          charges: booking.charges,
+        ),
         if (isOpen && booking.paymentMode == PaymentMode.onSite) ...[
           const Gap.md(),
           AppBanner(

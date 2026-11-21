@@ -30,6 +30,7 @@ class PaymentScreen extends ConsumerWidget {
         ApiErrorCode.approvalRequired => l10n.errApprovalRequired,
         ApiErrorCode.paymentProviderUnavailable =>
           l10n.errPaymentProviderUnavailable,
+        ApiErrorCode.paymentSignatureInvalid => l10n.errPaymentNotVerified,
         _ => l10n.describe(failure),
       };
 

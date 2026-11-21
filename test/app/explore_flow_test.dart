@@ -430,4 +430,34 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+  testWidgets('results with a time window show the free spaces', (
+    tester,
+  ) async {
+    final h = Harness(token: validToken());
+    final one = summaryJson();
+    for (final pool in one['pools'] as List) {
+      (pool as Map<String, dynamic>)
+        ..['capacity'] = 10
+        ..['spaces_left'] = 3;
+    }
+    final two = summaryJson(
+      id: 'b',
+      name: 'Two types',
+      vehicles: ['car', 'two_wheeler'],
+    );
+    final twoPools = two['pools'] as List;
+    (twoPools[0] as Map<String, dynamic>)
+      ..['capacity'] = 4
+      ..['spaces_left'] = 0;
+    (twoPools[1] as Map<String, dynamic>)
+      ..['capacity'] = 8
+      ..['spaces_left'] = 5;
+    h.http.stubs['/parking-lots'] = searchJson([one, two]);
+    await signedIn(tester, h);
+
+    expect(find.text('3 spaces free'), findsOneWidget);
+    expect(find.text('0 Car free'), findsOneWidget);
+    expect(find.text('5 Two wheeler free'), findsOneWidget);
+    expect(find.text('Any time'), findsOneWidget);
+  });
 }

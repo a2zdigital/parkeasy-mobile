@@ -11,6 +11,7 @@ abstract class OnsiteEarnings with _$OnsiteEarnings {
   const factory OnsiteEarnings({
     @MoneyAmountConverter() required Decimal collected,
     @MoneyAmountConverter() required Decimal commission,
+    @MoneyAmountConverter() Decimal? commissionTax,
   }) = _OnsiteEarnings;
 
   factory OnsiteEarnings.fromJson(Map<String, dynamic> json) =>

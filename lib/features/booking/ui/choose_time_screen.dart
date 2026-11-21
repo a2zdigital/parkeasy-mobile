@@ -322,7 +322,11 @@ class _PricingView extends StatelessWidget {
                     ),
             ),
             const Gap.md(),
-            PriceBreakdown(lines: quote.lines, total: quote.total),
+            PriceBreakdown(
+              lines: quote.lines,
+              total: quote.total,
+              charges: quote.charges,
+            ),
           ],
         );
     }

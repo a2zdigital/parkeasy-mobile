@@ -207,6 +207,18 @@ class OwnerDocumentsSection extends ConsumerWidget {
                                 typeLabel(l10n, document.type),
                                 style: text.body,
                               ),
+                              if (scanNote(l10n, document.scanStatus)
+                                  case final note?)
+                                Text(
+                                  note,
+                                  style: text.bodySmall.copyWith(
+                                    color:
+                                        document.scanStatus ==
+                                            DocumentScanStatus.infected
+                                        ? colors.danger.solid
+                                        : colors.textSecondary,
+                                  ),
+                                ),
                               if (document.expiresOn case final expires?)
                                 Text(
                                   document.isExpired
@@ -365,3 +377,14 @@ String pickProblemText(
   PickProblem.wrongType => photo ? l10n.photoWrongType : l10n.documentWrongType,
   PickProblem.unreadable => l10n.pickUnreadable,
 };
+
+/// A line under a document whose malware scan has not passed, or null when
+/// it has. A failed scan is retried by the server, so it reads as pending.
+@visibleForTesting
+String? scanNote(AppLocalizations l10n, DocumentScanStatus status) =>
+    switch (status) {
+      DocumentScanStatus.clean || DocumentScanStatus.unknown => null,
+      DocumentScanStatus.pending ||
+      DocumentScanStatus.failed => l10n.documentScanPending,
+      DocumentScanStatus.infected => l10n.documentScanInfected,
+    };

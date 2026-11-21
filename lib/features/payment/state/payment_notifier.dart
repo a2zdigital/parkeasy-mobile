@@ -78,6 +78,7 @@ class PaymentNotifier extends AutoDisposeFamilyNotifier<PaymentState, String> {
   static const int confirmAttempts = 30;
 
   String? _key;
+  String? _verifiedPayment;
   bool _disposed = false;
 
   @override
@@ -145,7 +146,7 @@ class PaymentNotifier extends AutoDisposeFamilyNotifier<PaymentState, String> {
 
     _set(PaymentState(stage: PaymentStage.inCheckout, order: order));
     final session = ref.read(sessionControllerProvider);
-    final outcome = await ref
+    final result = await ref
         .read(checkoutLauncherProvider)
         .open(
           CheckoutRequest(
@@ -160,8 +161,10 @@ class PaymentNotifier extends AutoDisposeFamilyNotifier<PaymentState, String> {
         );
     if (_disposed) return;
 
-    switch (outcome) {
+    switch (result.outcome) {
       case CheckoutOutcome.completed:
+        final receipt = result.receipt;
+        if (receipt != null && await _verify(order, receipt)) return;
         await _confirm(order, confirmAttempts, PaymentStage.stillPending);
       case CheckoutOutcome.dismissed:
         // Closing the window does not prove nothing was paid: check once.
@@ -190,6 +193,50 @@ class PaymentNotifier extends AutoDisposeFamilyNotifier<PaymentState, String> {
       return;
     }
     await _confirm(order, confirmAttempts, PaymentStage.stillPending);
+  }
+
+  /// Sends the window's receipt to the API once. Returns true when that
+  /// settled the payment (confirmed, or refused as not matching); false
+  /// when the answer is still open, so the caller keeps checking.
+  Future<bool> _verify(PaymentOrder order, CheckoutReceipt receipt) async {
+    // One verification per payment: a second tap or a rebuilt screen
+    // must not report the same receipt again.
+    if (_verifiedPayment == receipt.paymentId) return false;
+    _verifiedPayment = receipt.paymentId;
+
+    _set(PaymentState(stage: PaymentStage.confirming, order: order));
+    try {
+      final payment = await ref
+          .read(paymentRepositoryProvider)
+          .verify(arg, receipt);
+      if (_disposed) return true;
+      final latest = payment.order;
+      if (latest?.status == PaymentOrderStatus.succeeded ||
+          payment.bookingStatus == BookingStatus.confirmed) {
+        _succeeded(latest ?? order);
+        return true;
+      }
+      if (latest?.status == PaymentOrderStatus.failed) {
+        _set(PaymentState(stage: PaymentStage.failed, order: latest));
+        return true;
+      }
+      // Not captured yet: the provider or the webhook finishes it.
+      return false;
+    } on ApiException catch (failure) {
+      if (_disposed) return true;
+      if (failure.code == ApiErrorCode.paymentSignatureInvalid) {
+        _set(
+          PaymentState(
+            stage: PaymentStage.refused,
+            order: order,
+            failure: failure,
+          ),
+        );
+        return true;
+      }
+      // Lost connection or the provider was slow: not an answer.
+      return false;
+    }
   }
 
   /// Asks the API up to [attempts] times whether the payment arrived, and

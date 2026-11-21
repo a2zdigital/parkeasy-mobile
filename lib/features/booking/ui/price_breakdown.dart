@@ -3,18 +3,26 @@ import 'package:app/core/money/money_format.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/app_card.dart';
+import 'package:app/features/booking/data/models/charge_line.dart';
 import 'package:app/features/booking/data/models/price_line.dart';
 import 'package:app/features/parking_lot/data/models/rate_type.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 
 /// How a price is made up, exactly as the API returned it: one row per
-/// line, then the total. Nothing here is calculated by the app.
+/// line, then the parking charge and each GST line when GST applies, then
+/// the total. Nothing here is calculated by the app.
 class PriceBreakdown extends StatelessWidget {
-  const PriceBreakdown({required this.lines, required this.total, super.key});
+  const PriceBreakdown({
+    required this.lines,
+    required this.total,
+    this.charges = const [],
+    super.key,
+  });
 
   final List<PriceLine> lines;
   final Money total;
+  final List<ChargeLine> charges;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +38,28 @@ class PriceBreakdown extends StatelessWidget {
         RateType.unknown => l10n.timeLineOther(line.quantity, unit),
       };
     }
+
+    Widget row(String label, Money amount) => MergeSemantics(
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: text.bodySmall.copyWith(color: colors.textSecondary),
+            ),
+          ),
+          const Gap.md(),
+          Text(
+            formatMoney(amount),
+            style: text.bodySmall.copyWith(
+              fontFeatures: text.price.fontFeatures,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final taxed = charges.any((charge) => charge.isTax);
 
     return AppCard(
       child: Column(
@@ -57,6 +87,19 @@ class PriceBreakdown extends StatelessWidget {
               ),
             ),
             const Gap.sm(),
+          ],
+          if (taxed) ...[
+            const Divider(),
+            const Gap.sm(),
+            for (final charge in charges) ...[
+              row(
+                charge.isTax
+                    ? l10n.priceTaxLine(charge.taxName, charge.rate ?? '')
+                    : l10n.priceParking,
+                Money(charge.amount, total.currency),
+              ),
+              const Gap.sm(),
+            ],
           ],
           const Divider(),
           const Gap.sm(),

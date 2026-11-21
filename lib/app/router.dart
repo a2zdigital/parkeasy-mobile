@@ -26,6 +26,7 @@ import 'package:app/features/owner/ui/owner_check_in_screen.dart';
 import 'package:app/features/owner/ui/owner_documents_screen.dart';
 import 'package:app/features/owner/ui/owner_earnings_screen.dart';
 import 'package:app/features/owner/ui/owner_facilities_screen.dart';
+import 'package:app/features/owner/ui/owner_gst_screen.dart';
 import 'package:app/features/owner/ui/pool_form_screen.dart';
 import 'package:app/features/owner/ui/pool_spaces_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
@@ -338,6 +339,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'documents',
                     builder: (context, state) => const OwnerDocumentsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'gst',
+                    builder: (context, state) => const OwnerGstScreen(),
                   ),
                   GoRoute(
                     path: 'edit',

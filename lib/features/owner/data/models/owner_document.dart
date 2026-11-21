@@ -19,8 +19,25 @@ enum OwnerDocumentType {
   final String wire;
 }
 
+/// The server's malware scan of a document. Only [clean] documents can be
+/// opened. [unknown] stands for a value added to the API after this app was
+/// built.
+@JsonEnum(valueField: 'wire')
+enum DocumentScanStatus {
+  pending('pending'),
+  clean('clean'),
+  infected('infected'),
+  failed('failed'),
+  unknown('unknown');
+
+  const DocumentScanStatus(this.wire);
+
+  final String wire;
+}
+
 /// A document sent with the owner application. [url] is signed and stops
-/// working after a few minutes; reading the list again gives fresh ones.
+/// working after a few minutes; reading the list again gives fresh ones. It
+/// is null until the malware scan has passed.
 @freezed
 abstract class OwnerDocument with _$OwnerDocument {
   const factory OwnerDocument({
@@ -30,7 +47,10 @@ abstract class OwnerDocument with _$OwnerDocument {
     required String fileName,
     required String mimeType,
     required int sizeBytes,
-    required String url,
+    String? url,
+    @JsonKey(unknownEnumValue: DocumentScanStatus.unknown)
+    @Default(DocumentScanStatus.clean)
+    DocumentScanStatus scanStatus,
     @UtcDateTimeConverter() required DateTime createdAt,
 
     /// The expiry date the owner or staff entered, as YYYY-MM-DD. The
