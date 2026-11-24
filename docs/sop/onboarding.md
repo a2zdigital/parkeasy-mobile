@@ -6,7 +6,7 @@ From a new machine to the app running against a local API.
 
 | Tool | Version | Notes |
 |---|---|---|
-| Flutter | 3.47.9 (stable) | The version CI uses. `flutter --version` must match |
+| Flutter | 3.35.3 (stable) | The version CI uses. `flutter --version` must match |
 | Android Studio | Current | Android SDK, an emulator image, the Flutter and Dart plugins |
 | Xcode | Current | macOS only; needed for iOS. Windows developers build Android only |
 | CocoaPods | Current | macOS only |

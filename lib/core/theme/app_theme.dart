@@ -2,7 +2,6 @@ import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_text_styles.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 /// Builds the Material theme from the design tokens. This is the only

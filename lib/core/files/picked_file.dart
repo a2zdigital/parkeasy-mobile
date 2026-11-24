@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -63,13 +65,15 @@ class PlatformFilePickerService implements FilePickerService {
     try {
       // Photos come from the gallery (no storage permission needed on
       // Android, the system photo picker on iOS); documents from the
-      // document picker.
-      file = images
-          ? await FilePicker.pickFile(type: FileType.image)
-          : await FilePicker.pickFile(
+      // document picker. The contents are not loaded here: the size is
+      // checked first, so a large camera photo is never read into memory.
+      final result = images
+          ? await FilePicker.pickFiles(type: FileType.image)
+          : await FilePicker.pickFiles(
               type: FileType.custom,
               allowedExtensions: extensions,
             );
+      file = result == null || result.files.isEmpty ? null : result.files.first;
     } on PlatformException catch (error) {
       debugPrint('File picker failed: ${error.code}');
       throw const PickException(PickProblem.unreadable);
@@ -77,21 +81,27 @@ class PlatformFilePickerService implements FilePickerService {
     if (file == null) return null;
 
     // The gallery may name a file without an extension; the API checks the
-    // content's real type either way.
-    final extension = file.extension?.toLowerCase();
+    // content's real type either way. (The package's own `extension` getter
+    // returns the whole name when there is no dot, so it is not used.)
+    final dot = file.name.lastIndexOf('.');
+    final extension = dot < 0
+        ? null
+        : file.name.substring(dot + 1).toLowerCase();
     if (extension != null &&
         extension.isNotEmpty &&
         !extensions.contains(extension)) {
       throw const PickException(PickProblem.wrongType);
     }
 
+    if (file.size > maxUploadBytes) {
+      throw const PickException(PickProblem.tooLarge);
+    }
+
     try {
-      // Before reading: a large camera photo is never loaded into memory.
-      final length = await file.length();
-      if (length != null && length > maxUploadBytes) {
-        throw const PickException(PickProblem.tooLarge);
-      }
-      final bytes = await file.readAsBytes();
+      final path = file.path;
+      final bytes = path != null
+          ? await File(path).readAsBytes()
+          : file.bytes ?? (throw const PickException(PickProblem.unreadable));
       if (bytes.length > maxUploadBytes) {
         throw const PickException(PickProblem.tooLarge);
       }
