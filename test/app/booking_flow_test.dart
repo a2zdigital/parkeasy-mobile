@@ -116,6 +116,10 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Review and book'), findsNothing);
+    // A cancelled booking is no longer Upcoming: it is under Past.
+    expect(find.text('BK-K2M5XCN4'), findsNothing);
+    await tester.tap(find.text('Past'));
+    await tester.pumpAndSettle();
     expect(find.text('BK-K2M5XCN4'), findsOneWidget);
     expect(find.text('Cancelled'), findsOneWidget);
     expect(tester.takeException(), isNull);

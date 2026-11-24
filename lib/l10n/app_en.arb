@@ -398,7 +398,7 @@
   "statusCancelled": "Cancelled",
   "statusRejected": "Not accepted",
   "statusExpired": "Expired",
-  "statusNoShow": "Missed",
+  "statusNoShow": "Expired",
   "bannerConfirmed": "You're booked. Show the reference at the facility.",
   "bannerConfirmedWithCode": "You're booked. Show your check-in code at the entrance.",
   "bannerPendingApproval": "Request sent. The owner has until {time} to answer.",
@@ -431,7 +431,7 @@
   "bannerCancelled": "This booking was cancelled.",
   "bannerRejected": "The owner couldn't accept this request. You haven't been charged.",
   "bannerExpired": "This booking expired because it wasn't completed in time.",
-  "bannerNoShow": "This booking was missed, so the space was released.",
+  "bannerNoShow": "Booking expired. Check-in is no longer available.",
   "bannerCompleted": "This stay is complete.",
   "payAtFacilityDue": "Pay {amount} at the facility",
   "@payAtFacilityDue": {
@@ -1189,7 +1189,6 @@
   "gstLegalName": "Legal name",
   "gstSubmit": "Send for verification",
   "gstSent": "Sent. It will be checked and verified soon.",
-  "gstInvalid": "Enter a valid 15-character GSTIN.",
   "gstNameRequired": "Enter the legal name on your GST registration.",
   "gstPending": "Waiting for verification",
   "gstVerified": "Verified",
@@ -1201,5 +1200,164 @@
         "type": "String"
       }
     }
-  }
+  },
+  "checkOutCodeTitle": "Checkout QR Code",
+  "checkOutCodeHint": "Show this code to the parking attendant when leaving.",
+  "bannerParkedShowCode": "You're parked until {time}. Show your check-out code when you leave.",
+  "@bannerParkedShowCode": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerCheckOutCodeLabel": "Customer's check-out code",
+  "ownerCheckOutHelp": "Scan the check-out QR code on the customer's phone, or type the code they read out.",
+  "ratingSheetTitle": "How was your parking experience?",
+  "ratingStars": "{count, plural, =1{1 star} other{{count} stars}}",
+  "@ratingStars": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingFeedbackLabel": "Tell us more (optional)",
+  "ratingSubmit": "Submit",
+  "ratingMaybeLater": "Maybe later",
+  "gstErrCharacters": "A GSTIN has only letters and digits, with no spaces or symbols.",
+  "gstErrLength": "A GSTIN has exactly 15 characters; this one has {count}.",
+  "@gstErrLength": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "gstErrState": "The first 2 characters must be a valid GST state code (for example 29 for Karnataka).",
+  "gstErrPan": "Characters 3 to 12 must be a PAN: 5 letters, 4 digits, then 1 letter.",
+  "gstErrHolderType": "The 4th character of the PAN (character 6 of the GSTIN) is not a valid PAN holder type.",
+  "gstErrEntity": "Character 13 must be a registration number from 1 to 9 or a letter.",
+  "gstErrZ": "Character 14 must be the letter Z.",
+  "gstErrChecksum": "The last character (the check character) does not match: one or more characters are wrong.",
+  "gstNameMismatch": "Waiting for verification: the legal name doesn't match GST records ({name}).",
+  "@gstNameMismatch": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "bookingsOngoing": "Ongoing",
+  "bookingsOngoingEmptyTitle": "Nothing in progress",
+  "bookingsOngoingEmptyBody": "A booking shows here once its time starts, and while you're parked.",
+  "bookingsCheckedInLine": "Checked in {checkedIn} · Check out by {checkOutBy}",
+  "@bookingsCheckedInLine": {
+    "placeholders": {
+      "checkedIn": {
+        "type": "String"
+      },
+      "checkOutBy": {
+        "type": "String"
+      }
+    }
+  },
+  "ratingSheetMessage": "Share your experience with us.",
+  "ratingThanks": "Thank you for your rating!",
+  "checkOutConfirmTitle": "Confirm check-out",
+  "checkOutConfirmFacility": "Facility",
+  "checkOutConfirmBooked": "Booked",
+  "checkOutConfirmCheckedIn": "Checked in",
+  "checkOutConfirmAction": "Confirm check-out",
+  "checkOutOverstay": "Stayed {minutes} min past the booking. Extra charge: {amount}. Collect it before the vehicle leaves.",
+  "@checkOutOverstay": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "checkOutDone": "Checked out {reference}.",
+  "@checkOutDone": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "errCheckOutCodeNotFound": "No parked booking here has this check-out code. Check the code and try again.",
+  "errGatePassExpired": "This QR code has expired. Ask the customer to show the current one, or type their code.",
+  "errAlreadyCheckedOut": "This booking has already been checked out. The code can't be used again.",
+  "overstayWhileParked": "You've stayed {minutes} min past your booking. Extra charge so far: {amount}, payable when you leave.",
+  "@overstayWhileParked": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "overstayCharged": "Extra time past your booking: {amount}.",
+  "@overstayCharged": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerCheckOutByCode": "Check out with a code",
+  "checkOutPaidBy": "Extra time paid by",
+  "paidByCash": "Cash",
+  "paidByUpi": "UPI",
+  "paidByCard": "Card",
+  "checkOutCollectedAction": "Collected, check out",
+  "errExtraTimeAmountChanged": "The extra charge has changed (another hour has started). Check the code again to see the new amount.",
+  "errExtraTimePaymentRequired": "Extra time is due. Choose how it was paid to check out.",
+  "@extraTimeReceipt": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "method": {
+        "type": "String"
+      }
+    }
+  },
+  "checkOutCollectedConfirm": "I have collected {amount} from the customer",
+  "@checkOutCollectedConfirm": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "errCheckInCodeAtCheckOut": "That's the check-in code. Ask the customer for the check-out code now shown on their booking.",
+  "errCheckOutFailed": "Checkout didn't go through, so the booking is still parked and nothing was recorded. Check the connection and try again.",
+  "checkOutBookingDue": "To pay at the facility: {amount}. Collect it before the vehicle leaves.",
+  "@checkOutBookingDue": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "checkOutBookingPaidBy": "Booking paid by",
+  "checkOutBookingCollectedConfirm": "I have received {amount} for this booking",
+  "@checkOutBookingCollectedConfirm": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "checkOutOnlineUnpaid": "The online payment for this booking hasn't gone through, so it can't be checked out. Ask the customer to complete the payment in the app.",
+  "errBookingPaymentRequired": "Payment not yet received. Collect the amount due, choose how it was paid and confirm it, or ask the customer to finish paying online.",
+  "errBookingPaymentAmountMismatch": "That amount doesn't match what's due for this booking. Nothing was recorded. Check the booking and try again.",
+  "errCheckOutTimeout": "The connection timed out before checkout finished. The booking is still parked. Check the connection and try again.",
+  "errCheckOutServer": "Something went wrong on our side, so the booking is still parked and nothing was recorded. Try again in a moment."
 }

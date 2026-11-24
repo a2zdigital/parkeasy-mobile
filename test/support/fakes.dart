@@ -175,7 +175,9 @@ class FakeHttpAdapter implements HttpClientAdapter {
     }
     // A gate pass nobody stubbed: the API has none, and the app falls back
     // to the plain code. Never takes an answer queued for something else.
-    if (options.method == 'GET' && options.path.endsWith('/check-in-pass')) {
+    if (options.method == 'GET' &&
+        (options.path.endsWith('/check-in-pass') ||
+            options.path.endsWith('/check-out-pass'))) {
       return ResponseBody.fromString(
         jsonEncode({
           'error': {'code': 'NOT_FOUND', 'message': 'Not found.'},

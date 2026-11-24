@@ -11,8 +11,10 @@ import 'package:app/core/widgets/app_segmented_control.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/core/widgets/title_with_status.dart';
 import 'package:app/features/booking/data/models/booking.dart';
+import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/state/bookings_notifier.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
+import 'package:app/features/booking/ui/live_booking_refresh.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,12 +71,16 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         child: EmptyState(
           icon: Icons.event_note_outlined,
-          title: selectedTab == CustomerBookingTab.upcoming
-              ? l10n.bookingsEmptyTitle
-              : l10n.bookingsPastEmptyTitle,
-          body: selectedTab == CustomerBookingTab.upcoming
-              ? l10n.bookingsEmptyBody
-              : l10n.bookingsPastEmptyBody,
+          title: switch (selectedTab) {
+            CustomerBookingTab.upcoming => l10n.bookingsEmptyTitle,
+            CustomerBookingTab.ongoing => l10n.bookingsOngoingEmptyTitle,
+            CustomerBookingTab.past => l10n.bookingsPastEmptyTitle,
+          },
+          body: switch (selectedTab) {
+            CustomerBookingTab.upcoming => l10n.bookingsEmptyBody,
+            CustomerBookingTab.ongoing => l10n.bookingsOngoingEmptyBody,
+            CustomerBookingTab.past => l10n.bookingsPastEmptyBody,
+          },
           action: selectedTab == CustomerBookingTab.upcoming
               ? SecondaryButton(
                   label: l10n.bookingsFind,
@@ -152,11 +158,25 @@ class _BookingsScreenState extends ConsumerState<BookingsScreen> {
           AppSegmentedControl<CustomerBookingTab>(
             segments: [
               (CustomerBookingTab.upcoming, l10n.bookingsUpcoming),
+              (CustomerBookingTab.ongoing, l10n.bookingsOngoing),
               (CustomerBookingTab.past, l10n.bookingsPast),
             ],
             selected: selectedTab,
             onChanged: (tab) =>
                 ref.read(customerBookingTabProvider.notifier).state = tab,
+          ),
+          // While a listed booking can change at the gate (a code is on
+          // show, or the vehicle is parked), the list is read again every
+          // few seconds, so check-in and check-out move it between tabs.
+          LiveBookingRefresh(
+            active: state.items.any(
+              (booking) =>
+                  booking.checkInCode != null ||
+                  booking.checkOutCode != null ||
+                  booking.status == BookingStatus.parked,
+            ),
+            every: const Duration(seconds: 10),
+            onTick: notifier.load,
           ),
           Expanded(
             child: RefreshIndicator(onRefresh: notifier.load, child: content),
@@ -213,6 +233,18 @@ class _BookingCard extends StatelessWidget {
                 ),
               ],
             ),
+            // Ongoing and parked: when they arrived and when to leave by.
+            if (booking.isCheckedIn)
+              if (booking.checkedInAt case final arrived?) ...[
+                const Gap.xs(),
+                Text(
+                  context.l10n.bookingsCheckedInLine(
+                    FacilityTime.time(arrived, booking.timezone, locale),
+                    FacilityTime.time(booking.endAt, booking.timezone, locale),
+                  ),
+                  style: text.bodySmall.copyWith(color: colors.textSecondary),
+                ),
+              ],
             const Gap.md(),
             const Divider(height: AppSize.borderWidth),
             const Gap.md(),

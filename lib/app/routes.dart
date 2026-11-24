@@ -64,6 +64,8 @@ abstract final class Routes {
   static String ownerBooking(String id) => '$ownerBookings/$id';
 
   /// Gate check-in by the customer's code, opened from that booking.
+  static String ownerBookingCheckOut(String id) =>
+      '${ownerBookingCheckIn(id)}?out=1';
   static String ownerBookingCheckIn(String id) =>
       '${ownerBooking(id)}/check-in';
 

@@ -8,6 +8,9 @@ enum BookingStatus {
   pendingApproval('pending_approval'),
   awaitingPayment('awaiting_payment'),
   confirmed('confirmed'),
+
+  /// Checked in at the gate: the vehicle is in the facility.
+  parked('parked'),
   rejected('rejected'),
   cancelled('cancelled'),
   completed('completed'),

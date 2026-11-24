@@ -1,5 +1,6 @@
 import 'package:app/features/auth/data/models/otp_challenge.dart';
 import 'package:app/features/auth/data/models/session.dart';
+import 'package:app/features/auth/data/models/user.dart';
 import 'package:app/features/auth/data/models/user_role.dart';
 import 'package:app/features/auth/data/models/user_status.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +47,33 @@ void main() {
     expect(user.roles, [UserRole.customer, UserRole.unknown]);
     expect(user.status, UserStatus.unknown);
     expect(user.isOwner, isFalse);
+  });
+
+  test('the staff-only finance and support roles open nothing in the app', () {
+    User userWith(List<String> roles) {
+      final json = sessionJson();
+      (json['user'] as Map<String, dynamic>)['roles'] = roles;
+      return Session.fromJson(json).user;
+    }
+
+    // Staff roles are web roles: the app reads them as unknown and keeps the
+    // roles it does know, so several roles together still work.
+    final staff = userWith(['customer', 'finance', 'support']);
+    expect(staff.roles, [
+      UserRole.customer,
+      UserRole.unknown,
+      UserRole.unknown,
+    ]);
+    expect(staff.isOwner, isFalse);
+
+    expect(userWith(['finance']).isOwner, isFalse);
+    expect(userWith(['support', 'owner']).isOwner, isTrue);
+    expect(userWith(['customer', 'owner', 'operations', 'admin']).roles, [
+      UserRole.customer,
+      UserRole.owner,
+      UserRole.operations,
+      UserRole.admin,
+    ]);
   });
 
   test('OtpChallenge parses', () {

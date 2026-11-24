@@ -28,6 +28,11 @@ class BookingStatusChip extends StatelessWidget {
       StatusTone.warning,
       Icons.credit_card_outlined,
     ),
+    BookingStatus.parked => (
+      l10n.statusParked,
+      StatusTone.success,
+      Icons.local_parking_outlined,
+    ),
     BookingStatus.confirmed when booking.isCheckedIn => (
       l10n.statusParked,
       StatusTone.success,
@@ -58,9 +63,10 @@ class BookingStatusChip extends StatelessWidget {
       StatusTone.neutral,
       Icons.timer_off_outlined,
     ),
+    // Nobody checked in in time: shown to people as "Expired".
     BookingStatus.noShow => (
       l10n.statusNoShow,
-      StatusTone.neutral,
+      StatusTone.warning,
       Icons.event_busy_outlined,
     ),
     // A status added to the API after this build: shown as it is, neutrally.

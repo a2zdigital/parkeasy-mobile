@@ -253,6 +253,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                         path: 'check-in',
                         builder: (context, state) => OwnerCheckInScreen(
                           bookingId: state.pathParameters['id'],
+                          checkOut: state.uri.queryParameters['out'] == '1',
                         ),
                       ),
                     ],

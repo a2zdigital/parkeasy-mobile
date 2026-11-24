@@ -82,7 +82,14 @@ void main() {
             .where((request) => request.path == '/bookings')
             .skip(3)
             .map((request) => request.uri.queryParameters['filter[status]']),
-        ['rejected', 'cancelled', 'completed', 'expired', 'no_show'],
+        [
+          'rejected',
+          'cancelled',
+          'completed',
+          'expired',
+          'no_show',
+          'confirmed',
+        ],
       );
     });
 

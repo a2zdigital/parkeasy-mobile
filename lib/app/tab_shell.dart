@@ -1,4 +1,5 @@
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/features/booking/state/bookings_notifier.dart';
 import 'package:app/features/notifications/state/notifications_notifier.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
@@ -22,11 +23,17 @@ class TabShell extends StatelessWidget {
   const TabShell({
     required this.navigationShell,
     required this.items,
+    this.onSelected,
     super.key,
   });
 
   final StatefulNavigationShell navigationShell;
   final List<TabItem> items;
+
+  /// Called when a destination is chosen (including the current one). The
+  /// tabs stay alive in the background, so a tab whose data can change
+  /// elsewhere reloads here.
+  final void Function(int index)? onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +72,13 @@ class TabShell extends StatelessWidget {
           child: NavigationBar(
             selectedIndex: navigationShell.currentIndex,
             // Pressing the current tab returns to its first screen.
-            onDestinationSelected: (index) => navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            ),
+            onDestinationSelected: (index) {
+              onSelected?.call(index);
+              navigationShell.goBranch(
+                index,
+                initialLocation: index == navigationShell.currentIndex,
+              );
+            },
             destinations: [
               for (final item in items)
                 NavigationDestination(
@@ -102,6 +112,11 @@ class CustomerShell extends ConsumerWidget {
 
     return TabShell(
       navigationShell: navigationShell,
+      // Bookings change at the gate (check-in, check-out) on another phone:
+      // read them again whenever the tab is opened.
+      onSelected: (index) {
+        if (index == 1) ref.invalidate(bookingsProvider);
+      },
       items: [
         TabItem(icon: Icons.explore_outlined, label: l10n.tabExplore),
         TabItem(icon: Icons.event_note_outlined, label: l10n.tabBookings),

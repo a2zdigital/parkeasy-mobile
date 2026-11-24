@@ -1,11 +1,35 @@
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/api/pagination.dart';
+import 'package:app/core/providers.dart';
 import 'package:app/features/booking/data/booking_repository.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum CustomerBookingTab { upcoming, past }
+enum CustomerBookingTab { upcoming, ongoing, past }
+
+/// The one tab a booking belongs to at [now], from the status and times the
+/// API returned. Every booking lands in exactly one tab.
+///
+///  - Upcoming: not started yet (confirmed with a future start, or a
+///    request or unpaid booking still before its end).
+///  - Ongoing: parked, or confirmed and inside its booked time.
+///  - Past: completed, cancelled, expired, missed (no-show), rejected, or
+///    any booking whose end time has passed without being parked. A parked
+///    booking stays Ongoing until it is checked out at the gate.
+CustomerBookingTab classifyBooking(Booking booking, DateTime now) {
+  final started = !now.isBefore(booking.startAt);
+  final ended = !now.isBefore(booking.endAt);
+  return switch (booking.status) {
+    BookingStatus.parked => CustomerBookingTab.ongoing,
+    BookingStatus.confirmed when ended => CustomerBookingTab.past,
+    BookingStatus.confirmed when started => CustomerBookingTab.ongoing,
+    BookingStatus.confirmed => CustomerBookingTab.upcoming,
+    BookingStatus.pendingApproval ||
+    BookingStatus.awaitingPayment when !ended => CustomerBookingTab.upcoming,
+    _ => CustomerBookingTab.past,
+  };
+}
 
 final customerBookingTabProvider =
     StateProvider.autoDispose<CustomerBookingTab>(
@@ -37,12 +61,17 @@ class BookingsState {
   bool get isEmpty => !isLoading && failure == null && items.isEmpty;
 }
 
-/// The customer's bookings, filtered by API status and merged newest first.
+/// The customer's bookings for one tab: fetched by API status, kept only
+/// where [classifyBooking] puts them in that tab, merged newest first.
 class BookingsNotifier extends AutoDisposeNotifier<BookingsState> {
   static const _upcomingStatuses = [
     BookingStatus.pendingApproval,
     BookingStatus.awaitingPayment,
     BookingStatus.confirmed,
+  ];
+  static const _ongoingStatuses = [
+    BookingStatus.confirmed,
+    BookingStatus.parked,
   ];
   static const _pastStatuses = [
     BookingStatus.rejected,
@@ -50,6 +79,8 @@ class BookingsNotifier extends AutoDisposeNotifier<BookingsState> {
     BookingStatus.completed,
     BookingStatus.expired,
     BookingStatus.noShow,
+    // A confirmed booking whose time is over, if the API has not closed it yet.
+    BookingStatus.confirmed,
   ];
 
   int _generation = 0;
@@ -65,6 +96,7 @@ class BookingsNotifier extends AutoDisposeNotifier<BookingsState> {
     _tab = ref.watch(customerBookingTabProvider);
     _statuses = switch (_tab) {
       CustomerBookingTab.upcoming => _upcomingStatuses,
+      CustomerBookingTab.ongoing => _ongoingStatuses,
       CustomerBookingTab.past => _pastStatuses,
     };
     _generation++;
@@ -196,13 +228,16 @@ class BookingsNotifier extends AutoDisposeNotifier<BookingsState> {
     Iterable<CursorPage<Booking>> pages, {
     List<Booking> existing = const [],
   }) {
+    final now = ref.read(clockProvider)();
     final byId = <String, Booking>{for (final item in existing) item.id: item};
     for (final page in pages) {
       for (final item in page.items) {
         byId[item.id] = item;
       }
     }
-    return byId.values.toList()
+    return byId.values
+        .where((booking) => classifyBooking(booking, now) == _tab)
+        .toList()
       ..sort((first, second) => second.createdAt.compareTo(first.createdAt));
   }
 }

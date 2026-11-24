@@ -264,6 +264,11 @@ Map<String, dynamic> bookingJson({
   int? myRating,
   String? spaceLabel,
   String? checkInCode,
+  String? checkOutCode,
+  String? checkedOutAt,
+  String? bookingPaymentStatus,
+  String startAt = '2026-11-02T04:30:00Z',
+  String endAt = '2026-11-02T06:30:00Z',
 }) => {
   'id': id,
   'reference': reference,
@@ -280,8 +285,10 @@ Map<String, dynamic> bookingJson({
   'vehicle_type': 'car',
   'space_label': spaceLabel,
   'check_in_code': checkInCode,
-  'start_at': '2026-11-02T04:30:00Z',
-  'end_at': '2026-11-02T06:30:00Z',
+  'check_out_code': checkOutCode,
+  'booking_payment_status': ?bookingPaymentStatus,
+  'start_at': startAt,
+  'end_at': endAt,
   'timezone': 'Asia/Kolkata',
   'price_lines': [
     {
@@ -298,7 +305,7 @@ Map<String, dynamic> bookingJson({
   'payment_deadline_at': paymentDeadline,
   'confirmed_at': status == 'confirmed' ? '2026-11-02T04:18:00Z' : null,
   'checked_in_at': checkedInAt,
-  'checked_out_at': null,
+  'checked_out_at': checkedOutAt,
   'cancelled_at': status == 'cancelled' ? '2026-11-02T04:20:00Z' : null,
   'cancellation_reason': null,
   'refund_eligible': refundEligible,

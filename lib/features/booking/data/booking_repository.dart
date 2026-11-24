@@ -37,6 +37,18 @@ final checkInPassProvider = FutureProvider.autoDispose
       }
     });
 
+/// The current pass for leaving, while the vehicle is parked.
+final checkOutPassProvider = FutureProvider.autoDispose
+    .family<CheckInPass?, String>((ref, bookingId) async {
+      try {
+        return await ref
+            .watch(bookingRepositoryProvider)
+            .checkInPass(bookingId, checkOut: true);
+      } on ApiException {
+        return null;
+      }
+    });
+
 class BookingRepository {
   const BookingRepository(this._api);
 
@@ -54,9 +66,14 @@ class BookingRepository {
 
   /// A signed QR pass for the gate. It changes every minute and works for
   /// about two, so the app fetches a new one before [CheckInPass.expiresAt].
-  Future<CheckInPass> checkInPass(String bookingId) async {
+  Future<CheckInPass> checkInPass(
+    String bookingId, {
+    bool checkOut = false,
+  }) async {
     final data = ApiClient.object(
-      await _api.get('/bookings/$bookingId/check-in-pass'),
+      await _api.get(
+        '/bookings/$bookingId/${checkOut ? 'check-out-pass' : 'check-in-pass'}',
+      ),
     );
     final token = data['token'];
     final expires = data['expires_at'];

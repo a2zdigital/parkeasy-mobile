@@ -97,9 +97,26 @@ void main() {
     expect(Quote.fromJson(base).charges, isEmpty);
   });
 
-  test('GSTIN shape check', () {
-    expect(gstinPattern.hasMatch('29ABCDE1234F1Z5'), isTrue);
-    expect(gstinPattern.hasMatch('29abcde1234f1z5'), isFalse);
-    expect(gstinPattern.hasMatch('29ABCDE1234F1X5'), isFalse);
+  group('GSTIN format', () {
+    final valid = '29ABCPE1234F1Z${gstinCheckCharacter('29ABCPE1234F1Z')}';
+
+    test('a correct GSTIN, in any case, has no problem', () {
+      expect(gstinProblem(valid), isNull);
+      expect(gstinProblem(valid.toLowerCase()), isNull);
+    });
+
+    test('each mistake has its own reason', () {
+      final wrongCheck =
+          valid.substring(0, 14) + (valid[14] == 'A' ? 'B' : 'A');
+      expect(gstinProblem('29ABCPE1234F1Z'), GstinProblem.length);
+      expect(gstinProblem('${valid}5'), GstinProblem.length);
+      expect(gstinProblem('29ABCPE-234F1Z5'), GstinProblem.characters);
+      expect(gstinProblem('99ABCPE1234F1Z5'), GstinProblem.stateCode);
+      expect(gstinProblem('2912CPE1234F1Z5'), GstinProblem.pan);
+      expect(gstinProblem('29ABDDE1234F1Z5'), GstinProblem.panHolderType);
+      expect(gstinProblem('29ABCPE1234F0Z5'), GstinProblem.entityNumber);
+      expect(gstinProblem('29ABCPE1234F1X5'), GstinProblem.defaultCharacter);
+      expect(gstinProblem(wrongCheck), GstinProblem.checksum);
+    });
   });
 }

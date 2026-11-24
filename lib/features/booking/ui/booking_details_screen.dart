@@ -1,6 +1,7 @@
 import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/money/money.dart';
 import 'package:app/core/money/money_format.dart';
 import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_colors.dart';
@@ -19,10 +20,13 @@ import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/state/booking_details_notifier.dart';
+import 'package:app/features/booking/state/bookings_notifier.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
 import 'package:app/features/booking/ui/check_in_code_card.dart';
+import 'package:app/features/booking/ui/live_booking_refresh.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
 import 'package:app/features/booking/ui/rate_booking_card.dart';
+import 'package:app/features/booking/ui/rating_sheet.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,6 +72,22 @@ class BookingDetailsScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final details = ref.watch(bookingDetailsProvider(id));
 
+    // Checked out at the gate while this page is open: ask for a rating
+    // straight away, once. Only a change seen here opens it, so opening the
+    // booking later (from Past bookings) never shows it again.
+    ref.listen(bookingDetailsProvider(id), (previous, next) {
+      final before = previous?.valueOrNull?.booking;
+      final after = next.valueOrNull?.booking;
+      if (before == null || after == null) return;
+      // Checked in or out at the gate: the Bookings tabs move it too.
+      if (before.status != after.status) ref.invalidate(bookingsProvider);
+      if (before.status != BookingStatus.completed &&
+          after.status == BookingStatus.completed &&
+          after.myRating == null) {
+        showRatingSheet(context, after);
+      }
+    });
+
     return details.when(
       loading: () => AppScaffold(
         title: l10n.bookingTitle,
@@ -111,6 +131,14 @@ class BookingDetailsScreen extends ConsumerWidget {
             onRefresh: ref.read(bookingDetailsProvider(id).notifier).refresh,
             child: ListView(
               children: [
+                // While a gate code is on screen, the booking is re-read
+                // every few seconds, so check-in and check-out show at once.
+                LiveBookingRefresh(
+                  active:
+                      booking.checkInCode != null ||
+                      booking.checkOutCode != null,
+                  onTick: ref.read(bookingDetailsProvider(id).notifier).refresh,
+                ),
                 const Gap.md(),
                 _Body(booking: booking),
                 if (booking.status == BookingStatus.completed) ...[
@@ -192,6 +220,10 @@ class _Body extends StatelessWidget {
             ? l10n.bannerAwaitingPaymentNoTime
             : l10n.bannerAwaitingPayment(at(paymentDeadline)),
       ),
+      BookingStatus.parked => (
+        StatusTone.success,
+        l10n.bannerParkedShowCode(at(booking.endAt)),
+      ),
       BookingStatus.confirmed when booking.isCheckedIn => (
         StatusTone.success,
         l10n.bannerParked(at(booking.endAt)),
@@ -214,7 +246,7 @@ class _Body extends StatelessWidget {
       ),
       BookingStatus.rejected => (StatusTone.danger, l10n.bannerRejected),
       BookingStatus.expired => (StatusTone.neutral, l10n.bannerExpired),
-      BookingStatus.noShow => (StatusTone.neutral, l10n.bannerNoShow),
+      BookingStatus.noShow => (StatusTone.warning, l10n.bannerNoShow),
       BookingStatus.unknown => (StatusTone.neutral, l10n.statusAwaitingUpdate),
     };
   }
@@ -229,7 +261,8 @@ class _Body extends StatelessWidget {
     final isOpen = switch (booking.status) {
       BookingStatus.pendingApproval ||
       BookingStatus.awaitingPayment ||
-      BookingStatus.confirmed => true,
+      BookingStatus.confirmed ||
+      BookingStatus.parked => true,
       _ => false,
     };
 
@@ -289,6 +322,30 @@ class _Body extends StatelessWidget {
           // The code is revealed, not just drawn: it is what to show next.
           Reveal(
             child: CheckInCodeCard(code: code, bookingId: booking.id),
+          ),
+        ],
+        if (booking.overstay case final extra?) ...[
+          const Gap.md(),
+          AppBanner(
+            tone: StatusTone.warning,
+            message: booking.isCheckedIn
+                ? l10n.overstayWhileParked(
+                    extra.minutes,
+                    formatMoney(Money(extra.totalAmount, booking.currency)),
+                  )
+                : l10n.overstayCharged(
+                    formatMoney(Money(extra.totalAmount, booking.currency)),
+                  ),
+          ),
+        ],
+        if (booking.checkOutCode case final code?) ...[
+          const Gap.md(),
+          Reveal(
+            child: CheckInCodeCard(
+              code: code,
+              bookingId: booking.id,
+              checkOut: true,
+            ),
           ),
         ],
         const Gap.md(),

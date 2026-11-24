@@ -3,6 +3,7 @@ import 'package:app/core/money/money.dart';
 import 'package:app/features/booking/data/models/booking_lot_ref.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/charge_line.dart';
+import 'package:app/features/booking/data/models/overstay.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/data/models/price_line.dart';
 import 'package:app/features/parking_lot/data/models/booking_mode.dart';
@@ -36,6 +37,16 @@ abstract class Booking with _$Booking {
     /// The gate code (also the QR code's text). Only the customer gets it,
     /// while the booking is confirmed and not yet checked in.
     String? checkInCode,
+
+    /// The separate code for leaving, while parked. Only the customer sees it.
+    String? checkOutCode,
+
+    /// Time past the booked end and its price; null when there is none.
+    Overstay? overstay,
+
+    /// Whether the booking's own charge is paid: paid_online, unpaid,
+    /// collected_at_facility or due_at_facility. Null from older API builds.
+    String? bookingPaymentStatus,
     @UtcDateTimeConverter() required DateTime startAt,
     @UtcDateTimeConverter() required DateTime endAt,
     required String timezone,
@@ -72,9 +83,19 @@ abstract class Booking with _$Booking {
 
   Money get total => Money(totalAmount, currency);
 
-  /// Confirmed and the customer has arrived, but has not left yet.
+  /// The booking's amount is still to be collected at the facility; the
+  /// person at the gate records it with the check-out.
+  bool get paymentDueAtFacility => bookingPaymentStatus == 'due_at_facility';
+
+  /// An online booking whose payment has not gone through: it cannot be
+  /// checked out until the customer pays.
+  bool get onlinePaymentMissing => bookingPaymentStatus == 'unpaid';
+
+  /// The customer has arrived and has not left yet: parked, or confirmed and
+  /// checked in on an API from before the parked status.
   bool get isCheckedIn =>
-      status == BookingStatus.confirmed &&
-      checkedInAt != null &&
-      checkedOutAt == null;
+      status == BookingStatus.parked ||
+      (status == BookingStatus.confirmed &&
+          checkedInAt != null &&
+          checkedOutAt == null);
 }
