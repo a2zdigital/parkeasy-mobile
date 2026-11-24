@@ -14,6 +14,7 @@ import '../support/harness.dart';
 /// Gate attendants, check-out by code and signed QR passes.
 void main() {
   const pass = 'PE1.01M4JQSZSNAVTVCMS8A7AJ0WJ9.29845123.9f2cabc0de';
+  const checkOutPass = 'PE2.01M4JQSZSNAVTVCMS8A7AJ0WJ9.29845123.7a1bcd2e3f';
 
   Future<void> start(
     WidgetTester tester,
@@ -102,15 +103,27 @@ void main() {
 
       await tester.tap(find.text('Check out').first);
       await tester.pumpAndSettle();
+      // Verified first (the booking is shown), then confirmed.
+      h.http.respond(200, {
+        'data': bookingJson(
+          status: 'parked',
+          spaceLabel: 'B1-07',
+          checkedInAt: '2026-11-02T04:35:00Z',
+        ),
+      });
       h.http.respond(200, {'data': bookingJson(status: 'completed')});
-      h.scanner.next = pass;
+      h.scanner.next = checkOutPass;
       await tester.tap(find.text('Scan QR code'));
+      await tester.pumpAndSettle();
+      expect(writes(h).last.path, '/gate/check-out/verify');
+      expect(find.text('Confirm check-out'), findsWidgets);
+      await tester.tap(find.widgetWithText(PrimaryButton, 'Confirm check-out'));
       await tester.pumpAndSettle();
 
       final out = writes(h).last;
       expect(out.path, '/gate/check-out');
       // A scanned pass is sent exactly as scanned.
-      expect(body(out), {'code': pass});
+      expect(body(out), {'code': checkOutPass});
       expect(find.text('BK-K2M5XCN4 checked out.'), findsOneWidget);
     });
 

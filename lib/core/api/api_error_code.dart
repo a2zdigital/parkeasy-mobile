@@ -56,6 +56,15 @@ enum ApiErrorCode {
   checkInNotAllowed('CHECK_IN_NOT_ALLOWED'),
   checkOutNotAllowed('CHECK_OUT_NOT_ALLOWED'),
   checkInCodeNotFound('CHECK_IN_CODE_NOT_FOUND'),
+  checkOutCodeNotFound('CHECK_OUT_CODE_NOT_FOUND'),
+  gatePassExpired('GATE_PASS_EXPIRED'),
+  alreadyCheckedOut('ALREADY_CHECKED_OUT'),
+  checkInCodeAtCheckOut('CHECK_IN_CODE_AT_CHECK_OUT'),
+  extraTimePaymentRequired('EXTRA_TIME_PAYMENT_REQUIRED'),
+  bookingPaymentRequired('BOOKING_PAYMENT_REQUIRED'),
+  bookingPaymentAmountMismatch('BOOKING_PAYMENT_AMOUNT_MISMATCH'),
+  extraTimeAmountChanged('EXTRA_TIME_AMOUNT_CHANGED'),
+  extraTimeAlreadyCollected('EXTRA_TIME_ALREADY_COLLECTED'),
 
   // Numbered bays
   parkingSpaceInUse('PARKING_SPACE_IN_USE'),

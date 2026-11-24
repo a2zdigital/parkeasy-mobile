@@ -3,6 +3,7 @@ import 'package:app/core/providers.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
+import 'package:app/features/gate/data/extra_time_payment.dart';
 import 'package:app/features/owner/data/models/onsite_collection_state.dart';
 import 'package:app/features/owner/data/owner_repository.dart';
 import 'package:app/features/owner/state/owner_lists.dart';
@@ -65,6 +66,7 @@ class OwnerBookingState {
     final collection = this.collection;
     if (collection == null || collection.collection != null) return false;
     return booking.status == BookingStatus.confirmed ||
+        booking.status == BookingStatus.parked ||
         booking.status == BookingStatus.completed;
   }
 }
@@ -97,8 +99,10 @@ class OwnerBookingNotifier
     }
   }
 
-  Future<void> act(OwnerBookingAction action) =>
-      _run((repository) => repository.act(arg, action));
+  Future<void> act(
+    OwnerBookingAction action, {
+    CheckOutChoice choice = const CheckOutChoice(),
+  }) => _run((repository) => repository.act(arg, action, choice: choice));
 
   Future<void> recordPayment() =>
       _run((repository) => repository.recordCollection(arg));

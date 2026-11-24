@@ -10,7 +10,9 @@ import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_segmented_control.dart';
 import 'package:app/core/widgets/app_text_field.dart';
+import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/gate/data/gate_repository.dart';
+import 'package:app/features/gate/ui/check_out_confirm_sheet.dart';
 import 'package:app/features/owner/data/owner_repository.dart';
 import 'package:app/features/owner/state/owner_booking_notifier.dart';
 import 'package:app/features/owner/state/owner_lists.dart';
@@ -25,7 +27,10 @@ import 'package:go_router/go_router.dart';
 /// lands on that booking, checked in; or scans the QR code that holds
 /// the same text.
 class OwnerCheckInScreen extends ConsumerStatefulWidget {
-  const OwnerCheckInScreen({this.bookingId, super.key});
+  const OwnerCheckInScreen({this.bookingId, this.checkOut = false, super.key});
+
+  /// Opens in check-out mode (for a parked booking).
+  final bool checkOut;
 
   /// The booking this was opened from. Checking that booking in returns
   /// to it; another booking's code opens that booking instead.
@@ -38,7 +43,7 @@ class OwnerCheckInScreen extends ConsumerStatefulWidget {
 class _OwnerCheckInScreenState extends ConsumerState<OwnerCheckInScreen> {
   final _code = TextEditingController();
   bool _busy = false;
-  bool _checkingOut = false;
+  late bool _checkingOut = widget.checkOut;
   String? _error;
 
   @override
@@ -76,9 +81,25 @@ class _OwnerCheckInScreenState extends ConsumerState<OwnerCheckInScreen> {
     });
     try {
       final repository = ref.read(ownerRepositoryProvider);
-      final booking = _checkingOut
-          ? await repository.checkOutByCode(code)
-          : await repository.checkInByCode(code);
+      final Booking booking;
+      if (_checkingOut) {
+        // Verify first and show the booking; nothing changes until confirmed.
+        final found = await repository.verifyCheckOut(code);
+        if (!mounted) return;
+        // No spinner while the person reads and decides.
+        setState(() => _busy = false);
+        final choice = await confirmCheckOut(context, found);
+        if (choice == null || !mounted) return;
+        setState(() => _busy = true);
+        booking = await repository.checkOutByCode(code, choice);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.checkOutDone(booking.reference))),
+          );
+        }
+      } else {
+        booking = await repository.checkInByCode(code);
+      }
       ref.invalidate(ownerBookingsProvider);
       final from = widget.bookingId;
       if (from != null) ref.invalidate(ownerBookingProvider(from));
@@ -90,15 +111,35 @@ class _OwnerCheckInScreenState extends ConsumerState<OwnerCheckInScreen> {
       }
     } on ApiException catch (failure) {
       if (!mounted) return;
+      final out = _checkingOut;
       setState(() {
         _busy = false;
         _error = switch (failure.code) {
           ApiErrorCode.checkInCodeNotFound => l10n.errCheckInCodeNotFound,
+          ApiErrorCode.checkOutCodeNotFound => l10n.errCheckOutCodeNotFound,
+          ApiErrorCode.gatePassExpired => l10n.errGatePassExpired,
+          ApiErrorCode.alreadyCheckedOut => l10n.errAlreadyCheckedOut,
+          ApiErrorCode.checkInCodeAtCheckOut => l10n.errCheckInCodeAtCheckOut,
+          ApiErrorCode.extraTimeAlreadyCollected => l10n.errAlreadyCheckedOut,
+          // The server or the connection failed: nothing was completed,
+          // and the person can try again.
+          ApiErrorCode.network when out => l10n.errCheckOutFailed,
+          ApiErrorCode.timeout when out => l10n.errCheckOutTimeout,
+          ApiErrorCode.internalError ||
+          ApiErrorCode.serviceUnavailable ||
+          ApiErrorCode.unknown when out => l10n.errCheckOutServer,
+          ApiErrorCode.bookingPaymentRequired => l10n.errBookingPaymentRequired,
+          ApiErrorCode.bookingPaymentAmountMismatch =>
+            l10n.errBookingPaymentAmountMismatch,
+          ApiErrorCode.extraTimeAmountChanged => l10n.errExtraTimeAmountChanged,
+          ApiErrorCode.extraTimePaymentRequired =>
+            l10n.errExtraTimePaymentRequired,
           ApiErrorCode.checkOutNotAllowed => l10n.errCheckOutNotAllowed,
           ApiErrorCode.checkInNotAllowed || ApiErrorCode.invalidBookingState
               when _checkingOut =>
             l10n.errCheckOutNotAllowed,
           ApiErrorCode.checkInNotAllowed => checkInRefusalText(l10n, failure),
+          ApiErrorCode.bookingExpired => l10n.bannerNoShow,
           ApiErrorCode.invalidBookingState => l10n.errCheckInBookingState,
           _ => ownerAccessText(l10n, failure) ?? l10n.describe(failure),
         };
@@ -132,9 +173,13 @@ class _OwnerCheckInScreenState extends ConsumerState<OwnerCheckInScreen> {
           ),
           const Gap.md(),
           AppTextField(
-            label: l10n.ownerCheckInCodeLabel,
+            label: _checkingOut
+                ? l10n.ownerCheckOutCodeLabel
+                : l10n.ownerCheckInCodeLabel,
             hintText: l10n.ownerCheckInCodeHint,
-            helperText: l10n.ownerCheckInHelp,
+            helperText: _checkingOut
+                ? l10n.ownerCheckOutHelp
+                : l10n.ownerCheckInHelp,
             controller: _code,
             enabled: !_busy,
             autofocus: true,

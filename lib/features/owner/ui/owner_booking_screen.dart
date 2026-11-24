@@ -18,6 +18,7 @@ import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
+import 'package:app/features/gate/ui/check_out_confirm_sheet.dart';
 import 'package:app/features/owner/data/owner_repository.dart';
 import 'package:app/features/owner/state/owner_booking_notifier.dart';
 import 'package:app/features/owner/ui/move_bay_sheet.dart';
@@ -37,7 +38,15 @@ class OwnerBookingScreen extends ConsumerWidget {
   static String _failureText(AppLocalizations l10n, ApiException failure) =>
       switch (failure.code) {
         ApiErrorCode.checkInNotAllowed => checkInRefusalText(l10n, failure),
+        ApiErrorCode.bookingExpired => l10n.bannerNoShow,
         ApiErrorCode.checkOutNotAllowed => l10n.errCheckOutNotAllowed,
+        ApiErrorCode.alreadyCheckedOut => l10n.errAlreadyCheckedOut,
+        ApiErrorCode.bookingPaymentRequired => l10n.errBookingPaymentRequired,
+        ApiErrorCode.bookingPaymentAmountMismatch =>
+          l10n.errBookingPaymentAmountMismatch,
+        ApiErrorCode.extraTimePaymentRequired =>
+          l10n.errExtraTimePaymentRequired,
+        ApiErrorCode.extraTimeAmountChanged => l10n.errExtraTimeAmountChanged,
         ApiErrorCode.invalidBookingState => l10n.errInvalidBookingState,
         ApiErrorCode.approvalExpired => l10n.errApprovalExpired,
         ApiErrorCode.onsiteCollectionNotAllowed => l10n.errCollectionNotAllowed,
@@ -122,12 +131,19 @@ class OwnerBookingScreen extends ConsumerWidget {
           primary = PrimaryButton(
             label: l10n.ownerCheckOut,
             isLoading: state.isBusy,
-            onPressed: () => confirmThen(
-              () => notifier.act(OwnerBookingAction.checkOut),
-              title: l10n.ownerCheckOutConfirmTitle,
-              body: l10n.ownerCheckOutConfirmBody,
-              confirm: l10n.ownerCheckOut,
-            ),
+            onPressed: () async {
+              // The booking as it stands now (extra time keeps growing).
+              await notifier.refresh();
+              if (!context.mounted) return;
+              final current = ref.read(ownerBookingProvider(id)).valueOrNull;
+              final choice = await confirmCheckOut(
+                context,
+                current?.booking ?? booking,
+              );
+              if (choice != null) {
+                await notifier.act(OwnerBookingAction.checkOut, choice: choice);
+              }
+            },
           );
         } else {
           primary = null;
@@ -269,6 +285,19 @@ class OwnerBookingScreen extends ConsumerWidget {
                               SnackBar(content: Text(l10n.bayMoveDone(moved))),
                             );
                           },
+                  ),
+                ],
+                // Gate check-out by the customer's check-out code or QR
+                // code, for a parked booking.
+                if (state.canCheckOut) ...[
+                  const Gap.md(),
+                  SecondaryButton(
+                    label: l10n.ownerCheckOutByCode,
+                    onPressed: state.isBusy
+                        ? null
+                        : () => context.push(
+                            Routes.ownerBookingCheckOut(booking.id),
+                          ),
                   ),
                 ],
                 // Gate check-in by the customer's code or QR code, for a

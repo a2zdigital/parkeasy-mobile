@@ -5,11 +5,17 @@ import 'package:app/core/providers.dart';
 import 'package:app/features/auth/state/session_controller.dart';
 import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/booking/data/models/booking.dart';
+import 'package:app/features/gate/data/extra_time_payment.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// A signed QR pass from a customer's app (`PE1.…`). It is sent to the API
 /// exactly as scanned: never upper-cased, trimmed of dashes or shown.
-bool isGatePass(String scanned) => scanned.trim().startsWith('PE1.');
+/// A signed QR pass (PE1 to check in, PE2 to check out): sent exactly as
+/// scanned, never retyped or upper-cased.
+bool isGatePass(String scanned) {
+  final text = scanned.trim();
+  return text.startsWith('PE1.') || text.startsWith('PE2.');
+}
 
 /// A facility where the signed-in person works the gate.
 class GateFacility {
@@ -60,7 +66,22 @@ class GateRepository {
     ApiClient.object(await _api.post('/gate/check-in', body: {'code': code})),
   );
 
-  Future<Booking> checkOut(String code) async => Booking.fromJson(
-    ApiClient.object(await _api.post('/gate/check-out', body: {'code': code})),
+  Future<Booking> checkOut(
+    String code, [
+    CheckOutChoice choice = const CheckOutChoice(),
+  ]) async => Booking.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/gate/check-out',
+        body: {'code': code, ...choice.toJson()},
+      ),
+    ),
+  );
+
+  /// Checks a check-out code and returns the parked booking; changes nothing.
+  Future<Booking> verifyCheckOut(String code) async => Booking.fromJson(
+    ApiClient.object(
+      await _api.post('/gate/check-out/verify', body: {'code': code}),
+    ),
   );
 }

@@ -412,18 +412,24 @@ void main() {
         expect(find.text('₹80.00 collected at the facility'), findsOneWidget);
         expect(find.text('Record ₹80.00 received'), findsNothing);
 
-        // Check out asks first too.
+        // Check out shows the booking and asks first too.
         final done = bookingJson(
           status: 'completed',
           checkedInAt: '2026-11-02T04:25:00Z',
         );
         await tester.tap(find.widgetWithText(PrimaryButton, 'Check out'));
         await tester.pumpAndSettle();
-        expect(find.text('Check this vehicle out?'), findsOneWidget);
+        expect(find.text('Confirm check-out'), findsWidgets);
         h.http.respond(200, {'data': done});
         h.http.stubs[path] = {'data': done};
-        await tester.tap(find.widgetWithText(PrimaryButton, 'Check out').last);
+        await tester.tap(
+          find.widgetWithText(PrimaryButton, 'Confirm check-out'),
+        );
         await tester.pumpAndSettle();
+        expect(
+          h.http.requests.where((r) => r.path == '$path/check-out'),
+          hasLength(1),
+        );
 
         expect(find.text('Completed'), findsOneWidget);
         expect(find.widgetWithText(PrimaryButton, 'Check out'), findsNothing);

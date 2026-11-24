@@ -13,6 +13,7 @@ import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/gate/data/gate_repository.dart';
+import 'package:app/features/gate/ui/check_out_confirm_sheet.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -71,9 +72,20 @@ class _GateScreenState extends ConsumerState<GateScreen> {
     final out = _checkingOut;
     try {
       final gate = ref.read(gateRepositoryProvider);
-      final booking = out
-          ? await gate.checkOut(code)
-          : await gate.checkIn(code);
+      final Booking booking;
+      if (out) {
+        // Verify first and show the booking; nothing changes until confirmed.
+        final found = await gate.verifyCheckOut(code);
+        if (!mounted) return;
+        // No spinner while the person reads and decides.
+        setState(() => _busy = false);
+        final choice = await confirmCheckOut(context, found);
+        if (choice == null || !mounted) return;
+        setState(() => _busy = true);
+        booking = await gate.checkOut(code, choice);
+      } else {
+        booking = await gate.checkIn(code);
+      }
       if (!mounted) return;
       _code.clear();
       setState(() {
@@ -86,6 +98,24 @@ class _GateScreenState extends ConsumerState<GateScreen> {
         _busy = false;
         _error = switch (failure.code) {
           ApiErrorCode.checkInCodeNotFound => l10n.gateCodeNotFound,
+          ApiErrorCode.checkOutCodeNotFound => l10n.errCheckOutCodeNotFound,
+          ApiErrorCode.gatePassExpired => l10n.errGatePassExpired,
+          ApiErrorCode.alreadyCheckedOut => l10n.errAlreadyCheckedOut,
+          ApiErrorCode.checkInCodeAtCheckOut => l10n.errCheckInCodeAtCheckOut,
+          ApiErrorCode.extraTimeAlreadyCollected => l10n.errAlreadyCheckedOut,
+          // The server or the connection failed: nothing was completed,
+          // and the person can try again.
+          ApiErrorCode.network when out => l10n.errCheckOutFailed,
+          ApiErrorCode.timeout when out => l10n.errCheckOutTimeout,
+          ApiErrorCode.internalError ||
+          ApiErrorCode.serviceUnavailable ||
+          ApiErrorCode.unknown when out => l10n.errCheckOutServer,
+          ApiErrorCode.bookingPaymentRequired => l10n.errBookingPaymentRequired,
+          ApiErrorCode.bookingPaymentAmountMismatch =>
+            l10n.errBookingPaymentAmountMismatch,
+          ApiErrorCode.extraTimeAmountChanged => l10n.errExtraTimeAmountChanged,
+          ApiErrorCode.extraTimePaymentRequired =>
+            l10n.errExtraTimePaymentRequired,
           ApiErrorCode.checkOutNotAllowed => l10n.errCheckOutNotAllowed,
           ApiErrorCode.checkInNotAllowed || ApiErrorCode.invalidBookingState =>
             out ? l10n.errCheckOutNotAllowed : l10n.errCheckInNotAllowed,

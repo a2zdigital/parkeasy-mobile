@@ -4,6 +4,7 @@ import 'package:app/core/files/picked_file.dart';
 import 'package:app/core/providers.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
+import 'package:app/features/gate/data/extra_time_payment.dart';
 import 'package:app/features/owner/data/models/earning_entry.dart';
 import 'package:app/features/owner/data/models/gst_registration.dart';
 import 'package:app/features/owner/data/models/onsite_collection_state.dart';
@@ -115,23 +116,41 @@ class OwnerRepository {
   /// Gate check-in by the code the customer shows. Spaces, dashes and
   /// case do not matter. Throws `CHECK_IN_CODE_NOT_FOUND` for a code that
   /// is not one of this owner's bookings.
-  Future<Booking> checkOutByCode(String code) async => Booking.fromJson(
-    ApiClient.object(await _api.post('/owner/check-out', body: {'code': code})),
+  Future<Booking> checkOutByCode(
+    String code, [
+    CheckOutChoice choice = const CheckOutChoice(),
+  ]) async => Booking.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/owner/check-out',
+        body: {'code': code, ...choice.toJson()},
+      ),
+    ),
+  );
+
+  /// Checks a check-out code and returns the parked booking; changes nothing.
+  Future<Booking> verifyCheckOut(String code) async => Booking.fromJson(
+    ApiClient.object(
+      await _api.post('/owner/check-out/verify', body: {'code': code}),
+    ),
   );
 
   Future<Booking> checkInByCode(String code) async => Booking.fromJson(
     ApiClient.object(await _api.post('/owner/check-in', body: {'code': code})),
   );
 
-  Future<Booking> act(String id, OwnerBookingAction action) async =>
-      Booking.fromJson(
-        ApiClient.object(
-          await _api.post(
-            '/owner/bookings/$id/${action.path}',
-            body: const <String, Object?>{},
-          ),
-        ),
-      );
+  Future<Booking> act(
+    String id,
+    OwnerBookingAction action, {
+    CheckOutChoice choice = const CheckOutChoice(),
+  }) async => Booking.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/owner/bookings/$id/${action.path}',
+        body: choice.toJson(),
+      ),
+    ),
+  );
 
   /// What is due at the facility for a booking, and whether it was taken.
   Future<OnsiteCollectionState> collection(String id) async =>

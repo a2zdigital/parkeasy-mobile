@@ -49,10 +49,13 @@ class _OwnerGstScreenState extends ConsumerState<OwnerGstScreen> {
     final l10n = context.l10n;
     final gstin = _gstin.text.trim().toUpperCase();
     final name = _name.text.trim();
+    final problem = gstinProblem(gstin);
     setState(() {
       _error = null;
       _sent = false;
-      _gstinError = gstinPattern.hasMatch(gstin) ? null : l10n.gstInvalid;
+      _gstinError = problem == null
+          ? null
+          : gstinProblemText(l10n, problem, gstin.length);
     });
     if (_gstinError != null || name.length < 2) {
       if (name.length < 2) setState(() => _error = l10n.gstNameRequired);
@@ -120,9 +123,11 @@ class _OwnerGstScreenState extends ConsumerState<OwnerGstScreen> {
             controller: _gstin,
             errorText: _gstinError,
             textCapitalization: TextCapitalization.characters,
+            // Letters and digits only, shown in capitals, never more than 15.
             inputFormatters: [
-              LengthLimitingTextInputFormatter(15),
               FilteringTextInputFormatter.allow(RegExp('[0-9A-Za-z]')),
+              LengthLimitingTextInputFormatter(15),
+              const _UpperCase(),
             ],
             enabled: !_busy,
           ),
@@ -164,6 +169,9 @@ class _RegistrationCard extends StatelessWidget {
     final status = switch (item.status) {
       GstRegistrationStatus.verified => l10n.gstVerified,
       GstRegistrationStatus.rejected => l10n.gstRejected,
+      _ when item.nameMatches == false => l10n.gstNameMismatch(
+        item.serviceLegalName ?? '',
+      ),
       _ => l10n.gstPending,
     };
     return AppCard(
@@ -186,4 +194,31 @@ class _RegistrationCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The exact reason a GSTIN's format is wrong.
+String gstinProblemText(
+  AppLocalizations l10n,
+  GstinProblem problem,
+  int length,
+) => switch (problem) {
+  GstinProblem.characters => l10n.gstErrCharacters,
+  GstinProblem.length => l10n.gstErrLength(length),
+  GstinProblem.stateCode => l10n.gstErrState,
+  GstinProblem.pan => l10n.gstErrPan,
+  GstinProblem.panHolderType => l10n.gstErrHolderType,
+  GstinProblem.entityNumber => l10n.gstErrEntity,
+  GstinProblem.defaultCharacter => l10n.gstErrZ,
+  GstinProblem.checksum => l10n.gstErrChecksum,
+};
+
+/// Shows what is typed in capitals.
+class _UpperCase extends TextInputFormatter {
+  const _UpperCase();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) => newValue.copyWith(text: newValue.text.toUpperCase());
 }

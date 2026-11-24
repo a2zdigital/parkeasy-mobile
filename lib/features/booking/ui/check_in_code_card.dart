@@ -17,10 +17,18 @@ import 'package:qr_flutter/qr_flutter.dart';
 /// before it expires. Until a pass arrives, or if there is none, the QR code
 /// holds the plain code, which the gate also accepts.
 class CheckInCodeCard extends ConsumerStatefulWidget {
-  const CheckInCodeCard({required this.code, this.bookingId, super.key});
+  const CheckInCodeCard({
+    required this.code,
+    this.bookingId,
+    this.checkOut = false,
+    super.key,
+  });
 
   final String code;
   final String? bookingId;
+
+  /// The code for leaving (while parked) rather than for arriving.
+  final bool checkOut;
 
   /// Side of the QR code. Large enough to scan from an arm's length.
   static const double qrSize = 184;
@@ -46,7 +54,9 @@ class _CheckInCodeCardState extends ConsumerState<CheckInCodeCard> {
     if (id != null) {
       _refresh = Timer.periodic(
         CheckInCodeCard.refreshEvery,
-        (_) => ref.invalidate(checkInPassProvider(id)),
+        (_) => ref.invalidate(
+          widget.checkOut ? checkOutPassProvider(id) : checkInPassProvider(id),
+        ),
       );
     }
   }
@@ -66,14 +76,20 @@ class _CheckInCodeCardState extends ConsumerState<CheckInCodeCard> {
     final id = widget.bookingId;
     final pass = id == null
         ? null
-        : ref.watch(checkInPassProvider(id)).valueOrNull;
+        : ref
+              .watch(
+                widget.checkOut
+                    ? checkOutPassProvider(id)
+                    : checkInPassProvider(id),
+              )
+              .valueOrNull;
 
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l10n.checkInCodeTitle,
+            widget.checkOut ? l10n.checkOutCodeTitle : l10n.checkInCodeTitle,
             style: text.label.copyWith(color: colors.textSecondary),
           ),
           const Gap.sm(),
@@ -102,7 +118,9 @@ class _CheckInCodeCardState extends ConsumerState<CheckInCodeCard> {
           ),
           const Gap.xs(),
           Text(
-            pass == null ? l10n.checkInCodeHint : l10n.checkInPassHint,
+            widget.checkOut
+                ? l10n.checkOutCodeHint
+                : (pass == null ? l10n.checkInCodeHint : l10n.checkInPassHint),
             style: text.bodySmall.copyWith(color: colors.textSecondary),
           ),
         ],
