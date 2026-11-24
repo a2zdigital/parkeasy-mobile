@@ -1,0 +1,2100 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 16832ba..63c169d 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,14 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
+ ## [Unreleased]
+ 
+ ### Added
++- **explore:** Search by a selected place and view nearby parking; the configured location remains available as the default.
++- **profile:** Edit the profile name through the existing profile-update endpoint.
++
++### Changed
++- **explore:** Keep the configured default as the active area while starting the editable location search field empty.
++- **explore:** Distinguish empty parking results from filtered no-match results and show a specific no-place-match message.
++- **api:** Report offline only for actual connection failures; unknown transport errors remain unexpected errors.
++
+ - **auth:** Show a retryable error instead of leaving startup loading when secure token storage fails.
+ - **auth:** Sign out locally without waiting for the server to revoke the session.
+ - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).
+diff --git a/docs/conventions/api-client.md b/docs/conventions/api-client.md
+index cf76ebc..09e0bcc 100644
+--- a/docs/conventions/api-client.md
++++ b/docs/conventions/api-client.md
+@@ -31,7 +31,7 @@ Success is `{ "data": ΓÇª, "meta": ΓÇª }`; failure is `{ "error": { "code", "mes
+ | `requestId` | `error.request_id` |
+ | `status` | HTTP status |
+ 
+-No network, a timeout and a non-JSON response become `ApiException` too, with the codes `network`, `timeout` and `unknown`. **Features never see a `DioException`.**
++Connection failures, timeouts and non-JSON responses become `ApiException` too, with the codes `network`, `timeout` and `unknown`. Only a connection failure is reported as offline; an unknown transport failure or certificate error is not assumed to be a connectivity problem. **Features never see a `DioException`.**
+ 
+ ## Errors every screen gets for free
+ 
+@@ -92,3 +92,5 @@ The provider's SDK is used only in `lib/core/payment/razorpay_checkout_launcher.
+ 1. Find it in `openapi.yaml`. If it is not there, ask the API team; do not guess a shape.
+ 2. Add the model and the repository method.
+ 3. Add a repository test with the JSON from the specification's example.
++
++Explore resolves a typed place through `GET /places/search?query=` and then continues to use `GET /parking-lots` with the selected `lat` and `lng`; the mobile app never calls Google Places directly.
+diff --git a/docs/conventions/security.md b/docs/conventions/security.md
+index 0ff823a..0aae1f1 100644
+--- a/docs/conventions/security.md
++++ b/docs/conventions/security.md
+@@ -40,8 +40,7 @@ No key is in the project. The Razorpay SDK is installed, and it needs none from
+ 
+ | When this is added | The key goes |
+ |---|---|
+-| Google Maps SDK (MD-02) | Restricted per platform; `android/secrets.properties` ΓåÆ manifest placeholder; `ios/Flutter/Secrets.xcconfig` ΓåÆ `Info.plist` variable. Both files untracked; CI writes them from its secrets |
+-| Place search or geocoding | A server-side key on our API; the app calls our API |
++| Google Places API (New) place search | A server-side key on our API; the app calls `GET /places/search`, never the provider directly. See the API repository's ADR-0015 for billing and restrictions |
+ | Firebase (push, crash reports) | `google-services.json` and `GoogleService-Info.plist` written by CI from its secrets; App Check enabled |
+ | Razorpay checkout (**in place**) | Key ID arrives from our API per order; nothing stored in the app. Switching from test to live keys is a server change only; the app is not rebuilt |
+ | Release signing | Keystore and passwords from CI secrets; `key.properties` untracked |
+diff --git a/docs/design/components.md b/docs/design/components.md
+index 72a6560..fdbb8c7 100644
+--- a/docs/design/components.md
++++ b/docs/design/components.md
+@@ -28,7 +28,7 @@ Every interactive component has: default, pressed, focused, disabled. Those that
+ | `AppTextField` | Visible label above the field (`label` style), 52 high, `surface` fill, 1 px `borderControl`, radius `control`. Focus: 2 px `primary` border. Error: 2 px `danger` border, with the message and an icon beneath. Helper text sits in the same place as the error |
+ | `PhoneField` | Fixed `+91` prefix, numeric keyboard, formats as typed |
+ | `OtpField` | One box per digit, auto-advance, paste and SMS autofill, error state shakes once and clears |
+-| `SearchField` | Leading search icon, clear button when filled; on the explore screen it opens the place search |
++| `SearchField` | Leading search icon, clear button when filled; on Explore it searches places through the API and shows selectable matches |
+ | `SegmentedControl` | Track `surfaceSubtle`, selected segment `surface` with level 1 elevation; two or three options only ("Hourly / Daily") |
+ | `DateTimeField` | Read-only field that opens the platform date and time pickers, showing the facility's timezone when it differs from the phone's |
+ | `FilterChip` | Pill, 36 high inside a 48 target; selected: `primaryContainer` fill, `primaryPressed` text and a check icon |
+@@ -88,7 +88,7 @@ A card is `surface`, radius `card`, 1 px `border`, padding 16, no shadow.
+ | `PriceMarker` | Pill with the hourly price; selected: `primary` fill. Unavailable: `surfaceSubtle` with `textSecondary` |
+ | `UserLocationMarker` | `primary` dot with a white ring |
+ 
+-The map depends on open decision MD-02. The explore screen is specified so that the list works alone; the map is an additional view of the same results, with a list always reachable for screen-reader users.
++The map view remains deferred; MD-02 selects Google Places for server-side place search, not a map SDK. The explore screen works as a list, with every provider result selectable.
+ 
+ ## Brand
+ 
+diff --git a/docs/design/screens.md b/docs/design/screens.md
+index 5f1ae92..4a3d069 100644
+--- a/docs/design/screens.md
++++ b/docs/design/screens.md
+@@ -2,7 +2,7 @@
+ 
+ Every screen in the first version, and the API call behind it. A screen is in scope only if the API supports it today.
+ 
+-> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, around the configured city centre), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. C13 (Activity). Owner: O1 (apply and status), O3 and O4 (bookings and every booking action), O5 (facilities), O6 (facility editor: details, spaces and rates, opening hours, submit), O7 (earnings). O2 (dashboard) is replaced by the bookings list opening on requests. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
++> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, starts around the configured city centre with an initially empty place-search field), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. C13 (Activity). Owner: O1 (apply and status), O3 and O4 (bookings and every booking action), O5 (facilities), O6 (facility editor: details, spaces and rates, opening hours, submit), O7 (earnings). O2 (dashboard) is replaced by the bookings list opening on requests. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
+ 
+ ## Customer
+ 
+@@ -12,7 +12,7 @@ Every screen in the first version, and the API call behind it. A screen is in sc
+ | C2 | Phone number | `PhoneField`, "Send code" | `POST /auth/otp/request` |
+ | C3 | Verification code | `OtpField`, resend countdown | `POST /auth/otp/verify` |
+ | C4 | Your name (new users) | Name, optional email | `PATCH /me` |
+-| C5 | Explore | Search field, filter chips (vehicle type, amenities), results as `FacilityCard`s nearest first; map view when MD-02 is decided | `GET /parking-lots` |
++| C5 | Explore | Initially empty place-search field, filter chips (vehicle type, amenities), results as `FacilityCard`s nearest first; friendly empty and no-match states; map view remains deferred | `GET /places/search`, `GET /parking-lots` |
+ | C6 | Facility details | Name, address, distance, hours, amenities, rates per vehicle type, booking mode and payment modes; `ActionBar` "Choose time" | `GET /parking-lots/{id}` |
+ | C7 | Choose time | Vehicle type, start and end (`DateTimeField`), live availability and price | `GET ΓÇª/availability`, `POST /bookings/quote` |
+ | C8 | Review and book | `PriceBreakdown`, payment mode, instant or approval notice, cancellation rule; "Book parking" / "Send request" | `POST /bookings` |
+@@ -21,7 +21,7 @@ Every screen in the first version, and the API call behind it. A screen is in sc
+ | C11 | Bookings | Upcoming and past, `BookingCard`s | `GET /bookings` |
+ | C12 | Booking details | Status, reference, times, facility, price, payment; cancel | `GET /bookings/{id}`, `POST ΓÇª/cancel` |
+ | C13 | Activity | Notifications, unread first | `GET /notifications`, read endpoints |
+-| C14 | Profile | Name, phone, email, switch to owner area, sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
++| C14 | Profile | Name, phone, email, edit name (phone and email remain read-only), switch to owner area, sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
+ 
+ The journey designed first: **Explore ΓåÆ Facility ΓåÆ Choose time ΓåÆ Review ΓåÆ Pay or pay at facility ΓåÆ Result ΓåÆ Booking details.**
+ 
+@@ -53,6 +53,6 @@ The owner sees a booking's reference, never the customer's name or phone.
+ | Fixed time-slot grid, "2 hours save 8%" | The API prices any start and end, by started hour or day, and has no multi-hour discount | Start and end pickers; the quote shows the real price |
+ | Owner charts: occupancy, revenue by hour | The API offers an earnings summary and entries, not time series | `MetricTile`s and the entries list |
+ | Support chat, invite and earn | Not in scope | A support contact in Profile |
+-| Map with price pins | Needs a map provider and key (MD-02) | List first; map added as a second view |
++| Map with price pins | Map UI and a client Maps SDK remain deferred; MD-02 selected only the server-side place-search provider | Search and choose a place, then see the list |
+ 
+ Each of these can be added when the API and the product decision exist. None may be mocked in the meantime.
+diff --git a/docs/overview/mvp-status.md b/docs/overview/mvp-status.md
+index ffbeba5..1c9f0b4 100644
+--- a/docs/overview/mvp-status.md
++++ b/docs/overview/mvp-status.md
+@@ -2,14 +2,14 @@
+ 
+ What a tester can do on a phone today, and what is still needed before the app is a usable first version. Updated with every feature.
+ 
+-Last updated: 2026-10-10.
++Last updated: 2026-10-27.
+ 
+ ## Built and tested
+ 
+ | Area | What works |
+ |---|---|
+ | Sign-in | Phone number, SMS code with resend wait, name on first sign-in, staying signed in, sign out |
+-| Explore | Facilities around the pilot city centre, nearest first, with distance, starting price, approval and pay-at-facility flags; filter by vehicle type; paging; pull to refresh |
++| Explore | Search locations through the API, select a place, and find facilities around it; configured city centre is the initial/reset location; nearest first with distance, starting price, approval and pay-at-facility flags; vehicle filter, paging and pull to refresh |
+ | Facility | Address, booking mode, payment modes, rates per vehicle type, opening hours, amenities |
+ | Choose time | Vehicle type, arrival and departure on the facility's clock, live price and availability, reasons a time cannot be booked |
+ | Review and book | Everything being committed to on one screen; pay at the facility or online; instant booking or a request to the owner; safe to retry without double-booking |
+@@ -55,15 +55,15 @@ What QR and OTP check-in need, in order:
+ | SMS provider on the API | Signing in with a real code; today only the fixed development code works, and only against a local API | Technical lead |
+ | Razorpay test keys on the API (`PARKEASY_PAYMENT_DRIVER=razorpay`) | Real checkout. **The Razorpay window itself has never been opened**: the SDK is integrated and its logic is tested with a stand-in, but only a device run with test keys proves the native side | Technical lead |
+ | Logo and app icon artwork | Replacing the placeholders; launcher icon | Design |
+-| Map decision (MD-02) | A map view in Explore | Technical lead |
++| Google Places API (New) key and billing | Google-backed place search outside local/testing | Technical lead |
+ | Tester distribution (MD-06) and signing (MD-09) | Giving a build to people outside the team | Technical lead |
+ 
+ ## Known limits of what is built
+ 
+ | Limit | Reason |
+ |---|---|
+-| Explore searches around a fixed point (the city centre from configuration), not the phone's location | Device location needs a location package and permission texts, which must be tried on real devices |
+-| No search by place name | Needs a geocoding service behind our API |
++| Explore starts at the configured city centre and supports typed place search, not phone location | Device location needs a location package and permission texts, which must be tried on real devices |
++| Explore has no map view | The provider choice covers server-side place search; map SDK and map view remain deferred |
+ | Search results do not show amenities | The API's search result carries amenity codes without names |
+ | Facility time zones other than India are shown in UTC | No time-zone database is bundled; the pilot is India only |
+ | The cancel confirmation cannot say in advance whether a refund is due; the booking shows it after cancelling | The API reports refund eligibility only in the cancellation result |
+@@ -71,7 +71,7 @@ What QR and OTP check-in need, in order:
+ | Bookings are one list, newest first, not split into upcoming and past | The split needs a filter the API does not offer yet |
+ | A notification about a booking opens it as the customer's booking, except a new request, which opens the owner's view. An owner tapping "booking confirmed" or "cancelled" for their facility sees "couldn't find that booking" | Notifications do not say whether they are for the customer or the owner |
+ | The owner area has no dashboard; it opens on booking requests | Simpler, and requests are what an owner must act on |
+-| A facility's location is typed as latitude and longitude | Picking it on a map needs the map decision (MD-02) |
++| A facility's location is still typed as latitude and longitude | Facility location picking is separate from customer place search and still needs a map workflow |
+ | A rate cannot be removed once set, only changed | The API has no call to remove a rate |
+ | No facility photos | The API has no image upload |
+ | Owner earnings entries show times in India's zone | An entry carries no facility |
+diff --git a/docs/overview/open-decisions.md b/docs/overview/open-decisions.md
+index 4e9978b..49c5f37 100644
+--- a/docs/overview/open-decisions.md
++++ b/docs/overview/open-decisions.md
+@@ -5,7 +5,6 @@ A decision that is not made yet. **Never decide one in code.** If a ticket depen
+ | ID | Decision | Needed for | Status |
+ |---|---|---|---|
+ | MD-01 | Final logo and app icon artwork | Launch screen, store listing | Open; placeholders are in `assets/brand/`. Save the real images under the names in [brand-assets.md](../design/brand-assets.md) |
+-| MD-02 | Map provider (Google Maps, Mapbox, or list-only first) and who owns the key and its cost | Search | Open |
+ | MD-03 | Languages after English (Kannada, Hindi) | Text, layout | Open; all text goes through localisation from day one |
+ | MD-04 | Minimum Android and iOS versions | Build settings, packages | Open; working assumption Android 7 (API 24), iOS 15 |
+ | MD-05 | Crash and error reporting (Firebase Crashlytics or Sentry) | Supporting testers and the pilot | Open |
+@@ -20,6 +19,7 @@ A decision that is not made yet. **Never decide one in code.** If a ticket depen
+ 
+ | ID | Decision | Where |
+ |---|---|---|
++| MD-02 | Google Places API (New) Text Search behind the API; the API team owns its server key and usage cost. Map SDK and map view remain deferred. | [ADR-0015](../../../parkeasy-api/docs/adr/0015-google-places-search.md) |
+ | ΓÇö | Application ID `com.swanlabstechnologies.parkeasy` | Project settings |
+ | ΓÇö | One app for both roles | [ADR-0001](../adr/0001-one-app-two-roles.md) |
+ | ΓÇö | Technology stack | [ADR-0002](../adr/0002-technology-stack.md) |
+diff --git a/lib/app/router.dart b/lib/app/router.dart
+index 27a48ad..123a798 100644
+--- a/lib/app/router.dart
++++ b/lib/app/router.dart
+@@ -25,6 +25,7 @@ import 'package:app/features/owner/ui/pool_form_screen.dart';
+ import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
+ import 'package:app/features/payment/ui/payment_screen.dart';
+ import 'package:app/features/profile/ui/complete_profile_screen.dart';
++import 'package:app/features/profile/ui/edit_profile_screen.dart';
+ import 'package:app/features/profile/ui/profile_screen.dart';
+ import 'package:app/features/search/ui/explore_screen.dart';
+ import 'package:flutter/foundation.dart';
+@@ -38,10 +39,16 @@ final routerProvider = Provider<GoRouter>((ref) {
+     ref.read(sessionControllerProvider),
+   );
+   ref
+-    ..listen(
+-      sessionControllerProvider,
+-      (_, next) => sessionChanged.value = next,
+-    )
++    ..listen(sessionControllerProvider, (previous, next) {
++      final routingChanged = switch ((previous, next)) {
++        (SignedIn(user: final a), SignedIn(user: final b)) =>
++          a.isProfileComplete != b.isProfileComplete,
++        _ => previous?.runtimeType != next.runtimeType,
++      };
++      if (routingChanged) {
++        sessionChanged.value = next;
++      }
++    })
+     ..onDispose(sessionChanged.dispose);
+ 
+   final router = GoRouter(
+@@ -151,6 +158,12 @@ final routerProvider = Provider<GoRouter>((ref) {
+               GoRoute(
+                 path: Routes.profile,
+                 builder: (context, state) => const ProfileScreen(),
++                routes: [
++                  GoRoute(
++                    path: 'edit',
++                    builder: (context, state) => const EditProfileScreen(),
++                  ),
++                ],
+               ),
+             ],
+           ),
+diff --git a/lib/app/routes.dart b/lib/app/routes.dart
+index 229a8bf..8010b7a 100644
+--- a/lib/app/routes.dart
++++ b/lib/app/routes.dart
+@@ -12,6 +12,7 @@ abstract final class Routes {
+   static const String bookings = '/bookings';
+   static const String activity = '/activity';
+   static const String profile = '/profile';
++  static const String profileEdit = '$profile/edit';
+ 
+   /// A facility's details. The ID is the public, opaque one.
+   static String parkingLot(String id) => '$explore/lots/$id';
+diff --git a/lib/core/api/api_client.dart b/lib/core/api/api_client.dart
+index 5b63009..9436c8b 100644
+--- a/lib/core/api/api_client.dart
++++ b/lib/core/api/api_client.dart
+@@ -139,11 +139,7 @@ class ApiClient {
+       case DioExceptionType.badCertificate:
+       case DioExceptionType.cancel:
+       case DioExceptionType.unknown:
+-        return ApiException(
+-          code: error.error is FormatException
+-              ? ApiErrorCode.unknown
+-              : ApiErrorCode.network,
+-        );
++        return const ApiException(code: ApiErrorCode.unknown);
+     }
+   }
+ 
+diff --git a/lib/core/widgets/app_text_field.dart b/lib/core/widgets/app_text_field.dart
+index a08f16f..c686523 100644
+--- a/lib/core/widgets/app_text_field.dart
++++ b/lib/core/widgets/app_text_field.dart
+@@ -20,6 +20,8 @@ class AppTextField extends StatelessWidget {
+     this.textCapitalization = TextCapitalization.none,
+     this.inputFormatters,
+     this.autofillHints,
++    this.prefixIcon,
++    this.suffixIcon,
+     this.autofocus = false,
+     this.enabled = true,
+     this.onChanged,
+@@ -41,6 +43,8 @@ class AppTextField extends StatelessWidget {
+   final TextCapitalization textCapitalization;
+   final List<TextInputFormatter>? inputFormatters;
+   final Iterable<String>? autofillHints;
++  final Widget? prefixIcon;
++  final Widget? suffixIcon;
+   final bool autofocus;
+   final bool enabled;
+   final ValueChanged<String>? onChanged;
+@@ -90,6 +94,8 @@ class AppTextField extends StatelessWidget {
+             hintStyle: text.body.copyWith(color: colors.textSecondary),
+             prefixText: prefixText,
+             prefixStyle: text.body,
++            prefixIcon: prefixIcon,
++            suffixIcon: suffixIcon,
+             filled: true,
+             fillColor: enabled ? colors.surface : colors.surfaceSubtle,
+             constraints: const BoxConstraints(minHeight: AppSize.inputHeight),
+diff --git a/lib/features/profile/state/edit_profile_notifier.dart b/lib/features/profile/state/edit_profile_notifier.dart
+new file mode 100644
+index 0000000..3e4bfb4
+--- /dev/null
++++ b/lib/features/profile/state/edit_profile_notifier.dart
+@@ -0,0 +1,68 @@
++import 'package:app/core/api/api_error_code.dart';
++import 'package:app/core/api/api_exception.dart';
++import 'package:app/features/auth/state/session_controller.dart';
++import 'package:app/features/profile/data/profile_repository.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++
++final editProfileProvider =
++    NotifierProvider.autoDispose<EditProfileNotifier, EditProfileState>(
++      EditProfileNotifier.new,
++    );
++
++class EditProfileState {
++  const EditProfileState({
++    this.isSubmitting = false,
++    this.isNameMissing = false,
++    this.isNameInvalid = false,
++    this.didSave = false,
++    this.failure,
++  });
++
++  final bool isSubmitting;
++  final bool isNameMissing;
++  final bool isNameInvalid;
++  final bool didSave;
++  final ApiException? failure;
++}
++
++class EditProfileNotifier extends AutoDisposeNotifier<EditProfileState> {
++  @override
++  EditProfileState build() => const EditProfileState();
++
++  Future<void> save({required String name}) async {
++    if (state.isSubmitting) return;
++
++    final trimmedName = name.trim();
++    final nameLength = trimmedName.runes.length;
++    if (nameLength < 2 || nameLength > 120) {
++      state = EditProfileState(
++        isNameMissing: trimmedName.isEmpty,
++        isNameInvalid: trimmedName.isNotEmpty,
++      );
++      return;
++    }
++
++    state = const EditProfileState(isSubmitting: true);
++    try {
++      final user = await ref
++          .read(profileRepositoryProvider)
++          .update(name: trimmedName);
++      ref.read(sessionControllerProvider.notifier).updateUser(user);
++      state = const EditProfileState(didSave: true);
++    } on ApiException catch (failure) {
++      final fields = failure.code == ApiErrorCode.validationFailed
++          ? failure.fieldErrors
++          : const <String, List<String>>{};
++      state = EditProfileState(
++        isNameInvalid: fields.containsKey('name'),
++        failure: fields.isEmpty ? failure : null,
++      );
++    }
++  }
++
++  void clearProblems() {
++    if (state.isNameMissing || state.isNameInvalid || state.failure != null) {
++      state = const EditProfileState();
++    }
++  }
++}
+diff --git a/lib/features/profile/ui/edit_profile_screen.dart b/lib/features/profile/ui/edit_profile_screen.dart
+new file mode 100644
+index 0000000..05f6269
+--- /dev/null
++++ b/lib/features/profile/ui/edit_profile_screen.dart
+@@ -0,0 +1,106 @@
++import 'package:app/core/theme/app_colors.dart';
++import 'package:app/core/theme/app_dimensions.dart';
++import 'package:app/core/theme/app_theme.dart';
++import 'package:app/core/widgets/api_error_text.dart';
++import 'package:app/core/widgets/app_banner.dart';
++import 'package:app/core/widgets/app_buttons.dart';
++import 'package:app/core/widgets/app_scaffold.dart';
++import 'package:app/core/widgets/app_text_field.dart';
++import 'package:app/features/auth/state/session_controller.dart';
++import 'package:app/features/auth/state/session_state.dart';
++import 'package:app/features/profile/state/edit_profile_notifier.dart';
++import 'package:app/l10n/l10n.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
++
++class EditProfileScreen extends ConsumerStatefulWidget {
++  const EditProfileScreen({super.key});
++
++  @override
++  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
++}
++
++class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
++  late final TextEditingController _name;
++
++  @override
++  void initState() {
++    super.initState();
++    final session = ref.read(sessionControllerProvider);
++    _name = TextEditingController(
++      text: session is SignedIn ? session.user.name ?? '' : '',
++    );
++  }
++
++  @override
++  void dispose() {
++    _name.dispose();
++    super.dispose();
++  }
++
++  Future<void> _save() async {
++    if (ref.read(editProfileProvider).isSubmitting) return;
++    await ref.read(editProfileProvider.notifier).save(name: _name.text);
++    if (mounted && ref.read(editProfileProvider).didSave) {
++      context.pop(true);
++    }
++  }
++
++  @override
++  Widget build(BuildContext context) {
++    final l10n = context.l10n;
++    final state = ref.watch(editProfileProvider);
++    final failure = state.failure;
++
++    return AppScaffold(
++      title: l10n.profileEditTitle,
++      body: Column(
++        crossAxisAlignment: CrossAxisAlignment.start,
++        children: [
++          const Gap.xl(),
++          AppTextField(
++            label: l10n.nameLabel,
++            controller: _name,
++            enabled: !state.isSubmitting,
++            errorText: state.isNameMissing
++                ? l10n.nameRequired
++                : state.isNameInvalid
++                ? l10n.profileEditNameInvalid
++                : null,
++            keyboardType: TextInputType.name,
++            textCapitalization: TextCapitalization.words,
++            textInputAction: TextInputAction.done,
++            autofillHints: const [AutofillHints.name],
++            onChanged: (_) =>
++                ref.read(editProfileProvider.notifier).clearProblems(),
++            onSubmitted: state.isSubmitting ? null : (_) => _save(),
++          ),
++          const Gap.lg(),
++          AppBanner(
++            tone: StatusTone.info,
++            message: l10n.profileEditContactNotEditable,
++          ),
++          if (failure != null) ...[
++            const Gap.md(),
++            AppBanner(tone: StatusTone.danger, message: l10n.describe(failure)),
++            if (failure.requestId case final requestId?) ...[
++              const Gap.xs(),
++              Text(
++                l10n.errorReference(requestId),
++                style: context.text.bodySmall.copyWith(
++                  color: context.colors.textSecondary,
++                ),
++              ),
++            ],
++          ],
++        ],
++      ),
++      bottom: PrimaryButton(
++        label: l10n.profileSaveChanges,
++        isLoading: state.isSubmitting,
++        onPressed: state.isSubmitting ? null : _save,
++      ),
++    );
++  }
++}
+diff --git a/lib/features/profile/ui/profile_screen.dart b/lib/features/profile/ui/profile_screen.dart
+index ab6a906..f114454 100644
+--- a/lib/features/profile/ui/profile_screen.dart
++++ b/lib/features/profile/ui/profile_screen.dart
+@@ -47,7 +47,27 @@ class ProfileScreen extends ConsumerWidget {
+         crossAxisAlignment: CrossAxisAlignment.stretch,
+         children: [
+           const Gap.xl(),
+-          Text(user.name ?? l10n.profileNameMissing, style: context.text.h2),
++          Row(
++            children: [
++              Expanded(
++                child: Text(
++                  user.name ?? l10n.profileNameMissing,
++                  style: context.text.h2,
++                ),
++              ),
++              TextAction(
++                label: l10n.profileEdit,
++                onPressed: () async {
++                  final saved = await context.push<bool>(Routes.profileEdit);
++                  if (saved == true && context.mounted) {
++                    ScaffoldMessenger.of(
++                      context,
++                    ).showSnackBar(SnackBar(content: Text(l10n.profileSaved)));
++                  }
++                },
++              ),
++            ],
++          ),
+           const Gap.lg(),
+           _Details(
+             rows: [
+diff --git a/lib/features/search/data/models/location_suggestion.dart b/lib/features/search/data/models/location_suggestion.dart
+new file mode 100644
+index 0000000..265f23e
+--- /dev/null
++++ b/lib/features/search/data/models/location_suggestion.dart
+@@ -0,0 +1,19 @@
++import 'package:app/core/api/json_converters.dart';
++import 'package:freezed_annotation/freezed_annotation.dart';
++
++part 'location_suggestion.freezed.dart';
++part 'location_suggestion.g.dart';
++
++@freezed
++abstract class LocationSuggestion with _$LocationSuggestion {
++  const factory LocationSuggestion({
++    required String id,
++    required String name,
++    required String address,
++    @FlexibleDoubleConverter() required double latitude,
++    @FlexibleDoubleConverter() required double longitude,
++  }) = _LocationSuggestion;
++
++  factory LocationSuggestion.fromJson(Map<String, dynamic> json) =>
++      _$LocationSuggestionFromJson(json);
++}
+diff --git a/lib/features/search/data/search_repository.dart b/lib/features/search/data/search_repository.dart
+index 189628e..8ebd695 100644
+--- a/lib/features/search/data/search_repository.dart
++++ b/lib/features/search/data/search_repository.dart
+@@ -1,7 +1,10 @@
+ import 'package:app/core/api/api_client.dart';
++import 'package:app/core/api/api_error_code.dart';
++import 'package:app/core/api/api_exception.dart';
+ import 'package:app/core/api/pagination.dart';
+ import 'package:app/core/providers.dart';
+ import 'package:app/features/parking_lot/data/models/parking_lot_summary.dart';
++import 'package:app/features/search/data/models/location_suggestion.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ final searchRepositoryProvider = Provider<SearchRepository>(
+@@ -13,6 +16,30 @@ class SearchRepository {
+ 
+   final ApiClient _api;
+ 
++  /// Locations the customer can choose as the centre of a parking search.
++  Future<List<LocationSuggestion>> searchLocations(String query) async {
++    final response = await _api.get('/places/search', query: {'query': query});
++    final data = response['data'];
++    if (data is! List) {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    }
++
++    if (data.any((item) => item is! Map<String, dynamic>)) {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    }
++
++    try {
++      return data
++          .cast<Map<String, dynamic>>()
++          .map(LocationSuggestion.fromJson)
++          .toList();
++    } on FormatException {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    } on TypeError {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    }
++  }
++
+   /// Bookable facilities around a point, nearest first.
+   Future<NumberedPage<ParkingLotSummary>> near({
+     required double latitude,
+@@ -31,6 +58,17 @@ class SearchRepository {
+         'page': page,
+       },
+     );
+-    return NumberedPage.fromJson(envelope, ParkingLotSummary.fromJson);
++    final data = envelope['data'];
++    if (data is! List || data.any((item) => item is! Map)) {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    }
++
++    try {
++      return NumberedPage.fromJson(envelope, ParkingLotSummary.fromJson);
++    } on FormatException {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    } on TypeError {
++      throw const ApiException(code: ApiErrorCode.unknown);
++    }
+   }
+ }
+diff --git a/lib/features/search/state/explore_notifier.dart b/lib/features/search/state/explore_notifier.dart
+index 4bd1fd1..8eca903 100644
+--- a/lib/features/search/state/explore_notifier.dart
++++ b/lib/features/search/state/explore_notifier.dart
+@@ -1,4 +1,5 @@
+ import 'package:app/core/api/api_exception.dart';
++import 'package:app/core/config/app_config.dart';
+ import 'package:app/core/providers.dart';
+ import 'package:app/features/parking_lot/data/models/code_name.dart';
+ import 'package:app/features/parking_lot/data/models/parking_lot_summary.dart';
+@@ -11,6 +12,7 @@ final exploreProvider = NotifierProvider<ExploreNotifier, ExploreState>(
+ 
+ class ExploreState {
+   const ExploreState({
++    required this.origin,
+     this.items = const [],
+     this.isLoading = false,
+     this.failure,
+@@ -22,6 +24,7 @@ class ExploreState {
+     this.vehicleTypes = const [],
+   });
+ 
++  final SearchOrigin origin;
+   final List<ParkingLotSummary> items;
+ 
+   /// The first page is loading and there is nothing to show yet.
+@@ -56,10 +59,11 @@ class ExploreNotifier extends Notifier<ExploreState> {
+   ExploreState build() {
+     _disposed = false;
+     ref.onDispose(() => _disposed = true);
++    final origin = ref.read(appConfigProvider).searchOrigin;
+     Future.microtask(() {
+       if (!_disposed) load();
+     });
+-    return const ExploreState(isLoading: true);
++    return ExploreState(isLoading: true, origin: origin);
+   }
+ 
+   /// Loads the first page for the current filter. Also the pull-to-refresh
+@@ -68,6 +72,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+     final generation = ++_generation;
+     final hadItems = state.items.isNotEmpty;
+     state = ExploreState(
++      origin: state.origin,
+       items: state.items,
+       isLoading: !hadItems,
+       page: state.page,
+@@ -81,6 +86,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+       if (_disposed || generation != _generation) return;
+ 
+       state = ExploreState(
++        origin: state.origin,
+         items: result.items,
+         page: result.page,
+         hasMore: result.hasMore,
+@@ -93,6 +99,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+       if (_disposed || generation != _generation) return;
+ 
+       state = ExploreState(
++        origin: state.origin,
+         // A failed refresh keeps the list; a failed first load shows the error.
+         items: state.items,
+         failure: hadItems ? null : failure,
+@@ -110,6 +117,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+ 
+     final generation = _generation;
+     state = ExploreState(
++      origin: state.origin,
+       items: state.items,
+       page: state.page,
+       hasMore: state.hasMore,
+@@ -123,6 +131,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+       if (_disposed || generation != _generation) return;
+ 
+       state = ExploreState(
++        origin: state.origin,
+         items: [...state.items, ...result.items],
+         page: result.page,
+         hasMore: result.hasMore,
+@@ -133,6 +142,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+       if (_disposed || generation != _generation) return;
+ 
+       state = ExploreState(
++        origin: state.origin,
+         items: state.items,
+         page: state.page,
+         hasMore: state.hasMore,
+@@ -148,6 +158,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
+     if (code == state.vehicleType) return;
+ 
+     state = ExploreState(
++      origin: state.origin,
+       isLoading: true,
+       vehicleType: code,
+       vehicleTypes: state.vehicleTypes,
+@@ -155,15 +166,35 @@ class ExploreNotifier extends Notifier<ExploreState> {
+     await load();
+   }
+ 
++  Future<void> selectOrigin(SearchOrigin origin) async {
++    if (origin.latitude == state.origin.latitude &&
++        origin.longitude == state.origin.longitude) {
++      return;
++    }
++
++    state = ExploreState(
++      origin: origin,
++      isLoading: true,
++      vehicleType: state.vehicleType,
++      vehicleTypes: state.vehicleTypes,
++    );
++    await load();
++  }
++
++  Future<void> useDefaultOrigin() async {
++    await selectOrigin(ref.read(appConfigProvider).searchOrigin);
++  }
++
+   Future<({List<ParkingLotSummary> items, int page, bool hasMore})> _fetch(
+     int page,
+   ) async {
++    final origin = state.origin;
+     final config = ref.read(appConfigProvider);
+     final result = await ref
+         .read(searchRepositoryProvider)
+         .near(
+-          latitude: config.searchOrigin.latitude,
+-          longitude: config.searchOrigin.longitude,
++          latitude: origin.latitude,
++          longitude: origin.longitude,
+           radiusKm: config.searchRadiusKm,
+           vehicleType: state.vehicleType,
+           page: page,
+diff --git a/lib/features/search/state/place_search_notifier.dart b/lib/features/search/state/place_search_notifier.dart
+new file mode 100644
+index 0000000..b897567
+--- /dev/null
++++ b/lib/features/search/state/place_search_notifier.dart
+@@ -0,0 +1,85 @@
++import 'package:app/core/api/api_exception.dart';
++import 'package:app/features/search/data/models/location_suggestion.dart';
++import 'package:app/features/search/data/search_repository.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++
++final placeSearchProvider =
++    NotifierProvider<PlaceSearchNotifier, PlaceSearchState>(
++      PlaceSearchNotifier.new,
++    );
++
++class PlaceSearchState {
++  const PlaceSearchState({
++    this.query = '',
++    this.suggestions = const [],
++    this.isLoading = false,
++    this.hasSearched = false,
++    this.isInvalidQuery = false,
++    this.failure,
++  });
++
++  final String query;
++  final List<LocationSuggestion> suggestions;
++  final bool isLoading;
++  final bool hasSearched;
++  final bool isInvalidQuery;
++  final ApiException? failure;
++}
++
++class PlaceSearchNotifier extends Notifier<PlaceSearchState> {
++  int _generation = 0;
++  bool _disposed = false;
++
++  @override
++  PlaceSearchState build() {
++    _disposed = false;
++    ref.onDispose(() => _disposed = true);
++    return const PlaceSearchState();
++  }
++
++  void updateQuery(String query) {
++    _generation++;
++    state = PlaceSearchState(query: query);
++  }
++
++  void clear() {
++    _generation++;
++    state = const PlaceSearchState();
++  }
++
++  Future<void> search(String query) async {
++    final generation = ++_generation;
++    final normalizedQuery = query.trim();
++    if (normalizedQuery.length < 2) {
++      state = PlaceSearchState(
++        query: query,
++        hasSearched: true,
++        isInvalidQuery: true,
++      );
++      return;
++    }
++
++    state = PlaceSearchState(query: query, isLoading: true, hasSearched: true);
++
++    try {
++      final suggestions = await ref
++          .read(searchRepositoryProvider)
++          .searchLocations(normalizedQuery);
++      if (_disposed || generation != _generation) return;
++
++      state = PlaceSearchState(
++        query: query,
++        suggestions: suggestions,
++        hasSearched: true,
++      );
++    } on ApiException catch (failure) {
++      if (_disposed || generation != _generation) return;
++
++      state = PlaceSearchState(
++        query: query,
++        hasSearched: true,
++        failure: failure,
++      );
++    }
++  }
++}
+diff --git a/lib/features/search/ui/explore_screen.dart b/lib/features/search/ui/explore_screen.dart
+index cdb1c4c..d735525 100644
+--- a/lib/features/search/ui/explore_screen.dart
++++ b/lib/features/search/ui/explore_screen.dart
+@@ -1,4 +1,5 @@
+ import 'package:app/app/routes.dart';
++import 'package:app/core/config/app_config.dart';
+ import 'package:app/core/providers.dart';
+ import 'package:app/core/theme/app_dimensions.dart';
+ import 'package:app/core/theme/app_theme.dart';
+@@ -7,22 +8,46 @@ import 'package:app/core/widgets/app_buttons.dart';
+ import 'package:app/core/widgets/app_card.dart';
+ import 'package:app/core/widgets/app_filter_chip.dart';
+ import 'package:app/core/widgets/app_scaffold.dart';
++import 'package:app/core/widgets/app_text_field.dart';
+ import 'package:app/core/widgets/state_views.dart';
++import 'package:app/features/search/data/models/location_suggestion.dart';
+ import 'package:app/features/search/state/explore_notifier.dart';
++import 'package:app/features/search/state/place_search_notifier.dart';
+ import 'package:app/features/search/ui/facility_card.dart';
+ import 'package:app/l10n/l10n.dart';
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
+ 
+-class ExploreScreen extends ConsumerWidget {
++class ExploreScreen extends ConsumerStatefulWidget {
+   const ExploreScreen({super.key});
+ 
+   @override
+-  Widget build(BuildContext context, WidgetRef ref) {
++  ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
++}
++
++class _ExploreScreenState extends ConsumerState<ExploreScreen> {
++  late final TextEditingController _locationController;
++
++  @override
++  void initState() {
++    super.initState();
++    _locationController = TextEditingController();
++  }
++
++  @override
++  void dispose() {
++    _locationController.dispose();
++    super.dispose();
++  }
++
++  @override
++  Widget build(BuildContext context) {
+     final l10n = context.l10n;
+     final state = ref.watch(exploreProvider);
+     final notifier = ref.read(exploreProvider.notifier);
++    final placeState = ref.watch(placeSearchProvider);
++    final placeNotifier = ref.read(placeSearchProvider.notifier);
+     final config = ref.watch(appConfigProvider);
+     final failure = state.failure;
+ 
+@@ -38,8 +63,12 @@ class ExploreScreen extends ConsumerWidget {
+         physics: const AlwaysScrollableScrollPhysics(),
+         child: EmptyState(
+           icon: Icons.local_parking_outlined,
+-          title: l10n.exploreEmptyTitle,
+-          body: l10n.exploreEmptyBody(config.searchRadiusKm.round()),
++          title: state.vehicleType == null
++              ? l10n.exploreEmptyTitle
++              : l10n.exploreNoMatchingTitle,
++          body: state.vehicleType == null
++              ? l10n.exploreEmptyBody
++              : l10n.exploreNoMatchingBody,
+         ),
+       );
+     } else {
+@@ -50,54 +79,150 @@ class ExploreScreen extends ConsumerWidget {
+       title: l10n.tabExplore,
+       scrollable: false,
+       body: Column(
+-        crossAxisAlignment: CrossAxisAlignment.start,
+         children: [
+-          const Gap.md(),
+-          Row(
+-            children: [
+-              ExcludeSemantics(
+-                child: Icon(
+-                  Icons.place_outlined,
+-                  size: AppSize.iconSmall,
+-                  color: context.colors.textSecondary,
+-                ),
+-              ),
+-              const Gap.xs(),
+-              Expanded(
+-                child: Text(
+-                  l10n.exploreNear(config.searchOrigin.label),
+-                  style: context.text.bodySmall.copyWith(
+-                    color: context.colors.textSecondary,
+-                  ),
+-                ),
+-              ),
+-            ],
+-          ),
+-          if (state.vehicleTypes.isNotEmpty)
+-            SingleChildScrollView(
+-              scrollDirection: Axis.horizontal,
+-              child: Row(
++          Flexible(
++            child: SingleChildScrollView(
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+-                  AppFilterChip(
+-                    label: l10n.exploreAllVehicles,
+-                    isSelected: state.vehicleType == null,
+-                    onPressed: () => notifier.selectVehicleType(null),
++                  const Gap.md(),
++                  Row(
++                    children: [
++                      ExcludeSemantics(
++                        child: Icon(
++                          Icons.place_outlined,
++                          size: AppSize.iconSmall,
++                          color: context.colors.textSecondary,
++                        ),
++                      ),
++                      const Gap.xs(),
++                      Expanded(
++                        child: Text(
++                          l10n.exploreNear(state.origin.label),
++                          style: context.text.bodySmall.copyWith(
++                            color: context.colors.textSecondary,
++                          ),
++                        ),
++                      ),
++                    ],
+                   ),
+-                  for (final type in state.vehicleTypes) ...[
+-                    const Gap.sm(),
+-                    AppFilterChip(
+-                      label: type.name,
+-                      isSelected: state.vehicleType == type.code,
+-                      onPressed: () => notifier.selectVehicleType(type.code),
++                  const Gap.md(),
++                  AppTextField(
++                    label: l10n.exploreLocationLabel,
++                    controller: _locationController,
++                    hintText: l10n.exploreLocationHint,
++                    helperText: l10n.exploreLocationHelper,
++                    errorText: placeState.isInvalidQuery
++                        ? l10n.exploreLocationRequired
++                        : null,
++                    prefixIcon: Icon(
++                      Icons.search,
++                      size: AppSize.iconSmall,
++                      color: context.colors.textSecondary,
+                     ),
+-                  ],
++                    suffixIcon: Row(
++                      mainAxisSize: MainAxisSize.min,
++                      children: [
++                        if (_locationController.text.isNotEmpty)
++                          IconButton(
++                            tooltip: l10n.exploreLocationClear,
++                            onPressed: () {
++                              _locationController.clear();
++                              placeNotifier.updateQuery('');
++                              setState(() {});
++                            },
++                            icon: const Icon(Icons.clear),
++                          ),
++                        IconButton(
++                          tooltip: l10n.exploreSearchLocation,
++                          onPressed: placeState.isLoading
++                              ? null
++                              : () => placeNotifier.search(
++                                  _locationController.text,
++                                ),
++                          icon: placeState.isLoading
++                              ? SizedBox.square(
++                                  dimension: AppSize.spinner,
++                                  child: CircularProgressIndicator(
++                                    strokeWidth: AppSize.focusBorderWidth,
++                                    semanticsLabel:
++                                        l10n.exploreSearchingLocations,
++                                  ),
++                                )
++                              : const Icon(Icons.search),
++                        ),
++                      ],
++                    ),
++                    keyboardType: TextInputType.streetAddress,
++                    textCapitalization: TextCapitalization.words,
++                    textInputAction: TextInputAction.search,
++                    onChanged: (query) {
++                      placeNotifier.updateQuery(query);
++                      setState(() {});
++                    },
++                    onSubmitted: placeNotifier.search,
++                  ),
++                  if (state.origin.latitude != config.searchOrigin.latitude ||
++                      state.origin.longitude != config.searchOrigin.longitude)
++                    Align(
++                      alignment: AlignmentDirectional.centerEnd,
++                      child: TextAction(
++                        label: l10n.exploreUseDefaultLocation,
++                        onPressed: () {
++                          _locationController.clear();
++                          placeNotifier.clear();
++                          setState(() {});
++                          notifier.useDefaultOrigin();
++                        },
++                      ),
++                    ),
++                  if (state.vehicleTypes.isNotEmpty)
++                    SingleChildScrollView(
++                      scrollDirection: Axis.horizontal,
++                      child: Row(
++                        children: [
++                          AppFilterChip(
++                            label: l10n.exploreAllVehicles,
++                            isSelected: state.vehicleType == null,
++                            onPressed: () => notifier.selectVehicleType(null),
++                          ),
++                          for (final type in state.vehicleTypes) ...[
++                            const Gap.sm(),
++                            AppFilterChip(
++                              label: type.name,
++                              isSelected: state.vehicleType == type.code,
++                              onPressed: () =>
++                                  notifier.selectVehicleType(type.code),
++                            ),
++                          ],
++                        ],
++                      ),
++                    )
++                  else
++                    const Gap.md(),
+                 ],
+               ),
+-            )
+-          else
+-            const Gap.md(),
++            ),
++          ),
+           Expanded(
+-            child: RefreshIndicator(onRefresh: notifier.load, child: results),
++            child: placeState.hasSearched
++                ? _LocationSearchResults(
++                    state: placeState,
++                    onRetry: () => placeNotifier.search(placeState.query),
++                    onSelected: (suggestion) {
++                      _locationController.text = suggestion.name;
++                      placeNotifier.clear();
++                      setState(() {});
++                      notifier.selectOrigin(
++                        SearchOrigin(
++                          latitude: suggestion.latitude,
++                          longitude: suggestion.longitude,
++                          label: suggestion.name,
++                        ),
++                      );
++                    },
++                  )
++                : RefreshIndicator(onRefresh: notifier.load, child: results),
+           ),
+         ],
+       ),
+@@ -105,6 +230,88 @@ class ExploreScreen extends ConsumerWidget {
+   }
+ }
+ 
++class _LocationSearchResults extends StatelessWidget {
++  const _LocationSearchResults({
++    required this.state,
++    required this.onRetry,
++    required this.onSelected,
++  });
++
++  final PlaceSearchState state;
++  final VoidCallback onRetry;
++  final ValueChanged<LocationSuggestion> onSelected;
++
++  @override
++  Widget build(BuildContext context) {
++    final l10n = context.l10n;
++
++    if (state.isLoading) {
++      return Center(
++        child: CircularProgressIndicator(
++          strokeWidth: AppSize.focusBorderWidth,
++          semanticsLabel: l10n.exploreSearchingLocations,
++        ),
++      );
++    }
++
++    final failure = state.failure;
++    if (failure != null) {
++      return SingleChildScrollView(
++        child: ErrorState(failure: failure, onRetry: onRetry),
++      );
++    }
++
++    if (state.isInvalidQuery) {
++      return Center(child: Text(l10n.exploreLocationRequired));
++    }
++
++    if (state.suggestions.isEmpty) {
++      return Center(
++        child: Text(l10n.exploreLocationNoResults, textAlign: TextAlign.center),
++      );
++    }
++
++    return Column(
++      children: [
++        Expanded(
++          child: ListView.separated(
++            itemCount: state.suggestions.length,
++            separatorBuilder: (_, _) => const Gap.md(),
++            itemBuilder: (context, index) {
++              final suggestion = state.suggestions[index];
++              return AppCard(
++                onTap: () => onSelected(suggestion),
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Text(suggestion.name, style: context.text.body),
++                    const Gap.xs(),
++                    Text(
++                      suggestion.address,
++                      style: context.text.bodySmall.copyWith(
++                        color: context.colors.textSecondary,
++                      ),
++                    ),
++                  ],
++                ),
++              );
++            },
++          ),
++        ),
++        Padding(
++          padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
++          child: Text(
++            l10n.exploreGoogleMapsAttribution,
++            style: context.text.bodySmall.copyWith(
++              color: context.colors.textSecondary,
++            ),
++          ),
++        ),
++      ],
++    );
++  }
++}
++
+ class _Loading extends StatelessWidget {
+   const _Loading();
+ 
+diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
+index 1901a59..64d4474 100644
+--- a/lib/l10n/app_en.arb
++++ b/lib/l10n/app_en.arb
+@@ -69,6 +69,12 @@
+   "profilePhone": "Phone",
+   "profileEmail": "Email",
+   "profileEmailMissing": "Not added",
++  "profileEdit": "Edit profile",
++  "profileEditTitle": "Edit profile",
++  "profileEditContactNotEditable": "Phone number and email can't be changed here.",
++  "profileEditNameInvalid": "Enter a name between 2 and 120 characters.",
++  "profileSaveChanges": "Save changes",
++  "profileSaved": "Profile updated.",
+   "profileSignOut": "Sign out",
+   "signOutConfirmTitle": "Sign out?",
+   "signOutConfirmBody": "You'll need a new code to sign in again on this phone.",
+@@ -108,16 +114,21 @@
+       }
+     }
+   },
++  "exploreLocationLabel": "Search location",
++  "exploreLocationHint": "Enter a location",
++  "exploreLocationHelper": "Choose a matching place to search nearby.",
++  "exploreLocationRequired": "Enter at least two characters to find a place.",
++  "exploreLocationClear": "Clear location search",
++  "exploreSearchLocation": "Find location",
++  "exploreSearchingLocations": "Searching locations",
++  "exploreLocationNoResults": "No matching places found. Try another location.",
++  "exploreUseDefaultLocation": "Use default location",
++  "exploreGoogleMapsAttribution": "Google Maps",
+   "exploreAllVehicles": "All vehicles",
+   "exploreEmptyTitle": "No parking found",
+-  "exploreEmptyBody": "Nothing within {km} km matches. Try another vehicle type.",
+-  "@exploreEmptyBody": {
+-    "placeholders": {
+-      "km": {
+-        "type": "int"
+-      }
+-    }
+-  },
++  "exploreEmptyBody": "No parking is available near this location yet. Try another location.",
++  "exploreNoMatchingTitle": "No matching parking found",
++  "exploreNoMatchingBody": "Try another vehicle type or increase the search radius.",
+   "exploreLoadMoreFailed": "Couldn't load more.",
+   "distanceMetres": "{metres} m",
+   "@distanceMetres": {
+diff --git a/test/app/explore_flow_test.dart b/test/app/explore_flow_test.dart
+index 785a7e7..9c7d6e5 100644
+--- a/test/app/explore_flow_test.dart
++++ b/test/app/explore_flow_test.dart
+@@ -89,16 +89,266 @@ void main() {
+     expect(tester.takeException(), isNull);
+   });
+ 
+-  testWidgets('says so when nothing is found', (tester) async {
+-    await signedIn(tester, Harness(token: validToken()));
++  testWidgets('shows an empty state with a blank location search field', (
++    tester,
++  ) async {
++    final h = Harness(token: validToken());
++    await signedIn(tester, h);
+ 
++    final field = tester.widget<TextField>(find.byType(TextField));
++    expect(field.controller?.text, isEmpty);
++    expect(field.decoration?.hintText, 'Enter a location');
++    expect(
++      h.http.requests.any(
++        (request) => request.uri.path == '/api/v1/places/search',
++      ),
++      isFalse,
++    );
+     expect(find.text('No parking found'), findsOneWidget);
+-    expect(find.textContaining('within 25 km'), findsOneWidget);
++    expect(
++      find.text(
++        'No parking is available near this location yet. Try another location.',
++      ),
++      findsOneWidget,
++    );
++  });
++
++  testWidgets('typing and clearing do not search for places', (tester) async {
++    final h = Harness(token: validToken());
++    await signedIn(tester, h);
++
++    await tester.enterText(find.byType(TextField), 'Whitefield');
++    await tester.pump();
++
++    var field = tester.widget<TextField>(find.byType(TextField));
++    expect(field.controller?.text, 'Whitefield');
++    expect(find.text('Near Bengaluru'), findsOneWidget);
++    expect(
++      h.http.requests.where(
++        (request) => request.uri.path == '/api/v1/places/search',
++      ),
++      isEmpty,
++    );
++
++    await tester.tap(find.byTooltip('Clear location search'));
++    await tester.pump();
++
++    field = tester.widget<TextField>(find.byType(TextField));
++    expect(field.controller?.text, isEmpty);
++    expect(field.decoration?.hintText, 'Enter a location');
++    expect(find.text('Near Bengaluru'), findsOneWidget);
++    expect(
++      h.http.requests.where(
++        (request) => request.uri.path == '/api/v1/places/search',
++      ),
++      isEmpty,
++    );
++  });
++
++  testWidgets('submitting the field requests place matches', (tester) async {
++    final h = Harness(token: validToken());
++    h.http.stubs['/places/search'] = {
++      'data': [
++        {
++          'id': 'whitefield',
++          'name': 'Whitefield',
++          'address': 'Whitefield, Bengaluru, Karnataka, India',
++          'latitude': 12.9698,
++          'longitude': 77.75,
++        },
++      ],
++    };
++    await signedIn(tester, h);
++
++    await tester.enterText(find.byType(TextField), 'Whitefield');
++    await tester.testTextInput.receiveAction(TextInputAction.search);
++    await tester.pumpAndSettle();
++
++    final placeRequest = h.http.requests.singleWhere(
++      (request) => request.uri.path == '/api/v1/places/search',
++    );
++    expect(placeRequest.method, 'GET');
++    expect(placeRequest.uri.queryParameters['query'], 'Whitefield');
++    expect(
++      find.text('Whitefield, Bengaluru, Karnataka, India'),
++      findsOneWidget,
++    );
++    expect(find.text('Near Bengaluru'), findsOneWidget);
++  });
++
++  testWidgets('shows a friendly message when no places match', (tester) async {
++    final h = Harness(token: validToken());
++    h.http.stubs['/places/search'] = {'data': <Object>[]};
++    await signedIn(tester, h);
++
++    await tester.enterText(find.byType(TextField), 'Nowhere');
++    await tester.tap(find.byTooltip('Find location'));
++    await tester.pumpAndSettle();
++
++    expect(
++      find.text('No matching places found. Try another location.'),
++      findsOneWidget,
++    );
++    expect(find.text('Near Bengaluru'), findsOneWidget);
++  });
++
++  testWidgets('searches near a selected place', (tester) async {
++    final h = Harness(token: validToken());
++    h.http.stubs['/parking-lots'] = searchJson([summaryJson()]);
++    h.http.stubs['/places/search'] = {
++      'data': [
++        {
++          'id': 'whitefield',
++          'name': 'Whitefield',
++          'address': 'Whitefield, Bengaluru, Karnataka, India',
++          'latitude': 12.9698,
++          'longitude': 77.75,
++        },
++      ],
++    };
++    await signedIn(tester, h);
++
++    await tester.enterText(find.byType(TextField), 'Whitefield');
++    await tester.tap(find.byTooltip('Find location'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('Near Bengaluru'), findsOneWidget);
++    expect(
++      tester.widget<TextField>(find.byType(TextField)).controller?.text,
++      'Whitefield',
++    );
++    expect(
++      find.text('Whitefield, Bengaluru, Karnataka, India'),
++      findsOneWidget,
++    );
++    expect(find.text('Google Maps'), findsOneWidget);
++
++    await tester.tap(find.text('Whitefield').last);
++    await tester.pumpAndSettle();
++
++    expect(find.text('Near Whitefield'), findsOneWidget);
++    expect(find.text('MG Road Metro Parking'), findsOneWidget);
++    final parkingSearch = h.http.requests.lastWhere(
++      (request) => request.uri.path == '/api/v1/parking-lots',
++    );
++    expect(parkingSearch.uri.queryParameters['lat'], '12.9698');
++    expect(parkingSearch.uri.queryParameters['lng'], '77.75');
++    expect(parkingSearch.uri.queryParameters['radius_km'], '25.0');
++    expect(parkingSearch.uri.queryParameters['page'], '1');
++
++    await tester.tap(find.text('Use default location'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('Near Bengaluru'), findsOneWidget);
++    expect(
++      tester.widget<TextField>(find.byType(TextField)).controller?.text,
++      isEmpty,
++    );
++  });
++
++  testWidgets('shows a place-search failure with its own request reference', (
++    tester,
++  ) async {
++    final h = Harness(token: validToken());
++    await signedIn(tester, h);
++
++    h.http.respond(503, {
++      'error': {
++        'code': 'SERVICE_UNAVAILABLE',
++        'message': 'Place lookup unavailable.',
++        'request_id': 'place-search-ref',
++      },
++    });
++    await tester.enterText(find.byType(TextField), 'Whitefield');
++    await tester.tap(find.byTooltip('Find location'));
++    await tester.pumpAndSettle();
++
++    expect(
++      find.text('Something went wrong on our side. Try again in a moment.'),
++      findsOneWidget,
++    );
++    expect(find.text('Reference: place-search-ref'), findsOneWidget);
++    expect(
++      h.http.requests.where(
++        (request) => request.uri.path == '/api/v1/places/search',
++      ),
++      hasLength(1),
++    );
++    expect(
++      h.http.requests.where(
++        (request) => request.uri.path == '/api/v1/parking-lots',
++      ),
++      hasLength(1),
++      reason: 'Place-search failure must not trigger another parking search.',
++    );
++  });
++
++  testWidgets('shows a parking-search failure with its own request reference', (
++    tester,
++  ) async {
++    final h = Harness(token: validToken());
++    h.http.stubs.remove('/parking-lots');
++    h.http.respond(200, {'data': userJson()});
++    h.http.respond(500, {
++      'error': {
++        'code': 'INTERNAL_ERROR',
++        'message': 'Search failed.',
++        'request_id': 'parking-search-ref',
++      },
++    });
++    await tester.pumpWidget(
++      ProviderScope(overrides: h.overrides, child: const App()),
++    );
++    await tester.pumpAndSettle();
++
++    expect(
++      find.text('Something went wrong on our side. Try again in a moment.'),
++      findsOneWidget,
++    );
++    expect(find.text('Reference: parking-search-ref'), findsOneWidget);
++    expect(
++      h.http.requests.where(
++        (request) => request.uri.path == '/api/v1/parking-lots',
++      ),
++      hasLength(1),
++    );
++    expect(
++      h.http.requests.where(
++        (request) => request.uri.path == '/api/v1/places/search',
++      ),
++      isEmpty,
++    );
++  });
++
++  testWidgets('shows the no-match state when a vehicle filter has no results', (
++    tester,
++  ) async {
++    final h = Harness(token: validToken());
++    h.http.stubs['/parking-lots'] = searchJson([
++      summaryJson(vehicles: ['car']),
++    ]);
++    await signedIn(tester, h);
++    h.http.stubs.remove('/parking-lots');
++    h.http.respond(200, searchJson(const []));
++
++    await tester.tap(find.text('Car'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('No matching parking found'), findsOneWidget);
++    expect(
++      find.text('Try another vehicle type or increase the search radius.'),
++      findsOneWidget,
++    );
++    final request = h.http.requests.lastWhere(
++      (item) => item.uri.path == '/api/v1/parking-lots',
++    );
++    expect(request.uri.queryParameters['filter[vehicle_type]'], 'car');
++    expect(request.uri.queryParameters['radius_km'], '25.0');
+   });
+ 
+   testWidgets('explains a failed search and recovers on retry', (tester) async {
+     final h = Harness(token: validToken());
+-    h.http.stubs.clear();
++    h.http.stubs.remove('/parking-lots');
+     h.http.respond(200, {'data': userJson()});
+     h.http.fail(DioExceptionType.connectionError);
+     await tester.pumpWidget(
+diff --git a/test/app/profile_edit_flow_test.dart b/test/app/profile_edit_flow_test.dart
+new file mode 100644
+index 0000000..cb315ba
+--- /dev/null
++++ b/test/app/profile_edit_flow_test.dart
+@@ -0,0 +1,223 @@
++import 'dart:async';
++
++import 'package:app/app/app.dart';
++import 'package:app/core/widgets/app_buttons.dart';
++import 'package:app/features/profile/ui/edit_profile_screen.dart';
++import 'package:app/features/profile/ui/profile_screen.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++
++import '../support/fakes.dart';
++import '../support/harness.dart';
++
++void main() {
++  Future<Harness> openProfile(WidgetTester tester) async {
++    final harness = Harness(token: validToken())
++      ..http.respond(200, {'data': userJson()});
++    await tester.pumpWidget(
++      ProviderScope(overrides: harness.overrides, child: const App()),
++    );
++    await tester.pumpAndSettle();
++    await tester.tap(find.text('Profile'));
++    await tester.pumpAndSettle();
++    return harness;
++  }
++
++  testWidgets('opens name-only profile editing from Profile', (tester) async {
++    await openProfile(tester);
++
++    expect(find.text('Edit profile'), findsOneWidget);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    expect(find.byType(EditProfileScreen), findsOneWidget);
++    expect(
++      tester.widget<TextField>(find.byType(TextField)).controller?.text,
++      'Asha',
++    );
++    expect(
++      find.text("Phone number and email can't be changed here."),
++      findsOneWidget,
++    );
++  });
++
++  testWidgets('validates a blank name without sending an update', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++    await tester.enterText(find.byType(TextField), '');
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('Enter your name.'), findsOneWidget);
++    expect(find.byType(EditProfileScreen), findsOneWidget);
++    expect(find.byType(ProfileScreen), findsNothing);
++
++    await tester.enterText(find.byType(TextField), 'A');
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(
++      find.text('Enter a name between 2 and 120 characters.'),
++      findsOneWidget,
++    );
++    expect(find.byType(EditProfileScreen), findsOneWidget);
++    expect(
++      harness.http.requests.where(
++        (request) => request.method == 'PATCH' && request.path == '/me',
++      ),
++      isEmpty,
++    );
++  });
++
++  testWidgets('saves the name, navigates back to Profile, and shows success', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    harness.http.respond(200, {'data': userJson(name: 'Asha Rao')});
++    await tester.enterText(find.byType(TextField), '  Asha Rao  ');
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.byType(EditProfileScreen), findsNothing);
++    expect(find.byType(ProfileScreen), findsOneWidget);
++    expect(find.text('Asha Rao'), findsOneWidget);
++    expect(find.text('Profile updated.'), findsOneWidget);
++    final update = harness.http.last;
++    expect(update.method, 'PATCH');
++    expect(update.path, '/me');
++    expect(harness.http.lastBody, {'name': 'Asha Rao'});
++  });
++
++  testWidgets('shows a loading state while the profile update is pending', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    final releaseResponse = Completer<void>();
++    harness.http.respondLater(200, {
++      'data': userJson(name: 'Asha Rao'),
++    }, release: releaseResponse);
++    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.tap(find.text('Save changes'));
++    await tester.pump();
++
++    expect(
++      tester.widget<PrimaryButton>(find.byType(PrimaryButton)).isLoading,
++      isTrue,
++    );
++
++    releaseResponse.complete();
++    await tester.pumpAndSettle();
++    expect(find.byType(EditProfileScreen), findsNothing);
++    expect(find.byType(ProfileScreen), findsOneWidget);
++    expect(find.text('Profile updated.'), findsOneWidget);
++  });
++
++  testWidgets('prevents duplicate submissions while save is in progress', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    final releaseResponse = Completer<void>();
++    harness.http.respondLater(200, {
++      'data': userJson(name: 'Asha Rao'),
++    }, release: releaseResponse);
++
++    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.tap(find.text('Save changes'));
++    await tester.pump();
++
++    final button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
++    expect(button.isLoading, isTrue);
++    expect(button.onPressed, isNull);
++
++    // Attempt second tap while submitting
++    await tester.tap(find.byType(PrimaryButton), warnIfMissed: false);
++    await tester.pump();
++
++    releaseResponse.complete();
++    await tester.pumpAndSettle();
++
++    expect(
++      harness.http.requests
++          .where(
++            (request) => request.method == 'PATCH' && request.path == '/me',
++          )
++          .length,
++      1,
++    );
++
++    expect(find.byType(EditProfileScreen), findsNothing);
++    expect(find.byType(ProfileScreen), findsOneWidget);
++    expect(find.text('Asha Rao'), findsOneWidget);
++    expect(find.text('Profile updated.'), findsOneWidget);
++  });
++
++  testWidgets('shows an API failure and reference without changing Profile', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    harness.http.respond(503, {
++      'error': {
++        'code': 'SERVICE_UNAVAILABLE',
++        'message': 'Unavailable.',
++        'request_id': 'profile-update-ref',
++      },
++    });
++    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.byType(EditProfileScreen), findsOneWidget);
++    expect(find.byType(ProfileScreen), findsNothing);
++    expect(find.text('Profile updated.'), findsNothing);
++    expect(
++      find.text('Something went wrong on our side. Try again in a moment.'),
++      findsOneWidget,
++    );
++    expect(find.text('Reference: profile-update-ref'), findsOneWidget);
++  });
++
++  testWidgets('shows server field validation on the name field', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    harness.http.respond(422, {
++      'error': {
++        'code': 'VALIDATION_FAILED',
++        'message': 'Invalid.',
++        'details': {
++          'name': ['Name is not accepted.'],
++        },
++      },
++    });
++    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.byType(EditProfileScreen), findsOneWidget);
++    expect(find.byType(ProfileScreen), findsNothing);
++    expect(find.text('Profile updated.'), findsNothing);
++    expect(
++      find.text('Enter a name between 2 and 120 characters.'),
++      findsOneWidget,
++    );
++  });
++}
+diff --git a/test/core/api/api_client_test.dart b/test/core/api/api_client_test.dart
+index d5b9b9e..89630ac 100644
+--- a/test/core/api/api_client_test.dart
++++ b/test/core/api/api_client_test.dart
+@@ -149,6 +149,12 @@ void main() {
+       expect((await failure(client.get('/me'))).code, ApiErrorCode.network);
+     });
+ 
++    test('unknown transport failures are not reported as offline', () async {
++      http.fail(DioExceptionType.unknown);
++
++      expect((await failure(client.get('/me'))).code, ApiErrorCode.unknown);
++    });
++
+     test('a refused token is reported once to the session', () async {
+       tokens.token = validToken();
+       var reports = 0;
+diff --git a/test/features/profile/state/edit_profile_notifier_test.dart b/test/features/profile/state/edit_profile_notifier_test.dart
+new file mode 100644
+index 0000000..e13ed30
+--- /dev/null
++++ b/test/features/profile/state/edit_profile_notifier_test.dart
+@@ -0,0 +1,137 @@
++import 'dart:async';
++
++import 'package:app/core/api/api_error_code.dart';
++import 'package:app/features/auth/state/session_controller.dart';
++import 'package:app/features/auth/state/session_state.dart';
++import 'package:app/features/profile/state/edit_profile_notifier.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++
++import '../../../support/fakes.dart';
++import '../../../support/harness.dart';
++
++void main() {
++  late Harness harness;
++  late ProviderContainer container;
++
++  setUp(() {
++    harness = Harness();
++    container = harness.container();
++    addTearDown(container.dispose);
++    container.listen(sessionControllerProvider, (_, _) {});
++  });
++
++  group('EditProfileNotifier', () {
++    EditProfileState state() => container.read(editProfileProvider);
++    EditProfileNotifier notifier() =>
++        container.read(editProfileProvider.notifier);
++
++    setUp(() => container.listen(editProfileProvider, (_, _) {}));
++
++    test(
++      'validates an empty or invalid name without calling the API',
++      () async {
++        await notifier().save(name: '   ');
++        expect(state().isNameMissing, isTrue);
++        expect(state().isNameInvalid, isFalse);
++        expect(harness.http.requests, isEmpty);
++
++        notifier().clearProblems();
++        expect(state().isNameMissing, isFalse);
++
++        await notifier().save(name: 'A');
++        expect(state().isNameMissing, isFalse);
++        expect(state().isNameInvalid, isTrue);
++        expect(harness.http.requests, isEmpty);
++      },
++    );
++
++    test('saves a trimmed name, updates session and sets didSave', () async {
++      harness.tokens.token = validToken();
++      harness.http.respond(200, {'data': userJson()});
++      await container.read(sessionControllerProvider.notifier).restore();
++
++      harness.http.respond(200, {'data': userJson(name: 'Asha Rao')});
++      await notifier().save(name: '  Asha Rao ');
++
++      expect(harness.http.last.method, 'PATCH');
++      expect(harness.http.lastBody, {'name': 'Asha Rao'});
++      expect(state().didSave, isTrue);
++      expect(state().isSubmitting, isFalse);
++
++      final session = container.read(sessionControllerProvider) as SignedIn;
++      expect(session.user.name, 'Asha Rao');
++    });
++
++    test('prevents duplicate submissions while save is in progress', () async {
++      harness.tokens.token = validToken();
++      harness.http.respond(200, {'data': userJson()});
++      await container.read(sessionControllerProvider.notifier).restore();
++
++      final releaseResponse = Completer<void>();
++      harness.http.respondLater(200, {
++        'data': userJson(name: 'Asha Rao'),
++      }, release: releaseResponse);
++
++      final firstCall = notifier().save(name: 'Asha Rao');
++      expect(state().isSubmitting, isTrue);
++
++      // Second call while submitting
++      final secondCall = notifier().save(name: 'Another Name');
++      await secondCall;
++
++      releaseResponse.complete();
++      await firstCall;
++
++      expect(
++        harness.http.requests
++            .where(
++              (request) => request.method == 'PATCH' && request.path == '/me',
++            )
++            .length,
++        1,
++      );
++      expect(state().didSave, isTrue);
++    });
++
++    test('shows API validation error on the name field', () async {
++      harness.http.respond(422, {
++        'error': {
++          'code': 'VALIDATION_FAILED',
++          'message': 'Invalid.',
++          'details': {
++            'name': ['The name is unacceptable.'],
++          },
++        },
++      });
++
++      await notifier().save(name: 'Bad Name');
++
++      expect(state().isNameInvalid, isTrue);
++      expect(state().failure, isNull);
++      expect(state().didSave, isFalse);
++    });
++
++    test('shows an API failure and does not update session', () async {
++      harness.tokens.token = validToken();
++      harness.http.respond(200, {'data': userJson()});
++      await container.read(sessionControllerProvider.notifier).restore();
++
++      harness.http.respond(503, {
++        'error': {
++          'code': 'SERVICE_UNAVAILABLE',
++          'message': 'Unavailable.',
++          'request_id': 'req-123',
++        },
++      });
++
++      await notifier().save(name: 'Asha Rao');
++
++      expect(state().failure?.code, ApiErrorCode.serviceUnavailable);
++      expect(state().didSave, isFalse);
++
++      final session = container.read(sessionControllerProvider) as SignedIn;
++      expect(session.user.name, 'Asha');
++    });
++  });
++}
+diff --git a/test/features/search/state/explore_notifier_test.dart b/test/features/search/state/explore_notifier_test.dart
+index cbcfc89..8428d83 100644
+--- a/test/features/search/state/explore_notifier_test.dart
++++ b/test/features/search/state/explore_notifier_test.dart
+@@ -1,5 +1,9 @@
++import 'dart:async';
++
+ import 'package:app/core/api/api_error_code.dart';
++import 'package:app/core/config/app_config.dart';
+ import 'package:app/features/search/state/explore_notifier.dart';
++import 'package:app/features/search/state/place_search_notifier.dart';
+ import 'package:dio/dio.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
+@@ -74,6 +78,17 @@ void main() {
+     expect(state().failure, isNull);
+   });
+ 
++  test(
++    'an invalid parking response is an error, not an empty result',
++    () async {
++      harness.http.respond(200, {'data': 'not-a-list'});
++      await open();
++
++      expect(state().failure?.code, ApiErrorCode.unknown);
++      expect(state().isEmpty, isFalse);
++    },
++  );
++
+   test('a failed first load is an error that can be retried', () async {
+     harness.http.fail(DioExceptionType.connectionError);
+     await open();
+@@ -162,4 +177,180 @@ void main() {
+       reason: 'the filter choices stay when a filter finds nothing',
+     );
+   });
++
++  test('selecting a place searches around its coordinates', () async {
++    harness.http.respond(
++      200,
++      searchJson([
++        summaryJson(vehicles: ['car', 'two_wheeler']),
++      ]),
++    );
++    await open();
++
++    harness.http.respond(200, {
++      'data': [
++        {
++          'id': 'whitefield',
++          'name': 'Whitefield',
++          'address': 'Whitefield, Bengaluru, Karnataka, India',
++          'latitude': 12.9698,
++          'longitude': 77.75,
++        },
++      ],
++    });
++    await container.read(placeSearchProvider.notifier).search('Whitefield');
++
++    expect(harness.http.last.uri.path, '/api/v1/places/search');
++    expect(harness.http.last.uri.queryParameters['query'], 'Whitefield');
++
++    harness.http.respond(
++      200,
++      searchJson([
++        summaryJson(vehicles: ['car', 'two_wheeler']),
++      ]),
++    );
++    await notifier().selectOrigin(
++      const SearchOrigin(
++        latitude: 12.9698,
++        longitude: 77.75,
++        label: 'Whitefield',
++      ),
++    );
++
++    expect(state().origin.label, 'Whitefield');
++    expect(harness.http.last.uri.path, '/api/v1/parking-lots');
++    expect(harness.http.last.uri.queryParameters, {
++      'lat': '12.9698',
++      'lng': '77.75',
++      'radius_km': '25.0',
++      'page': '1',
++    });
++
++    harness.http.respond(200, searchJson(const []));
++    await notifier().selectVehicleType('two_wheeler');
++
++    expect(harness.http.last.uri.queryParameters, {
++      'lat': '12.9698',
++      'lng': '77.75',
++      'radius_km': '25.0',
++      'filter[vehicle_type]': 'two_wheeler',
++      'page': '1',
++    });
++  });
++
++  test('an empty place query is validated without a request', () async {
++    await container.read(placeSearchProvider.notifier).search('  ');
++
++    final placeState = container.read(placeSearchProvider);
++    expect(placeState.isInvalidQuery, isTrue);
++    expect(placeState.failure, isNull);
++    expect(harness.http.requests, isEmpty);
++  });
++
++  test('a failed place search can be retried', () async {
++    final places = container.read(placeSearchProvider.notifier);
++    harness.http.fail(DioExceptionType.connectionError);
++    await places.search('Whitefield');
++
++    expect(
++      container.read(placeSearchProvider).failure?.code,
++      ApiErrorCode.network,
++    );
++    expect(container.read(placeSearchProvider).query, 'Whitefield');
++
++    harness.http.respond(200, {
++      'data': [
++        {
++          'id': 'whitefield',
++          'name': 'Whitefield',
++          'address': 'Whitefield, Bengaluru, Karnataka, India',
++          'latitude': 12.9698,
++          'longitude': 77.75,
++        },
++      ],
++    });
++    await places.search('Whitefield');
++
++    expect(container.read(placeSearchProvider).failure, isNull);
++    expect(container.read(placeSearchProvider).suggestions, hasLength(1));
++  });
++
++  test('an older place search cannot replace newer suggestions', () async {
++    final places = container.read(placeSearchProvider.notifier);
++    final releaseOldResponse = Completer<void>();
++    harness.http.respondLater(200, {
++      'data': [
++        {
++          'id': 'old',
++          'name': 'Old result',
++          'address': 'Old address',
++          'latitude': 12.9,
++          'longitude': 77.6,
++        },
++      ],
++    }, release: releaseOldResponse);
++    final oldSearch = places.search('Old query');
++    await harness.http.waitForRequests(1);
++
++    harness.http.respond(200, {
++      'data': [
++        {
++          'id': 'new',
++          'name': 'New result',
++          'address': 'New address',
++          'latitude': 19.0,
++          'longitude': 72.8,
++        },
++      ],
++    });
++    await places.search('New query');
++    expect(
++      container.read(placeSearchProvider).suggestions.single.name,
++      'New result',
++    );
++
++    releaseOldResponse.complete();
++    await oldSearch;
++    expect(
++      container.read(placeSearchProvider).suggestions.single.name,
++      'New result',
++    );
++  });
++
++  test(
++    'a parking search for an older place cannot replace a newer location',
++    () async {
++      harness.http.respond(200, searchJson(const []));
++      await open();
++
++      final releaseOldResponse = Completer<void>();
++      harness.http.respondLater(
++        200,
++        searchJson([summaryJson(name: 'Old-location result')]),
++        release: releaseOldResponse,
++      );
++      final oldSearch = notifier().selectOrigin(
++        const SearchOrigin(latitude: 13, longitude: 77, label: 'Old location'),
++      );
++      await harness.http.waitForRequests(2);
++
++      harness.http.respond(
++        200,
++        searchJson([summaryJson(name: 'New-location result')]),
++      );
++      await notifier().selectOrigin(
++        const SearchOrigin(
++          latitude: 19,
++          longitude: 72.8,
++          label: 'New location',
++        ),
++      );
++
++      releaseOldResponse.complete();
++      await oldSearch;
++
++      expect(state().origin.label, 'New location');
++      expect(state().items.map((item) => item.name), ['New-location result']);
++    },
++  );
+ }

@@ -6,6 +6,31 @@
 /// the app waits for that confirmation.
 enum CheckoutOutcome { completed, dismissed, failed }
 
+/// What the provider's window returned after a payment: the three values
+/// our API checks against the order's signature. Not proof of payment.
+class CheckoutReceipt {
+  const CheckoutReceipt({
+    required this.orderId,
+    required this.paymentId,
+    required this.signature,
+  });
+
+  final String orderId;
+  final String paymentId;
+  final String signature;
+}
+
+/// How the window closed, and the receipt when it reports a payment.
+class CheckoutResult {
+  const CheckoutResult(this.outcome, {this.receipt});
+
+  final CheckoutOutcome outcome;
+
+  /// Present only when the window completed a payment and returned all
+  /// three values (an external wallet returns none).
+  final CheckoutReceipt? receipt;
+}
+
 /// Everything the payment window needs. All of it comes from our API with
 /// the order; nothing here is stored in the app.
 class CheckoutRequest {
@@ -39,5 +64,5 @@ class CheckoutRequest {
 /// Opens a payment provider's checkout. The provider's SDK is used only
 /// behind this interface, so no feature imports it and tests never touch it.
 abstract interface class CheckoutLauncher {
-  Future<CheckoutOutcome> open(CheckoutRequest request);
+  Future<CheckoutResult> open(CheckoutRequest request);
 }

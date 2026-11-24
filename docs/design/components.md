@@ -28,7 +28,7 @@ Every interactive component has: default, pressed, focused, disabled. Those that
 | `AppTextField` | Visible label above the field (`label` style), 52 high, `surface` fill, 1 px `borderControl`, radius `control`. Focus: 2 px `primary` border. Error: 2 px `danger` border, with the message and an icon beneath. Helper text sits in the same place as the error |
 | `PhoneField` | Fixed `+91` prefix, numeric keyboard, formats as typed |
 | `OtpField` | One box per digit, auto-advance, paste and SMS autofill, error state shakes once and clears |
-| `SearchField` | Leading search icon, clear button when filled; on the explore screen it opens the place search |
+| `SearchField` | Leading search icon, clear button when filled; on Explore it searches places through the API and shows selectable matches |
 | `SegmentedControl` | Track `surfaceSubtle`, selected segment `surface` with level 1 elevation; two or three options only ("Hourly / Daily") |
 | `DateTimeField` | Read-only field that opens the platform date and time pickers, showing the facility's timezone when it differs from the phone's |
 | `FilterChip` | Pill, 36 high inside a 48 target; selected: `primaryContainer` fill, `primaryPressed` text and a check icon |
@@ -88,7 +88,7 @@ A card is `surface`, radius `card`, 1 px `border`, padding 16, no shadow.
 | `PriceMarker` | Pill with the hourly price; selected: `primary` fill. Unavailable: `surfaceSubtle` with `textSecondary` |
 | `UserLocationMarker` | `primary` dot with a white ring |
 
-The map depends on open decision MD-02. The explore screen is specified so that the list works alone; the map is an additional view of the same results, with a list always reachable for screen-reader users.
+The map view remains deferred; MD-02 selects Google Places for server-side place search, not a map SDK. The explore screen works as a list, with every provider result selectable.
 
 ## Brand
 

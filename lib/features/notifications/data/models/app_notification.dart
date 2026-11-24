@@ -30,4 +30,13 @@ abstract class AppNotification with _$AppNotification {
     final value = payload['booking_id'];
     return value is String ? value : null;
   }
+
+  /// Whether the API sent this to the facility owner rather than the
+  /// customer. Notifications from before the API sent an audience fall back
+  /// to the type: only a new request goes to the owner.
+  bool get isForOwner => switch (payload['audience']) {
+    'owner' => true,
+    'customer' => false,
+    _ => type == 'booking.approval_requested',
+  };
 }

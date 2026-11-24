@@ -1,4 +1,5 @@
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/state/cursor_list.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
@@ -94,7 +95,12 @@ class CursorListView<T> extends StatelessWidget {
             if (header != null && index == 0) return header;
             final itemIndex = index - lead;
             if (itemIndex < state.items.length) {
-              return itemBuilder(context, state.items[itemIndex]);
+              final item = itemBuilder(context, state.items[itemIndex]);
+              // Only what fits on the first screen; later pages appear
+              // as they scroll in.
+              return itemIndex < 8
+                  ? FadeSlideIn(index: itemIndex, child: item)
+                  : item;
             }
             if (state.isLoadingMore) {
               return const Center(

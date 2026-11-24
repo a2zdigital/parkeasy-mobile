@@ -1,6 +1,7 @@
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/money/money_format.dart';
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
@@ -29,6 +30,7 @@ class PaymentScreen extends ConsumerWidget {
         ApiErrorCode.approvalRequired => l10n.errApprovalRequired,
         ApiErrorCode.paymentProviderUnavailable =>
           l10n.errPaymentProviderUnavailable,
+        ApiErrorCode.paymentSignatureInvalid => l10n.errPaymentNotVerified,
         _ => l10n.describe(failure),
       };
 
@@ -214,24 +216,26 @@ class _Result extends StatelessWidget {
 
     return Semantics(
       liveRegion: true,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ExcludeSemantics(
-            child: Icon(icon, size: AppSize.touchTarget, color: color),
-          ),
-          const Gap.lg(),
-          Text(title, style: context.text.h2, textAlign: TextAlign.center),
-          const Gap.sm(),
-          Text(
-            body,
-            style: context.text.body.copyWith(
-              color: context.colors.textSecondary,
+      child: Reveal(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExcludeSemantics(
+              child: Icon(icon, size: AppSize.touchTarget, color: color),
             ),
-            textAlign: TextAlign.center,
-          ),
-          if (footer != null) ...[const Gap.xl(), footer],
-        ],
+            const Gap.lg(),
+            Text(title, style: context.text.h2, textAlign: TextAlign.center),
+            const Gap.sm(),
+            Text(
+              body,
+              style: context.text.body.copyWith(
+                color: context.colors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (footer != null) ...[const Gap.xl(), footer],
+          ],
+        ),
       ),
     );
   }

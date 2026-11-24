@@ -5,14 +5,15 @@ import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/owner/data/models/earning_entry.dart';
 import 'package:app/features/owner/data/models/owner_earnings.dart';
 import 'package:app/features/owner/data/models/owner_parking_lot.dart';
+import 'package:app/features/owner/data/models/owner_payout.dart';
 import 'package:app/features/owner/data/owner_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// The status the owner's booking list is filtered by; null shows all.
-/// Requests waiting for an answer are what an owner must act on, so the
-/// list opens on them.
+/// All bookings are shown initially so automatically approved bookings are
+/// visible even when the owner has not selected a status filter.
 final ownerBookingFilterProvider = StateProvider.autoDispose<BookingStatus?>(
-  (ref) => BookingStatus.pendingApproval,
+  (ref) => null,
 );
 
 /// A booking reference typed at the gate. When set, it replaces the
@@ -64,6 +65,11 @@ class OwnerFacilitiesNotifier extends CursorListNotifier<OwnerParkingLot> {
 
 final ownerEarningsProvider = FutureProvider.autoDispose<OwnerEarnings>(
   (ref) => ref.watch(ownerRepositoryProvider).earnings(),
+);
+
+/// The newest payouts, for the earnings screen. One page is enough there.
+final ownerPayoutsProvider = FutureProvider.autoDispose<List<OwnerPayout>>(
+  (ref) async => (await ref.watch(ownerRepositoryProvider).payouts()).items,
 );
 
 final ownerEarningEntriesProvider =

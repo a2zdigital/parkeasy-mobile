@@ -86,15 +86,15 @@ Rejected values and the reasons are in [review-notes.md](review-notes.md). **A n
 
 | Token | Size / line height | Weight | Use |
 |---|---|---|---|
-| `display` | 32 / 40 | 700 | Launch screen message |
-| `h1` | 28 / 36 | 700 | Screen title (large) |
-| `h2` | 22 / 30 | 600 | Section heading, app bar title |
-| `h3` | 18 / 26 | 600 | Facility name, card heading |
-| `body` | 16 / 24 | 400 | Main content |
-| `bodySmall` | 14 / 20 | 400 | Supporting detail |
+| `display` | 30 / 38 | 700, -0.5 tracking | Launch screen message |
+| `h1` | 26 / 34 | 700, -0.4 tracking | Screen title (large) |
+| `h2` | 20 / 28 | 600, -0.2 tracking | Section heading, app bar title |
+| `h3` | 17 / 24 | 600 | Facility name, card heading |
+| `body` | 15 / 22 | 400 | Main content |
+| `bodySmall` | 13 / 18 | 400 | Supporting detail |
 | `label` | 12 / 16 | 500 | Chips, metadata, field labels |
-| `button` | 16 / 20 | 600 | Buttons |
-| `price` | 18 / 26 | 600, tabular figures | Prices and totals |
+| `button` | 15 / 20 | 600 | Buttons |
+| `price` | 17 / 24 | 600, tabular figures | Prices and totals |
 
 - Eight text styles and one numeric variant. There is no ninth.
 - Prices, durations, counts and countdowns use tabular figures so digits do not shift.
@@ -160,6 +160,21 @@ No coloured shadows, no glow, no blur behind surfaces.
 | Curve | Ease out (enter), ease in (exit) | |
 
 Motion explains a change of state and nothing else. No looping animation except a progress indicator. When the device asks for reduced motion, transitions become fades.
+
+The approved uses, all in `lib/core/motion/motion.dart` and all off with reduced motion:
+
+| Widget | Use | Timing |
+|---|---|---|
+| `AppPageTransitionsBuilder` | Page changes (Android): fade with a 3% rise; iOS keeps its swipe-back slide | `slow` in, `base` back |
+| `FadeSlideIn` | The first screenful of a list arrives: fade and rise 12 px, staggered 40 ms for the first six items | `slow` |
+| `PressScale` | Buttons and tappable cards shrink to 98% while pressed | `fast` |
+| `Reveal` | Something to act on appears: the check-in code and QR, a payment result | `slow` |
+| `CountUpText` | A loaded money total (owner earnings) counts up; screen readers get only the final figure | 700 ms |
+| `AnimatedSwitcher` | A booking's status chip and banner cross-fade when the status changes | `base` |
+| `AnimatedSize` | Sections that open (place matches, manual location options, coordinates) grow instead of jumping | `base` |
+| Map pin drop | A pin placed by a tap drops the last 12 px into place | `base` |
+
+The admin web follows the same table with CSS (`parkeasy-web-1/src/styles/tokens.css`, `polish.css`).
 
 ## Icons
 

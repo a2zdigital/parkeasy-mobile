@@ -20,6 +20,8 @@ class AppTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.autofillHints,
+    this.prefixIcon,
+    this.suffixIcon,
     this.autofocus = false,
     this.enabled = true,
     this.onChanged,
@@ -41,6 +43,8 @@ class AppTextField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final Iterable<String>? autofillHints;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
   final bool autofocus;
   final bool enabled;
   final ValueChanged<String>? onChanged;
@@ -90,6 +94,8 @@ class AppTextField extends StatelessWidget {
             hintStyle: text.body.copyWith(color: colors.textSecondary),
             prefixText: prefixText,
             prefixStyle: text.body,
+            prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: enabled ? colors.surface : colors.surfaceSubtle,
             constraints: const BoxConstraints(minHeight: AppSize.inputHeight),

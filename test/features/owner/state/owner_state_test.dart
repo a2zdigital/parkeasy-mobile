@@ -97,15 +97,15 @@ void main() {
 
   group('owner bookings list', () {
     test(
-      'opens on requests waiting, and a new filter starts the list again',
+      'opens on all bookings, and a new filter starts the list again',
       () async {
         harness.http.respond(200, pageJson(const []));
         container.listen(ownerBookingsProvider, (_, _) {});
         await harness.http.idle();
 
         expect(
-          harness.http.last.uri.queryParameters['filter[status]'],
-          'pending_approval',
+          harness.http.last.uri.queryParameters.containsKey('filter[status]'),
+          isFalse,
         );
 
         harness.http.respond(200, pageJson([bookingJson()]));

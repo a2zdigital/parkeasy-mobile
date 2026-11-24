@@ -26,8 +26,12 @@ void main() {
   ) async {
     final h = await launch(tester);
 
-    expect(find.text('Get started'), findsOneWidget);
-    await tester.tap(find.text('Get started'));
+    expect(find.text('Log in'), findsOneWidget);
+    expect(
+      find.text('Sign in or create an account with your mobile number.'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Log in'));
     await tester.pumpAndSettle();
 
     // An invalid number is explained and nothing is sent.
@@ -65,7 +69,7 @@ void main() {
     await tester.enterText(find.byType(TextField), '123456');
     await tester.pumpAndSettle();
 
-    expect(find.text('What should we call you?'), findsOneWidget);
+    expect(find.text('Complete your profile'), findsOneWidget);
     expect(h.tokens.token?.value, '12|secret');
 
     await tester.tap(find.widgetWithText(PrimaryButton, 'Continue'));
@@ -89,7 +93,7 @@ void main() {
 
     await launch(tester, harness: h);
 
-    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Log in'), findsNothing);
     expect(find.text('Explore'), findsWidgets);
   });
 
@@ -120,7 +124,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(h.tokens.token, isNull);
-    expect(find.text('Get started'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
   });
 
   testWidgets('offline at start-up: an explanation and a retry, not sign-in', (
@@ -134,7 +138,7 @@ void main() {
       find.text("You're offline. Check your connection and try again."),
       findsOneWidget,
     );
-    expect(find.text('Get started'), findsNothing);
+    expect(find.text('Log in'), findsNothing);
     expect(h.tokens.token, isNotNull);
 
     h.http.respond(200, {'data': userJson()});

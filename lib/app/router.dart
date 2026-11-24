@@ -1,17 +1,20 @@
 import 'package:app/app/routes.dart';
 import 'package:app/app/tab_shell.dart';
 import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_controller.dart';
 import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/auth/ui/launch_screen.dart';
 import 'package:app/features/auth/ui/otp_screen.dart';
 import 'package:app/features/auth/ui/phone_screen.dart';
+import 'package:app/features/auth/ui/registration_role_screen.dart';
 import 'package:app/features/auth/ui/start_up_screen.dart';
 import 'package:app/features/booking/state/booking_draft.dart';
 import 'package:app/features/booking/ui/booking_details_screen.dart';
 import 'package:app/features/booking/ui/bookings_screen.dart';
 import 'package:app/features/booking/ui/choose_time_screen.dart';
 import 'package:app/features/booking/ui/review_screen.dart';
+import 'package:app/features/gate/ui/gate_screen.dart';
 import 'package:app/features/notifications/ui/activity_screen.dart';
 import 'package:app/features/owner/ui/facility_form_screen.dart';
 import 'package:app/features/owner/ui/facility_screen.dart';
@@ -19,14 +22,22 @@ import 'package:app/features/owner/ui/hours_form_screen.dart';
 import 'package:app/features/owner/ui/owner_application_screen.dart';
 import 'package:app/features/owner/ui/owner_booking_screen.dart';
 import 'package:app/features/owner/ui/owner_bookings_screen.dart';
+import 'package:app/features/owner/ui/owner_check_in_screen.dart';
+import 'package:app/features/owner/ui/owner_documents_screen.dart';
 import 'package:app/features/owner/ui/owner_earnings_screen.dart';
 import 'package:app/features/owner/ui/owner_facilities_screen.dart';
+import 'package:app/features/owner/ui/owner_gst_screen.dart';
 import 'package:app/features/owner/ui/pool_form_screen.dart';
+import 'package:app/features/owner/ui/pool_spaces_screen.dart';
 import 'package:app/features/parking_lot/ui/parking_lot_screen.dart';
 import 'package:app/features/payment/ui/payment_screen.dart';
 import 'package:app/features/profile/ui/complete_profile_screen.dart';
+import 'package:app/features/profile/ui/edit_profile_screen.dart';
 import 'package:app/features/profile/ui/profile_screen.dart';
 import 'package:app/features/search/ui/explore_screen.dart';
+import 'package:app/features/support/ui/help_screen.dart';
+import 'package:app/features/support/ui/new_ticket_screen.dart';
+import 'package:app/features/support/ui/ticket_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,17 +49,44 @@ final routerProvider = Provider<GoRouter>((ref) {
     ref.read(sessionControllerProvider),
   );
   ref
-    ..listen(
-      sessionControllerProvider,
-      (_, next) => sessionChanged.value = next,
-    )
+    ..listen(sessionControllerProvider, (previous, next) {
+      final routingChanged = switch ((previous, next)) {
+        (
+          SignedIn(user: final a, registrationRole: final roleA),
+          SignedIn(user: final b, registrationRole: final roleB),
+        ) =>
+          a.isProfileComplete != b.isProfileComplete ||
+              !listEquals(a.roles, b.roles) ||
+              roleA != roleB,
+        _ => previous?.runtimeType != next.runtimeType,
+      };
+      if (routingChanged) {
+        sessionChanged.value = next;
+      }
+    })
     ..onDispose(sessionChanged.dispose);
+
+  // Where a guest was going when sign-in was needed; used once.
+  String? returnTo;
 
   final router = GoRouter(
     initialLocation: Routes.startUp,
     refreshListenable: sessionChanged,
-    redirect: (context, state) =>
-        Routes.redirect(sessionChanged.value, state.matchedLocation),
+    redirect: (context, state) {
+      final session = sessionChanged.value;
+      final location = state.matchedLocation;
+      final target = Routes.redirect(session, location, returnTo: returnTo);
+      if (session is SignedOut &&
+          target == Routes.launch &&
+          Routes.isReturnable(location)) {
+        // A guest tried to book or open something personal: remember it.
+        returnTo = location;
+      } else if (session is SignedIn &&
+          (target == returnTo || session.user.isOwner)) {
+        returnTo = null;
+      }
+      return target;
+    },
     routes: [
       GoRoute(
         path: Routes.startUp,
@@ -61,6 +99,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.phone,
         builder: (context, state) => const PhoneScreen(),
+      ),
+      GoRoute(
+        path: Routes.registrationRole,
+        builder: (context, state) => const RegistrationRoleScreen(),
+      ),
+      GoRoute(
+        path: Routes.registrationPhone,
+        redirect: (context, state) =>
+            state.extra is RegistrationRole ? null : Routes.registrationRole,
+        builder: (context, state) =>
+            PhoneScreen(registrationRole: state.extra! as RegistrationRole),
       ),
       GoRoute(
         path: Routes.code,
@@ -151,6 +200,31 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.profile,
                 builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'gate',
+                    builder: (context, state) => const GateScreen(),
+                  ),
+                  GoRoute(
+                    path: 'help',
+                    builder: (context, state) => const HelpScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        builder: (context, state) => const NewTicketScreen(),
+                      ),
+                      GoRoute(
+                        path: ':ticketId',
+                        builder: (context, state) =>
+                            TicketScreen(id: state.pathParameters['ticketId']!),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -174,6 +248,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: ':id',
                     builder: (context, state) =>
                         OwnerBookingScreen(id: state.pathParameters['id']!),
+                    routes: [
+                      GoRoute(
+                        path: 'check-in',
+                        builder: (context, state) => OwnerCheckInScreen(
+                          bookingId: state.pathParameters['id'],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -216,6 +298,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                             poolId: poolId == 'new' ? null : poolId,
                           );
                         },
+                        routes: [
+                          GoRoute(
+                            path: 'spaces',
+                            builder: (context, state) => PoolSpacesScreen(
+                              facilityId: state.pathParameters['id']!,
+                              poolId: state.pathParameters['poolId']!,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -228,6 +319,51 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.ownerEarnings,
                 builder: (context, state) => const OwnerEarningsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerActivity,
+                builder: (context, state) => const ActivityScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.ownerProfile,
+                builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'documents',
+                    builder: (context, state) => const OwnerDocumentsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'gst',
+                    builder: (context, state) => const OwnerGstScreen(),
+                  ),
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'help',
+                    builder: (context, state) => const HelpScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        builder: (context, state) => const NewTicketScreen(),
+                      ),
+                      GoRoute(
+                        path: ':ticketId',
+                        builder: (context, state) =>
+                            TicketScreen(id: state.pathParameters['ticketId']!),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

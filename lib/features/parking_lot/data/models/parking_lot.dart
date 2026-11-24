@@ -3,6 +3,8 @@ import 'package:app/features/parking_lot/data/models/booking_mode.dart';
 import 'package:app/features/parking_lot/data/models/code_name.dart';
 import 'package:app/features/parking_lot/data/models/inventory_pool.dart';
 import 'package:app/features/parking_lot/data/models/operating_hour.dart';
+import 'package:app/features/parking_lot/data/models/parking_photo.dart';
+import 'package:app/features/parking_lot/data/models/rating_summary.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'parking_lot.freezed.dart';
@@ -29,6 +31,8 @@ abstract class ParkingLot with _$ParkingLot {
     @Default(<CodeName>[]) List<CodeName> amenities,
     @Default(<OperatingHour>[]) List<OperatingHour> operatingHours,
     @Default(<InventoryPool>[]) List<InventoryPool> pools,
+    @Default(<ParkingPhoto>[]) List<ParkingPhoto> photos,
+    @Default(RatingSummary()) RatingSummary rating,
   }) = _ParkingLot;
 
   factory ParkingLot.fromJson(Map<String, dynamic> json) =>

@@ -1,4 +1,6 @@
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_colors.dart';
+import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/widgets/status_chip.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
@@ -72,6 +74,14 @@ class BookingStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, tone, icon) = describe(context.l10n, booking);
-    return StatusChip(tone: tone, label: label, icon: icon);
+    return AnimatedSwitcher(
+      duration: reduceMotion(context) ? Duration.zero : AppMotion.base,
+      child: StatusChip(
+        key: ValueKey(label),
+        tone: tone,
+        label: label,
+        icon: icon,
+      ),
+    );
   }
 }

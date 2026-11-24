@@ -17,7 +17,7 @@ These rules are what separates a product from a mock-up. They are checked in rev
 2. **Every component has every state.** Default, pressed, focused, disabled, loading, error. A component without its states is not finished.
 3. **Every screen has every state.** Loading, empty, error, data, and for lists: more loading and end of list. Design them before writing the happy path.
 4. **Real data shapes the layout.** Build with a 48-character facility name, ₹1,25,000.00, a booking across midnight, zero results, one result, 200% text size. Not with the neat sample from the mock-up.
-5. **Nothing decorative.** No gradient, glow, glass effect, illustration or animation that does not carry information or feedback. Elevation appears only where something really floats above the page.
+5. **Nothing decorative.** No gradient, glow, glass effect, illustration or animation that does not carry information or feedback (the motion that is allowed, and why, is listed in [tokens.md](tokens.md#motion)). Elevation appears only where something really floats above the page.
 6. **Hierarchy by type and space, not by colour.** Most of a screen is neutral. Electric blue marks what can be pressed or what is selected. If a screen has more than one filled blue button, one of them is wrong.
 7. **Status means the server's status.** A chip shows what the API returned, with a label and an icon. Booking status, payment status and refund status are separate facts and are never merged into one badge.
 8. **The app does not pretend.** No feature the API does not have, no fake rating, no placeholder count. A missing capability is absent, not mocked.

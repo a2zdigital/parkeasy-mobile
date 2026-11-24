@@ -10,8 +10,37 @@
   },
   "launchTagline": "Find parking nearby, see the price, and book in a minute.",
   "launchGetStarted": "Get started",
-  "phoneTitle": "Enter your phone number",
-  "phoneBody": "We'll send a code by SMS to check it's you.",
+  "launchPointNearby": "Find parking near where you are going",
+  "launchPointPrice": "The full price before you book",
+  "launchPointCheckIn": "Check in with a code, no paper ticket",
+  "phoneTitle": "Sign in or create an account",
+  "phoneBody": "Enter your mobile number. We'll send a one-time code by SMS.",
+  "phoneAccountHint": "New here? Your account is created after you verify your number.",
+  "launchLogIn": "Log in",
+  "launchCreateAccount": "Create account",
+  "launchBrowse": "Browse parking first",
+  "launchAccountHint": "Sign in or create an account with your mobile number.",
+  "registrationRoleTitle": "Choose how to use the app",
+  "registrationRoleQuestion": "How would you like to use {appName}?",
+  "@registrationRoleQuestion": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "registrationOwnerTitle": "Parking Owner",
+  "registrationOwnerDescription": "List and manage your parking facilities and bookings.",
+  "registrationCustomerTitle": "Customer",
+  "registrationCustomerDescription": "Find nearby parking and manage your bookings.",
+  "ownerVerifiedContact": "Your verified mobile number ({phone}) will be used as the contact number.",
+  "@ownerVerifiedContact": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
   "phoneLabel": "Phone number",
   "phoneHelper": "10 digits, without the country code",
   "phoneInvalid": "Enter a valid 10-digit mobile number.",
@@ -53,9 +82,10 @@
   },
   "otpResent": "A new code is on its way.",
   "otpChangeNumber": "Change number",
-  "nameTitle": "What should we call you?",
-  "nameBody": "Your name appears on your bookings.",
-  "nameLabel": "Full name",
+  "nameTitle": "Complete your profile",
+  "nameBody": "Add a name for your bookings and save it to finish setting up your profile.",
+  "nameVerifiedPhone": "Verified mobile number",
+  "nameLabel": "Full name (required)",
   "nameRequired": "Enter your name.",
   "emailLabel": "Email (optional)",
   "emailInvalid": "Enter a valid email address.",
@@ -69,6 +99,15 @@
   "profilePhone": "Phone",
   "profileEmail": "Email",
   "profileEmailMissing": "Not added",
+  "profileEdit": "Edit profile",
+  "profileEditTitle": "Edit profile",
+  "profileEditContactNotEditable": "Phone number and email can't be changed here.",
+  "profileEditPhoneNotEditable": "Phone number can't be changed here.",
+  "profileEditNameInvalid": "Enter a name between 2 and 120 characters.",
+  "profileEditEmailInvalid": "Enter a valid email address.",
+  "profileEditEmailRejected": "This email address could not be saved. Check that it is valid and not already in use.",
+  "profileSaveChanges": "Save changes",
+  "profileSaved": "Profile updated.",
   "profileSignOut": "Sign out",
   "signOutConfirmTitle": "Sign out?",
   "signOutConfirmBody": "You'll need a new code to sign in again on this phone.",
@@ -78,6 +117,19 @@
   "startingUp": "Starting up",
   "errorTitle": "That didn't work",
   "errorNetwork": "You're offline. Check your connection and try again.",
+  "reviewsTitle": "Reviews",
+  "reviewsEmpty": "No reviews yet. Customers can rate this facility after a completed booking.",
+  "reviewsShowingLatest": "Showing the latest {shown} of {total} reviews.",
+  "@reviewsShowingLatest": {
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "errorTimeout": "The server took too long to answer. Try again.",
   "errorServer": "Something went wrong on our side. Try again in a moment.",
   "errorRateLimited": "Too many attempts. Try again in {seconds} seconds.",
@@ -85,6 +137,23 @@
     "placeholders": {
       "seconds": {
         "type": "int"
+      }
+    }
+  },
+  "phoneRetryIn": "Too many codes were requested for this number. You can request a new one in {time}.",
+  "@phoneRetryIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "phoneRetryNow": "You can request a new code now.",
+  "phoneSendCodeIn": "Send code in {time}",
+  "@phoneSendCodeIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
       }
     }
   },
@@ -108,16 +177,57 @@
       }
     }
   },
-  "exploreAllVehicles": "All vehicles",
-  "exploreEmptyTitle": "No parking found",
-  "exploreEmptyBody": "Nothing within {km} km matches. Try another vehicle type.",
-  "@exploreEmptyBody": {
+  "exploreLocationLabel": "Search location",
+  "exploreLocationHint": "Enter a location",
+  "exploreLocationHelper": "Choose a matching place to search nearby.",
+  "exploreLocationRequired": "Enter at least two characters to find a place.",
+  "exploreLocationClear": "Clear location search",
+  "exploreSearchLocation": "Find location",
+  "exploreSearchingLocations": "Searching locations",
+  "exploreLocationNoResults": "No matching places found. Try another location.",
+  "exploreUseDefaultLocation": "Use default location",
+  "exploreGoogleMapsAttribution": "Google Maps",
+  "exploreWhenAnyTime": "Any time",
+  "exploreWhenRange": "{start} – {end}",
+  "@exploreWhenRange": {
     "placeholders": {
-      "km": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreWhenDate": "Day you arrive",
+  "exploreWhenArrive": "Arrival time",
+  "exploreWhenLeave": "Departure time",
+  "exploreWhenPast": "Choose an arrival time that is not in the past.",
+  "exploreWhenClear": "Search any time",
+  "exploreSpacesFree": "{count, plural, =0{No spaces free} =1{1 space free} other{{count} spaces free}}",
+  "@exploreSpacesFree": {
+    "placeholders": {
+      "count": {
         "type": "int"
       }
     }
   },
+  "exploreSpacesFreeFor": "{count} {vehicle} free",
+  "@exploreSpacesFreeFor": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "vehicle": {
+        "type": "String"
+      }
+    }
+  },
+  "exploreAllVehicles": "All vehicles",
+  "exploreEmptyTitle": "No parking found",
+  "exploreEmptyBody": "No parking is available near this location yet. Try another location.",
+  "exploreNoMatchingTitle": "No matching parking found",
+  "exploreNoMatchingBody": "Try another vehicle type or increase the search radius.",
   "exploreLoadMoreFailed": "Couldn't load more.",
   "distanceMetres": "{metres} m",
   "@distanceMetres": {
@@ -264,17 +374,19 @@
   "payOnlineHint": "Pay in the app to confirm the booking.",
   "payOnSite": "Pay at the facility",
   "payOnSiteHint": "Pay the attendant when you arrive.",
-  "reviewInstantNote": "Your booking is confirmed as soon as you book.",
-  "reviewApprovalNote": "This is a request. The owner must accept it before it's confirmed.",
+  "reviewInstantNote": "Your booking is approved automatically when you book.",
   "reviewCancelNote": "You can cancel before the booking starts. If you paid online and cancel early enough, the refund is automatic.",
   "reviewBook": "Book parking",
-  "reviewSendRequest": "Send request",
   "errSlotUnavailable": "The last space for this time was just taken. Choose another time or facility.",
   "errQuoteExpired": "The price for this time has changed. Go back to see the new price.",
   "errPaymentModeNotSupported": "This facility doesn't accept that way of paying. Choose the other one.",
   "bookingsEmptyTitle": "No bookings yet",
   "bookingsEmptyBody": "When you book parking, it appears here.",
   "bookingsFind": "Find parking",
+  "bookingsUpcoming": "Upcoming",
+  "bookingsPast": "Past",
+  "bookingsPastEmptyTitle": "No past bookings",
+  "bookingsPastEmptyBody": "Bookings that have ended or were cancelled appear here.",
   "bookingTitle": "Booking",
   "bookingReference": "Reference",
   "bookingTotal": "Total",
@@ -288,6 +400,7 @@
   "statusExpired": "Expired",
   "statusNoShow": "Missed",
   "bannerConfirmed": "You're booked. Show the reference at the facility.",
+  "bannerConfirmedWithCode": "You're booked. Show your check-in code at the entrance.",
   "bannerPendingApproval": "Request sent. The owner has until {time} to answer.",
   "@bannerPendingApproval": {
     "placeholders": {
@@ -334,6 +447,16 @@
   "cancelConfirmTitle": "Cancel this booking?",
   "cancelConfirmBodyOnSite": "The space will be released. This can't be undone.",
   "cancelConfirmBodyOnline": "The space will be released. If a refund is due, it's issued automatically. This can't be undone.",
+  "cancelConfirmBodyRefund": "The space will be released and your payment refunded in full, automatically. This can't be undone.",
+  "cancelConfirmBodyNoRefund": "The free-cancellation period has ended, so your payment won't be refunded. The space will be released. This can't be undone.",
+  "reviewCancelUntil": "Free cancellation until {time}. If you pay online and cancel by then, you get a full refund automatically. After that, cancelling gives no refund.",
+  "@reviewCancelUntil": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "cancelKeep": "Keep booking",
   "errCancellationNotAllowed": "This booking can no longer be cancelled.",
   "bookingNotFound": "We couldn't find that booking.",
@@ -374,12 +497,26 @@
   "paymentSimulateSuccess": "Simulate a successful payment",
   "paymentSimulateFailure": "Simulate a failed payment",
   "errPaymentNotRequired": "This booking doesn't need an online payment.",
+  "errPaymentNotVerified": "We could not verify this payment. If money left your account, it will be confirmed or refunded automatically. Please do not pay again.",
   "errPaymentAlreadyCompleted": "This booking is already paid.",
   "errBookingExpired": "This booking is no longer waiting for payment. Book again to get a space.",
   "errApprovalRequired": "The owner hasn't accepted this request yet. You can pay once they do.",
   "errPaymentProviderUnavailable": "The payment service isn't responding. Try again in a moment.",
-  "activityEmptyTitle": "Nothing yet",
-  "activityEmptyBody": "Updates about your bookings appear here.",
+  "activityEmptyTitle": "You're all caught up.",
+  "activityEmptyBody": "New updates will appear here.",
+  "activityCategoryAll": "All",
+  "activityCategoryBookings": "Bookings",
+  "activityCategoryFacilities": "Facilities",
+  "activityCategoryPayments": "Payments",
+  "activityCategoryAccount": "Account",
+  "activityEmptyBookingsTitle": "No booking activities yet.",
+  "activityEmptyBookingsBody": "Updates about your bookings appear here.",
+  "activityEmptyFacilitiesTitle": "No facility updates yet.",
+  "activityEmptyFacilitiesBody": "Updates about your facilities appear here.",
+  "activityEmptyPaymentsTitle": "No payment activities yet.",
+  "activityEmptyPaymentsBody": "Updates about payments appear here.",
+  "activityEmptyAccountTitle": "No account activities yet.",
+  "activityEmptyAccountBody": "Updates about your account appear here.",
   "activityMarkAllRead": "Mark all read",
   "activityUnread": "Unread",
   "activityUnreadCount": "{count} unread",
@@ -392,10 +529,9 @@
   },
   "profileOwnerArea": "Owner area",
   "profileOwnerAreaHint": "List your parking and manage bookings.",
-  "ownerExit": "Back to finding parking",
   "ownerApplyTitle": "Become an owner",
   "ownerApplyBody": "Tell us about your parking business. We review each application before you can list a facility.",
-  "ownerBusinessName": "Business name",
+  "ownerBusinessName": "Business name (required)",
   "ownerBusinessNameRequired": "Enter your business name.",
   "ownerContactPhone": "Contact phone",
   "ownerApplySubmit": "Send application",
@@ -486,7 +622,11 @@
       }
     }
   },
-  "errCheckInNotAllowed": "This booking can't be checked in now. Check-in opens shortly before its start time.",
+  "errCheckInNotAllowed": "This booking can't be checked in now.",
+  "errCheckInTooEarly": "Check-in opens 30 minutes before the booking starts.",
+  "errCheckInEnded": "This booking has already ended. Check-in is no longer available.",
+  "errCheckInAlreadyDone": "This booking has already been checked in.",
+  "errCheckInBookingState": "This booking can't be checked in: it isn't confirmed. It may be cancelled, expired, unpaid or waiting for approval.",
   "errCheckOutNotAllowed": "This booking isn't checked in, so it can't be checked out.",
   "errInvalidBookingState": "This booking has changed. Pull down to refresh.",
   "errApprovalExpired": "The time to answer this request has passed.",
@@ -509,6 +649,15 @@
   "earningsCommission": "Commission",
   "earningsEarned": "Your share",
   "earningsRefunded": "Refunded",
+  "earningsPayouts": "Payouts",
+  "earningsPayoutsEmpty": "No payouts yet. Payouts are arranged from your balance.",
+  "payoutPendingReview": "Payout in review",
+  "payoutApproved": "Payout approved",
+  "payoutProcessing": "Payout processing",
+  "payoutPaid": "Paid out",
+  "payoutFailed": "Payout failed",
+  "payoutRejected": "Payout rejected",
+  "payoutCancelled": "Payout cancelled",
   "earningsEntries": "By booking",
   "earningsEntriesEmpty": "Entries appear here as bookings are paid.",
   "entryEarned": "Earned",
@@ -533,10 +682,9 @@
   "facilityPostalCode": "PIN code",
   "facilityLatitude": "Latitude",
   "facilityLongitude": "Longitude",
-  "facilityLocationHelp": "Open the place in a maps app, press and hold on the entrance, and copy the two numbers shown.",
+  "facilityLocationHelp": "Only needed to move the pin: in a maps app, press and hold on the entrance and copy the two numbers.",
   "facilityBookingMode": "How bookings are confirmed",
-  "modeInstant": "Instantly",
-  "modeOwnerApproval": "After I approve",
+  "facilityAutoApprovalNote": "New bookings are approved automatically. The customer's selected payment method determines whether payment is due online or at the facility.",
   "facilityPayments": "Payments accepted",
   "facilityPayOnline": "Online",
   "facilityPayOnsite": "At the facility",
@@ -566,6 +714,25 @@
   },
   "facilityRejectedNoReason": "Not approved. Change what's needed and submit again.",
   "facilityLiveNote": "Live. Customers can find and book this facility.",
+  "lotPhoto": "Photo {index} of {count}",
+  "@lotPhoto": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "facilityPausedNote": "Paused. Customers can't find or book this facility. Bookings already made are not affected.",
+  "facilityPause": "Pause bookings",
+  "facilityPauseTitle": "Pause this facility?",
+  "facilityPauseBody": "It will be hidden from search and take no new bookings until you resume it. Bookings already made are not affected.",
+  "facilityResume": "Resume bookings",
+  "facilityDelete": "Delete draft",
+  "facilityDeleteTitle": "Delete this draft?",
+  "facilityDeleteBody": "The facility and everything set up for it will be removed. This can't be undone.",
   "errFacilityIncomplete": "Not ready to submit yet. A facility needs opening hours for every day and at least one vehicle type with a rate.",
   "errFacilityUnderReview": "This facility is in review and can't be changed until that's finished.",
   "errLocationLocked": "The location of an approved facility can't be changed here. Contact support.",
@@ -580,13 +747,459 @@
   "poolCapacityInvalid": "Enter a whole number from 1.",
   "poolRateInvalid": "Enter an amount above zero, like 40 or 40.50.",
   "poolRateRequired": "Set at least one rate.",
-  "poolNoneLeft": "Every vehicle type already has spaces at this facility.",
+  "poolNoneLeft": "Every vehicle type already has spaces at this facility. Edit one below to change its spaces or rates.",
+  "poolNoTypes": "No vehicle types are available yet. Please contact support to have them added.",
+  "poolConfiguredTitle": "Already set up here",
+  "poolConfiguredCapacity": "{count, plural, =1{1 space} other{{count} spaces}}",
+  "@poolConfiguredCapacity": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "poolEdit": "Edit",
   "hoursTitle": "Opening hours",
   "hoursOpenAllDay": "Open 24 hours every day",
   "hoursOpens": "Opens",
   "hoursCloses": "Closes",
   "hoursClosedDay": "Closed",
+  "hoursMidnight": "midnight",
   "hoursInvalid": "Closing time must be after opening time.",
   "ownerFindReference": "Find by reference",
-  "ownerFindReferenceHint": "BK-…"
+  "ownerFindReferenceHint": "BK-…",
+  "documentsTitle": "Documents",
+  "documentsHint": "Optional. Add proof of identity, business, property or a parking licence now or later from Profile. Link a licence to the facility it covers. PDF, JPG or PNG, up to 5 MB each.",
+  "documentsLockedHint": "These documents were checked with your application.",
+  "documentsEmpty": "No documents yet.",
+  "documentAdd": "Add a document",
+  "documentChooseType": "What does this document show?",
+  "documentTypeIdentity": "Proof of identity",
+  "documentTypeBusiness": "Proof of business",
+  "documentTypeProperty": "Proof of property",
+  "documentTypeLicence": "Parking licence or permit",
+  "documentChooseFacility": "Which facility does this licence cover?",
+  "documentNoFacilityLink": "Upload without linking a facility",
+  "documentNoFacilities": "No facilities are available to link yet.",
+  "documentContinueWithoutFacility": "Continue without linking",
+  "documentLinkedFacility": "Facility: {name}",
+  "@documentLinkedFacility": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "documentExpiryPrompt": "When does it expire?",
+  "documentExpirySkip": "No expiry date",
+  "documentScanPending": "Security check in progress",
+  "@documentScanPending": {
+    "description": "Owner document still being checked for viruses."
+  },
+  "documentScanInfected": "Rejected by the security check. Remove it and upload a clean copy.",
+  "@documentScanInfected": {
+    "description": "Owner document failed the virus check; its content was deleted."
+  },
+  "documentExpires": "Expires {date}",
+  "@documentExpires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "documentExpired": "Expired {date}. Add a current one.",
+  "@documentExpired": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "documentRemove": "Remove document",
+  "documentRemoveTitle": "Remove this document?",
+  "documentRemoveBody": "{name} will be deleted from your application.",
+  "@documentRemoveBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadTooLarge": "That file is larger than 5 MB. Choose a smaller one.",
+  "photosTitle": "Photos",
+  "photosHint": "Customers see these in this order. JPG, PNG or WebP, up to 5 MB each.",
+  "photosEmpty": "No photos yet. Facilities with photos are easier to find.",
+  "photoAdd": "Add a photo",
+  "photoRemove": "Remove photo",
+  "photoRemoveTitle": "Remove this photo?",
+  "photoRemoveBody": "Customers will no longer see it.",
+  "photoMoveEarlier": "Move earlier",
+  "photoMoveLater": "Move later",
+  "profileHelp": "Help and support",
+  "supportTitle": "Help and support",
+  "supportNewTicket": "Contact support",
+  "supportEmptyTitle": "No questions yet",
+  "supportEmptyBody": "Ask us about a booking, a payment or your account. We reply here.",
+  "supportStatusOpen": "Waiting for us",
+  "supportStatusInProgress": "In progress",
+  "supportStatusResolved": "Resolved",
+  "supportStatusClosed": "Closed",
+  "supportCategory": "What is it about?",
+  "supportCategoryRequired": "Choose what it is about.",
+  "supportSubject": "Subject",
+  "supportSubjectTooShort": "Write at least 5 characters.",
+  "supportDescription": "Details",
+  "supportDescriptionHint": "Tell us what happened, with the booking reference if there is one.",
+  "supportDescriptionTooShort": "Write at least 10 characters.",
+  "supportSend": "Send",
+  "supportReply": "Reply",
+  "supportFromSupport": "Support",
+  "supportFromYou": "You",
+  "supportClosedNote": "This conversation is closed. Contact support again if you still need help.",
+  "ratingPrompt": "How was your parking?",
+  "ratingPromptBody": "Your rating helps other drivers. It is shown without your name.",
+  "ratingComment": "Comment (optional)",
+  "ratingSend": "Send rating",
+  "ratingYours": "Your rating",
+  "ratingNotAllowed": "This booking cannot be rated now.",
+  "ratingOutOfFive": "{score} out of 5",
+  "@ratingOutOfFive": {
+    "placeholders": {
+      "score": {
+        "type": "int"
+      }
+    }
+  },
+  "ratingSummary": "{average} · {count, plural, =1{1 rating} other{{count} ratings}}",
+  "@ratingSummary": {
+    "placeholders": {
+      "average": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "bookingSpace": "Bay",
+  "checkInCodeTitle": "Check-in code",
+  "checkInCodeHint": "Show this code at the gate. The facility types it in to check you in.",
+  "checkInPassHint": "Show this at the gate. The QR code changes every minute; the code below always works.",
+  "checkInCodeSemantics": "Check-in code {code}",
+  "@checkInCodeSemantics": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "ownerCheckInByCode": "Check in with a code",
+  "ownerCheckInTitle": "Check in",
+  "ownerCheckInCodeLabel": "Customer's check-in code",
+  "ownerCheckInCodeHint": "7KQ3 MZ8D",
+  "ownerCheckInHelp": "The customer finds this code on their booking.",
+  "ownerCheckInSubmit": "Check in",
+  "ownerCheckInEmpty": "Enter the code the customer shows.",
+  "errCheckInCodeNotFound": "No booking at your facilities has this code. Check it with the customer.",
+  "errParkingSpaceInUse": "This bay has bookings, so it can't change now.",
+  "poolBaysTitle": "How customers park",
+  "poolBaysPooled": "Customers park in any free space.",
+  "poolBaysNumbered": "{count, plural, =1{1 bay in use. Each booking is given a free bay.} other{{count} bays in use. Each booking is given a free bay.}}",
+  "@poolBaysNumbered": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "poolBaysManage": "Manage bays",
+  "poolBaysUseNumbered": "Use numbered bays",
+  "poolCapacityFromBays": "The number of spaces follows the bays in use.",
+  "baysTitle": "Bays",
+  "baysIntro": "Give each space a label, such as A-01. Every booking is then given a free bay, and the number of spaces follows the bays in use.",
+  "baysRangePrefix": "Label start",
+  "baysRangeFrom": "From",
+  "baysRangeTo": "To",
+  "baysRangeHelp": "A-, 01 and 20 make A-01 to A-20.",
+  "baysLabels": "Or type labels",
+  "baysLabelsHelp": "Separate labels with commas.",
+  "baysAdd": "Add bays",
+  "baysSwitchOn": "Number these spaces",
+  "baysSwitchOff": "Stop numbering",
+  "baysSwitchOffTitle": "Stop numbering these spaces?",
+  "baysSwitchOffBody": "Bookings will no longer be given a bay. The bays are kept, and the number of spaces stays the same.",
+  "baysKeep": "Keep numbering",
+  "baysEmptyInput": "Add at least one bay.",
+  "baysInvalid": "Use letters, numbers, spaces and - / . only, up to 20 characters, starting with a letter or number.",
+  "baysRangeInvalid": "Use whole numbers, with From no more than To, and at most 200 bays at a time.",
+  "baysInUse": "{active} of {total} in use",
+  "@baysInUse": {
+    "placeholders": {
+      "active": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "baysInactive": "Not in use",
+  "baysDeactivate": "Stop using {label}",
+  "@baysDeactivate": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "baysActivate": "Use {label} again",
+  "@baysActivate": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "baysDelete": "Delete {label}",
+  "@baysDelete": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "baysDeleteTitle": "Delete this bay?",
+  "baysDeleteBody": "A bay that was ever booked can't be deleted; stop using it instead.",
+  "baysDeleteConfirm": "Delete bay",
+  "baysCancel": "Cancel",
+  "checkInQrSemantics": "QR code for checking in",
+  "ownerCheckInScan": "Scan QR code",
+  "scanTitle": "Scan check-in code",
+  "scanHint": "Point the camera at the QR code on the customer's booking.",
+  "scanCameraDenied": "This app can't use the camera. Allow camera access in your phone's settings, or type the code instead.",
+  "scanUnavailable": "The camera isn't available on this device. Type the code instead.",
+  "scanTypeInstead": "Type the code instead",
+  "exploreUseMyLocation": "Use my location",
+  "exploreLocating": "Finding your location",
+  "exploreMyLocation": "your location",
+  "locationServiceOff": "Location is switched off on this phone. Turn it on, or search for a place.",
+  "locationDenied": "Allow location to find parking near you. You can also search for a place.",
+  "locationDeniedForever": "Location access is turned off for this app. Allow it in your phone's settings, or search for a place.",
+  "locationUnavailable": "Your location couldn't be found. Try again, or search for a place.",
+  "locationOpenSettings": "Open settings",
+  "facilityNewIntro": "Type the facility's name and we look for it on Google Maps. Check the place we find, or set the location yourself.",
+  "facilityLocation": "Location on the map",
+  "facilityLocationNone": "Not set yet.",
+  "facilityLocationFromAddress": "Found from the address: {at}",
+  "@facilityLocationFromAddress": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "facilityLocationFromPhone": "Set from this phone's location: {at}",
+  "@facilityLocationFromPhone": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "facilityLocationAt": "Set to {at}",
+  "@facilityLocationAt": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "facilityLocationMatched": "{place}. Check this is the facility; if not, set it on the map.",
+  "@facilityLocationMatched": {
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "facilityLocationFind": "Find from address",
+  "facilityLocationUsePhone": "Use my current location",
+  "facilityLocationAdjust": "Adjust coordinates",
+  "facilityLocationHideCoordinates": "Hide coordinates",
+  "facilityLocationNeedsAddress": "Enter the street address and city first.",
+  "facilityLocationNotFound": "That address could not be found on the map. Check it, use your current location at the facility, or adjust the coordinates.",
+  "facilityLocationPhoneFailed": "This phone's location is not available. Check location is on and allowed for the app, or use the address.",
+  "photoWrongType": "Choose a JPG, PNG or WebP photo. iPhone HEIC photos can be shared as JPG.",
+  "documentWrongType": "Choose a PDF, JPG or PNG file.",
+  "pickUnreadable": "That file could not be opened. Try again, or choose another.",
+  "profileDocuments": "Documents",
+  "documentsApprovedHint": "Your verified documents. You can add more at any time; contact support to remove one.",
+  "facilityLocationOnMap": "Set on map",
+  "facilityLocationFromMap": "Placed on the map: {at}",
+  "@facilityLocationFromMap": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerTitle": "Facility location",
+  "mapPickerHint": "Drag the pin, or tap the map, to the facility's entrance.",
+  "mapPickerHintNoStart": "This is only the general area, not your facility. Find the facility, then drag the pin or tap its entrance before confirming.",
+  "mapPickerAt": "Pin at {at}",
+  "@mapPickerAt": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "mapPickerPin": "Facility location pin. Drag to move.",
+  "mapPickerConfirm": "Confirm location",
+  "facilityNameHelp": "As customers know it. We search Google Maps as you type.",
+  "facilityNameSearch": "Find on Google Maps",
+  "facilityPlaceChoose": "Choose your facility on Google Maps",
+  "facilityAddressChoose": "Several places match this address. Choose the right one.",
+  "facilityPlaceNoneMatch": "None of these is my facility",
+  "facilityPlaceNotFound": "We couldn't find this parking facility on Google Maps. Please set its location manually.",
+  "facilityLocationFromPlace": "Selected on Google Maps: {at}",
+  "@facilityLocationFromPlace": {
+    "placeholders": {
+      "at": {
+        "type": "String"
+      }
+    }
+  },
+  "facilityLocationRequired": "Set the facility's location before saving.",
+  "facilityLocationStale": "The address changed after the location was found. Find it again, or check the pin on the map.",
+  "facilityDetailsSection": "Facility details",
+  "facilityAddressSection": "Address",
+  "facilityLocationSearchHint": "Enter the facility's name above to find it on Google Maps.",
+  "facilityLocationSearching": "Searching Google Maps",
+  "facilityLocationManual": "Set the location manually",
+  "facilityLocationChange": "Not the right place? Change location",
+  "facilityLocationRetry": "Try the search again",
+  "facilityLocationDenied": "Location permission was not given, so this phone's location can't be used. Choose another option, or allow it and try again.",
+  "facilityLocationDeniedForever": "Location access is turned off for this app. Allow it in the phone's settings, or choose another option.",
+  "facilityLocationServiceOff": "Location is switched off on this phone. Turn it on, or choose another option.",
+  "gateTitle": "Gate",
+  "gateCheckIn": "Check in",
+  "gateCheckOut": "Check out",
+  "gateAt": "At {facilities}",
+  "@gateAt": {
+    "placeholders": {
+      "facilities": {
+        "type": "String"
+      }
+    }
+  },
+  "gateCodeNotFound": "No booking at your facilities has this code, or the QR code has expired. Ask the customer to show it again.",
+  "gateCheckedIn": "{reference} checked in.",
+  "@gateCheckedIn": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "gateCheckedInBay": "{reference} checked in. Bay {bay}.",
+  "@gateCheckedInBay": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      },
+      "bay": {
+        "type": "String"
+      }
+    }
+  },
+  "gateCheckedOut": "{reference} checked out.",
+  "@gateCheckedOut": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "gateNoFacilitiesTitle": "No gate access",
+  "gateNoFacilitiesBody": "A facility owner hasn't added you as an attendant, or has removed you.",
+  "profileGate": "Gate check-in",
+  "profileGateHint": "Check vehicles in and out",
+  "attendantsTitle": "Gate attendants",
+  "attendantsHint": "They can check vehicles in and out here, and nothing else.",
+  "attendantsEmpty": "No attendants yet.",
+  "attendantsAdd": "Add attendant",
+  "attendantsPhone": "Their mobile number",
+  "attendantsRemove": "Remove",
+  "attendantsRemoveTitle": "Remove this attendant?",
+  "attendantsRemoveBody": "They will no longer be able to check vehicles in or out here.",
+  "attendantsNoName": "Not signed in yet",
+  "attendantsSelf": "You already manage this facility.",
+  "errBayUnavailable": "That bay was just taken or closed. Choose another bay, or any free bay.",
+  "reviewBay": "Bay",
+  "bayChooseTitle": "Choose a bay (optional)",
+  "bayAny": "Any free bay",
+  "bayTaken": "{label}, taken",
+  "@bayTaken": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "bayFeatureAccessible": "Accessible",
+  "bayFeatureEv": "EV charging",
+  "bayFeatureCovered": "Covered",
+  "bayMoveAction": "Move to another bay",
+  "bayMoveTitle": "Move to which bay?",
+  "bayMoveDone": "Moved to bay {label}.",
+  "@bayMoveDone": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "bayMoveNone": "No other bay is free for this booking's time.",
+  "bayTypes": "Bay type",
+  "priceParking": "Parking",
+  "priceTaxLine": "{tax} {rate}%",
+  "@priceTaxLine": {
+    "description": "A GST line of the price, e.g. CGST 9%",
+    "placeholders": {
+      "tax": {
+        "type": "String"
+      },
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "earningsCommissionGst": "GST on commission",
+  "earningsTcs": "TCS deducted",
+  "earningsParkingGst": "Parking GST collected for you",
+  "gstTitle": "GST registration",
+  "profileGstHint": "Your GSTIN for charging GST",
+  "gstIntro": "Add your GSTIN for each state you have facilities in. Once it is verified, GST is added to bookings at those facilities and shown on invoices.",
+  "gstNone": "No GSTIN added yet.",
+  "gstLoadFailed": "Your GST registrations could not be loaded.",
+  "gstAddTitle": "Add a GSTIN",
+  "gstGstin": "GSTIN",
+  "gstLegalName": "Legal name",
+  "gstSubmit": "Send for verification",
+  "gstSent": "Sent. It will be checked and verified soon.",
+  "gstInvalid": "Enter a valid 15-character GSTIN.",
+  "gstNameRequired": "Enter the legal name on your GST registration.",
+  "gstPending": "Waiting for verification",
+  "gstVerified": "Verified",
+  "gstRejected": "Rejected",
+  "gstState": "State {code}",
+  "@gstState": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  }
 }

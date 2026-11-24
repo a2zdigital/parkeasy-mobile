@@ -1,4 +1,5 @@
 import 'package:app/core/api/json_converters.dart';
+import 'package:app/features/booking/data/models/bay_option.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'availability.freezed.dart';
@@ -16,6 +17,9 @@ abstract class Availability with _$Availability {
     required int spacesLeft,
     required bool isWithinOperatingHours,
     required bool isAvailable,
+
+    /// A numbered pool's bays, to choose one; null for "any free space".
+    List<BayOption>? bays,
   }) = _Availability;
 
   factory Availability.fromJson(Map<String, dynamic> json) =>

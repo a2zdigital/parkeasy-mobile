@@ -1,7 +1,13 @@
 import 'package:app/core/api/api_client.dart';
 import 'package:app/core/auth/token_store.dart';
+import 'package:app/core/files/picked_file.dart';
+import 'package:app/core/location/location_service.dart';
+import 'package:app/core/maps/location_picker.dart';
 import 'package:app/core/providers.dart';
+import 'package:app/core/push/push_messaging.dart';
+import 'package:app/core/scanning/qr_scanner.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'fakes.dart';
@@ -12,21 +18,37 @@ class Harness {
   Harness({StoredToken? token, DateTime? now})
     : http = FakeHttpAdapter(),
       tokens = InMemoryTokenStore(token),
+      files = FakeFilePicker(),
+      location = FakeLocationService(),
+      push = FakePushMessaging(),
+      scanner = FakeQrScanner(),
       now = now ?? DateTime.utc(2026, 11, 2, 4) {
     // Explore loads as soon as the user is in; by default it finds nothing.
     http.stubs['/parking-lots'] = searchJson(const []);
     // The Activity badge asks for this whenever the customer area is shown.
     http.stubs['/notifications/unread-count'] = unreadJson(0);
+    // The owner application screen lists its documents; none by default.
+    http.stubs['/owner/application/documents'] = {'data': <Object?>[]};
   }
 
   final FakeHttpAdapter http;
   final InMemoryTokenStore tokens;
+  final FakeFilePicker files;
+  final FakeLocationService location;
+  final FakePushMessaging push;
+  final FakeQrScanner scanner;
   DateTime now;
 
   late final List<Override> overrides = [
     appConfigProvider.overrideWithValue(testConfig),
     tokenStoreProvider.overrideWithValue(tokens),
     clockProvider.overrideWithValue(() => now),
+    filePickerServiceProvider.overrideWithValue(files),
+    locationServiceProvider.overrideWithValue(location),
+    pushMessagingProvider.overrideWithValue(push),
+    qrScannerProvider.overrideWithValue(scanner),
+    // Never reach the OpenStreetMap tile servers from tests.
+    mapTileLayerProvider.overrideWithValue(const SizedBox.shrink()),
     apiClientProvider.overrideWith(
       (ref) => ApiClient(
         dio: Dio()..httpClientAdapter = http,
@@ -44,13 +66,14 @@ class Harness {
 
 Map<String, dynamic> userJson({
   String? name = 'Asha',
+  String? email,
   bool complete = true,
   List<String> roles = const ['customer'],
 }) => {
   'id': '01M4JQSZSNAVTVCMS8A7AJ0USR',
   'name': name,
   'phone': '+919000000001',
-  'email': null,
+  'email': email,
   'status': 'active',
   'roles': roles,
   'is_profile_complete': complete,
@@ -90,6 +113,9 @@ Map<String, dynamic> summaryJson({
   'accepts_online_payment': true,
   'accepts_onsite_payment': true,
   'amenities': ['cctv'],
+  'amenity_details': [
+    {'code': 'cctv', 'name': 'CCTV'},
+  ],
   'pools': [
     for (final code in vehicles)
       {
@@ -204,6 +230,8 @@ Map<String, dynamic> quoteJson({String total = '80.00', int hours = 2}) => {
     'base_amount': total,
     'total_amount': total,
     'currency': 'INR',
+    'free_cancellation_minutes': 60,
+    'free_cancellation_until': '2026-11-02T03:30:00Z',
   },
 };
 
@@ -226,16 +254,23 @@ Map<String, dynamic> bookingJson({
   String id = bookingId,
   String status = 'confirmed',
   String paymentMode = 'on_site',
+  String? bookingMode,
   String reference = 'BK-K2M5XCN4',
   bool? refundEligible,
   String? approvalDeadline,
   String? paymentDeadline,
   String? checkedInAt,
+  bool? refundIfCancelledNow,
+  int? myRating,
+  String? spaceLabel,
+  String? checkInCode,
 }) => {
   'id': id,
   'reference': reference,
   'status': status,
-  'booking_mode': status == 'pending_approval' ? 'owner_approval' : 'instant',
+  'booking_mode':
+      bookingMode ??
+      (status == 'pending_approval' ? 'owner_approval' : 'instant'),
   'payment_mode': paymentMode,
   'payment_required': status == 'awaiting_payment',
   'parking_lot': {
@@ -243,6 +278,8 @@ Map<String, dynamic> bookingJson({
     'name': 'MG Road Metro Parking',
   },
   'vehicle_type': 'car',
+  'space_label': spaceLabel,
+  'check_in_code': checkInCode,
   'start_at': '2026-11-02T04:30:00Z',
   'end_at': '2026-11-02T06:30:00Z',
   'timezone': 'Asia/Kolkata',
@@ -265,6 +302,9 @@ Map<String, dynamic> bookingJson({
   'cancelled_at': status == 'cancelled' ? '2026-11-02T04:20:00Z' : null,
   'cancellation_reason': null,
   'refund_eligible': refundEligible,
+  'free_cancellation_until': '2026-11-02T03:30:00Z',
+  'refund_if_cancelled_now': refundIfCancelledNow,
+  'my_rating': myRating,
   'created_at': '2026-11-02T04:18:00Z',
 };
 
@@ -333,12 +373,15 @@ Map<String, dynamic> notificationJson({
   String title = 'Booking confirmed',
   bool read = false,
   String? forBooking = bookingId,
+  String? audience,
 }) => {
   'id': id,
   'type': type,
   'title': title,
   'body': 'Your booking BK-K2M5XCN4 is confirmed.',
-  'payload': forBooking == null ? <Object?>[] : {'booking_id': forBooking},
+  'payload': forBooking == null
+      ? <Object?>[]
+      : {'booking_id': forBooking, 'audience': ?audience},
   'is_read': read,
   'read_at': read ? '2026-11-02T04:20:00Z' : null,
   'created_at': '2026-11-02T04:18:00Z',
@@ -408,6 +451,7 @@ Map<String, dynamic> facilityJson({
   bool withPool = false,
   bool withHours = false,
   String? reason,
+  bool paused = false,
 }) {
   final lot = Map<String, dynamic>.from(
     lotJson()['data']! as Map<String, dynamic>,
@@ -432,6 +476,7 @@ Map<String, dynamic> facilityJson({
       'approval_status': status,
       'rejection_reason': reason,
       'is_active': status == 'approved',
+      'is_paused': paused,
       'submitted_at': null,
       'reviewed_at': null,
       'created_at': '2026-10-08T08:00:00Z',

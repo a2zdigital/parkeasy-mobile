@@ -1,3 +1,4 @@
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_state.dart';
 
 /// Every location in the app. Screens navigate by these, never by typing
@@ -7,11 +8,18 @@ abstract final class Routes {
   static const String launch = '/welcome';
   static const String phone = '/sign-in/phone';
   static const String code = '/sign-in/code';
+  static const String registrationRole = '/register/role';
+  static const String registrationPhone = '/register/phone';
   static const String completeProfile = '/complete-profile';
   static const String explore = '/explore';
   static const String bookings = '/bookings';
   static const String activity = '/activity';
   static const String profile = '/profile';
+  static const String profileEdit = '$profile/edit';
+  static const String profileHelp = '$profile/help';
+
+  /// The gate, for someone an owner made an attendant.
+  static const String gate = '$profile/gate';
 
   /// A facility's details. The ID is the public, opaque one.
   static String parkingLot(String id) => '$explore/lots/$id';
@@ -33,6 +41,12 @@ abstract final class Routes {
   static const String ownerBookings = '/owner/bookings';
   static const String ownerFacilities = '/owner/facilities';
   static const String ownerEarnings = '/owner/earnings';
+  static const String ownerActivity = '/owner/activity';
+  static const String ownerProfile = '/owner/profile';
+  static const String ownerProfileEdit = '$ownerProfile/edit';
+  static const String ownerProfileHelp = '$ownerProfile/help';
+  static const String ownerProfileDocuments = '$ownerProfile/documents';
+  static const String ownerProfileGst = '$ownerProfile/gst';
 
   static const String ownerFacilityNew = '$ownerFacilities/new';
 
@@ -49,30 +63,95 @@ abstract final class Routes {
   /// A booking at one of the owner's facilities.
   static String ownerBooking(String id) => '$ownerBookings/$id';
 
-  static const Set<String> _signedOut = {launch, phone, code};
+  /// Gate check-in by the customer's code, opened from that booking.
+  static String ownerBookingCheckIn(String id) =>
+      '${ownerBooking(id)}/check-in';
+
+  /// A numbered pool's bays.
+  static String ownerPoolSpaces(String facilityId, String poolId) =>
+      '${ownerFacilityPool(facilityId, poolId: poolId)}/spaces';
+
+  static const Set<String> _signedOut = {
+    launch,
+    phone,
+    code,
+    registrationRole,
+    registrationPhone,
+  };
+
+  /// What a guest may see without an account: search and a facility's
+  /// public details. Choosing a time, booking and everything personal
+  /// needs sign-in.
+  static bool isGuestBrowsable(String location) =>
+      location == explore ||
+      RegExp(r'^/explore/lots/[^/]+$').hasMatch(location);
+
+  /// A customer location worth returning to after signing in.
+  static bool isReturnable(String location) =>
+      location.startsWith(explore) ||
+      location.startsWith(bookings) ||
+      location.startsWith(activity) ||
+      location.startsWith(profile);
 
   /// Where the session allows the user to be. Returns the location to go
   /// to instead of [location], or null to stay.
   ///
+  /// [returnTo] is where a guest was going when they were asked to sign
+  /// in; a signed-in customer arriving from the sign-in screens goes there.
+  ///
   /// A pure function of its inputs, so the whole access policy of the app
   /// is tested without building a widget.
-  static String? redirect(SessionState session, String location) {
+  static String? redirect(
+    SessionState session,
+    String location, {
+    String? returnTo,
+  }) {
     switch (session) {
       case SessionUnknown() || SessionRestoreFailed():
         return location == startUp ? null : startUp;
 
       case SignedOut():
-        return _signedOut.contains(location) ? null : launch;
+        return _signedOut.contains(location) || isGuestBrowsable(location)
+            ? null
+            : launch;
 
-      case SignedIn(:final user):
+      case SignedIn(:final user, :final registrationRole):
         if (!user.isProfileComplete) {
           return location == completeProfile ? null : completeProfile;
+        }
+
+        if (user.isOwner) {
+          if (location == owner) return ownerBookings;
+          if (_isOwnerRoute(location) ||
+              location == ownerProfile ||
+              location == ownerProfileEdit) {
+            return null;
+          }
+          return ownerBookings;
+        }
+
+        if (registrationRole == RegistrationRole.owner) {
+          return location == owner ? null : owner;
+        }
+
+        if (_isOwnerRoute(location)) {
+          return explore;
         }
         final isOutside =
             location == startUp ||
             location == completeProfile ||
             _signedOut.contains(location);
+        // Back to what a guest was doing when sign-in was needed; the
+        // router forgets it once used.
+        if (returnTo != null &&
+            isReturnable(returnTo) &&
+            location != returnTo) {
+          return returnTo;
+        }
         return isOutside ? explore : null;
     }
   }
+
+  static bool _isOwnerRoute(String location) =>
+      location == owner || location.startsWith('$owner/');
 }

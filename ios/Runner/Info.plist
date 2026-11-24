@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ParkEasy uses your location to find parking near you, only when you tap Use my location.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ParkEasy uses photos you choose to show your parking facility to customers.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ParkEasy uses the camera to scan a customer's check-in QR code.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

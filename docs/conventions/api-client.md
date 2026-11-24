@@ -31,7 +31,7 @@ Success is `{ "data": …, "meta": … }`; failure is `{ "error": { "code", "mes
 | `requestId` | `error.request_id` |
 | `status` | HTTP status |
 
-No network, a timeout and a non-JSON response become `ApiException` too, with the codes `network`, `timeout` and `unknown`. **Features never see a `DioException`.**
+Connection failures, timeouts and non-JSON responses become `ApiException` too, with the codes `network`, `timeout` and `unknown`. Only a connection failure is reported as offline; an unknown transport failure or certificate error is not assumed to be a connectivity problem. **Features never see a `DioException`.**
 
 ## Errors every screen gets for free
 
@@ -67,6 +67,8 @@ The API sends `"80.00"` with a `currency`. Parse it into `Money` (`core/money`, 
 
 Lists return `meta.next_cursor` and `meta.has_more`; pass `cursor` and `per_page`. Facility search is ordered by distance and uses `page`. One shared paginated-list notifier in `core` serves both.
 
+The customer bookings list refreshes from the API when the app returns to the foreground. It displays the server's status; it never infers expiry from a deadline locally.
+
 ## Idempotency
 
 `POST /bookings` and `POST /bookings/{id}/payment-orders` need an `Idempotency-Key`.
@@ -92,3 +94,5 @@ The provider's SDK is used only in `lib/core/payment/razorpay_checkout_launcher.
 1. Find it in `openapi.yaml`. If it is not there, ask the API team; do not guess a shape.
 2. Add the model and the repository method.
 3. Add a repository test with the JSON from the specification's example.
+
+Explore resolves a typed place through `GET /places/search?query=` and then continues to use `GET /parking-lots` with the selected `lat` and `lng`; the mobile app never calls Google Places directly.

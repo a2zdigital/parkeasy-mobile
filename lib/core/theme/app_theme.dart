@@ -1,3 +1,4 @@
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_text_styles.dart';
@@ -37,6 +38,16 @@ abstract final class AppTheme {
       fontFamily: AppTextStyles.fontFamily,
       extensions: [colors, text],
       splashFactory: InkRipple.splashFactory,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: AppPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.windows: AppPageTransitionsBuilder(),
+          TargetPlatform.linux: AppPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: AppPageTransitionsBuilder(),
+        },
+      ),
       dividerTheme: DividerThemeData(
         color: colors.border,
         thickness: AppSize.borderWidth,
@@ -53,6 +64,29 @@ abstract final class AppTheme {
         titleTextStyle: text.h2,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: colors.primary),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colors.surface,
+        surfaceTintColor: colors.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(AppRadius.sheet)),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: colors.surface,
+        surfaceTintColor: colors.surface,
+        showDragHandle: true,
+        dragHandleColor: colors.border,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.sheet),
+          ),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        titleTextStyle: text.body.copyWith(fontWeight: FontWeight.w500),
+        subtitleTextStyle: text.bodySmall.copyWith(color: colors.textSecondary),
+        iconColor: colors.textSecondary,
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: colors.brandNavy,

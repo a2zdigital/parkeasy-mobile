@@ -5,7 +5,7 @@ import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/time/facility_time.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
-import 'package:app/core/widgets/app_card.dart';
+import 'package:app/core/widgets/app_list_row.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/features/owner/data/models/operating_hour_input.dart';
 import 'package:app/features/owner/state/owner_facility_notifier.dart';
@@ -135,8 +135,6 @@ class _HoursFormScreenState extends ConsumerState<HoursFormScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final text = context.text;
-    final colors = context.colors;
     final locale = Localizations.localeOf(context).toLanguageTag();
     final days = _days ??= _initial();
     final failure = _failure;
@@ -161,75 +159,41 @@ class _HoursFormScreenState extends ConsumerState<HoursFormScreen> {
                     _invalid = false;
                   }),
           ),
+          const Gap.lg(),
+          // One card for the week: each day says what it is now, the switch
+          // opens or closes it, and an open day shows its two times.
+          AppListGroup(
+            children: [
+              for (final (index, day) in days.indexed)
+                _DayRow(
+                  weekday: FacilityTime.weekday(index + 1, locale),
+                  summary: day.isClosed
+                      ? l10n.hoursClosedDay
+                      : day.opens == '00:00' && day.closes == '24:00'
+                      ? l10n.lotOpen24
+                      : l10n.lotHoursRange(
+                          FacilityTime.clock(day.opens, locale),
+                          FacilityTime.clock(day.closes, locale),
+                        ),
+                  isOpen: !day.isClosed,
+                  opensLabel:
+                      '${l10n.hoursOpens} ${FacilityTime.clock(day.opens, locale)}',
+                  // 24:00 is the end of the day, not "12:00 AM".
+                  closesLabel: day.closes == '24:00'
+                      ? '${l10n.hoursCloses} ${l10n.hoursMidnight}'
+                      : '${l10n.hoursCloses} ${FacilityTime.clock(day.closes, locale)}',
+                  error: _invalid && !day.isValid ? l10n.hoursInvalid : null,
+                  enabled: !_saving,
+                  onOpenChanged: (open) => setState(() {
+                    day.isClosed = !open;
+                    _invalid = false;
+                  }),
+                  onPickOpens: () => _pick(day, opening: true),
+                  onPickCloses: () => _pick(day, opening: false),
+                ),
+            ],
+          ),
           const Gap.md(),
-          for (final (index, day) in days.indexed) ...[
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          FacilityTime.weekday(index + 1, locale),
-                          style: text.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        l10n.hoursClosedDay,
-                        style: text.bodySmall.copyWith(
-                          color: colors.textSecondary,
-                        ),
-                      ),
-                      Switch(
-                        value: day.isClosed,
-                        activeTrackColor: colors.primary,
-                        onChanged: _saving
-                            ? null
-                            : (closed) => setState(() {
-                                day.isClosed = closed;
-                                _invalid = false;
-                              }),
-                      ),
-                    ],
-                  ),
-                  if (!day.isClosed)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextAction(
-                            label:
-                                '${l10n.hoursOpens} ${FacilityTime.clock(day.opens, locale)}',
-                            onPressed: _saving
-                                ? null
-                                : () => _pick(day, opening: true),
-                          ),
-                        ),
-                        Expanded(
-                          child: TextAction(
-                            label:
-                                '${l10n.hoursCloses} ${FacilityTime.clock(day.closes, locale)}',
-                            onPressed: _saving
-                                ? null
-                                : () => _pick(day, opening: false),
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (_invalid && !day.isValid)
-                    Text(
-                      l10n.hoursInvalid,
-                      style: text.bodySmall.copyWith(
-                        color: colors.danger.solid,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const Gap.sm(),
-          ],
           if (failure != null)
             AppBanner(
               tone: StatusTone.danger,
@@ -243,6 +207,139 @@ class _HoursFormScreenState extends ConsumerState<HoursFormScreen> {
         isLoading: _saving,
         onPressed: () => _save(days),
       ),
+    );
+  }
+}
+
+/// One day of the week inside the hours card.
+class _DayRow extends StatelessWidget {
+  const _DayRow({
+    required this.weekday,
+    required this.summary,
+    required this.isOpen,
+    required this.opensLabel,
+    required this.closesLabel,
+    required this.error,
+    required this.enabled,
+    required this.onOpenChanged,
+    required this.onPickOpens,
+    required this.onPickCloses,
+  });
+
+  final String weekday;
+  final String summary;
+  final bool isOpen;
+  final String opensLabel;
+  final String closesLabel;
+  final String? error;
+  final bool enabled;
+  final ValueChanged<bool> onOpenChanged;
+  final VoidCallback onPickOpens;
+  final VoidCallback onPickCloses;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.text;
+    final colors = context.colors;
+    final error = this.error;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpace.lg,
+        AppSpace.md,
+        AppSpace.sm,
+        AppSpace.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      weekday,
+                      style: text.body.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      summary,
+                      style: text.bodySmall.copyWith(
+                        color: isOpen
+                            ? colors.textSecondary
+                            : colors.danger.strong,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Semantics(
+                label: '$weekday open',
+                child: Switch(
+                  value: isOpen,
+                  activeTrackColor: colors.primary,
+                  onChanged: enabled ? onOpenChanged : null,
+                ),
+              ),
+            ],
+          ),
+          if (isOpen) ...[
+            const Gap.sm(),
+            Row(
+              children: [
+                Expanded(
+                  child: _TimeButton(
+                    label: opensLabel,
+                    onPressed: enabled ? onPickOpens : null,
+                  ),
+                ),
+                const Gap.sm(),
+                Expanded(
+                  child: _TimeButton(
+                    label: closesLabel,
+                    onPressed: enabled ? onPickCloses : null,
+                  ),
+                ),
+                const Gap.sm(),
+              ],
+            ),
+          ],
+          if (error != null) ...[
+            const Gap.xs(),
+            Text(
+              error,
+              style: text.bodySmall.copyWith(color: colors.danger.solid),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A compact time chip: shows the time and opens the picker.
+class _TimeButton extends StatelessWidget {
+  const _TimeButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
+        minimumSize: const Size(0, AppSize.touchTarget),
+        foregroundColor: colors.textPrimary,
+        side: BorderSide(color: colors.border),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.controlAll),
+        textStyle: context.text.bodySmall.copyWith(fontWeight: FontWeight.w600),
+      ),
+      child: FittedBox(fit: BoxFit.scaleDown, child: Text(label)),
     );
   }
 }

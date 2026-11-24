@@ -1,3 +1,5 @@
+import 'package:app/features/auth/data/models/user_role.dart';
+import 'package:app/features/notifications/data/models/activity_category.dart';
 import 'package:app/features/notifications/data/models/app_notification.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +26,27 @@ void main() {
     expect(notification.bookingId, '01M4JQYWW2WEFYAASEC49S6PW3');
   });
 
+  test('the audience decides whose view of the booking opens', () {
+    AppNotification withPayload(String type, Map<String, Object?> extra) =>
+        AppNotification.fromJson({
+          ...notificationJson(),
+          'type': type,
+          'payload': {'booking_id': 'b1', ...extra},
+        });
+
+    expect(
+      withPayload('booking.confirmed', {'audience': 'owner'}).isForOwner,
+      isTrue,
+    );
+    expect(
+      withPayload('booking.confirmed', {'audience': 'customer'}).isForOwner,
+      isFalse,
+    );
+    // Older notifications without an audience: only a request is the owner's.
+    expect(withPayload('booking.approval_requested', {}).isForOwner, isTrue);
+    expect(withPayload('booking.confirmed', {}).isForOwner, isFalse);
+  });
+
   test('an empty or missing payload is an empty map', () {
     for (final payload in [<Object?>[], null]) {
       final notification = AppNotification.fromJson({
@@ -45,4 +68,68 @@ void main() {
     expect(notification.type, 'promo.new_city');
     expect(notification.title, isNotEmpty);
   });
+
+  test(
+    'classifies only notification types supported by the mobile contract',
+    () {
+      AppNotification notice(String type) =>
+          AppNotification.fromJson({...notificationJson(), 'type': type});
+
+      expect(
+        notice('booking.completed').activityCategory,
+        ActivityCategory.bookings,
+      );
+      expect(
+        notice('parking_lot.rejected').activityCategory,
+        ActivityCategory.facilities,
+      );
+      expect(
+        notice('payment.refund_completed').activityCategory,
+        ActivityCategory.payments,
+      );
+      expect(
+        notice('profile.updated').activityCategory,
+        ActivityCategory.account,
+      );
+      expect(notice('promo.new_city').activityCategory, isNull);
+    },
+  );
+
+  test(
+    'visibility respects notification audience and excludes staff events',
+    () {
+      AppNotification notice(String type, {String? audience}) =>
+          AppNotification.fromJson({
+            ...notificationJson(),
+            'type': type,
+            'payload': {if (audience != null) 'audience': audience},
+          });
+
+      expect(
+        notice(
+          'booking.confirmed',
+          audience: 'owner',
+        ).isVisibleToRoles([UserRole.customer]),
+        isFalse,
+      );
+      expect(
+        notice(
+          'booking.confirmed',
+          audience: 'owner',
+        ).isVisibleToRoles([UserRole.owner]),
+        isTrue,
+      );
+      expect(
+        notice(
+          'system.worker_failed',
+          audience: 'admin',
+        ).isVisibleToRoles([UserRole.admin]),
+        isFalse,
+      );
+      expect(
+        notice('queue.heartbeat_warning').isVisibleToRoles([UserRole.customer]),
+        isFalse,
+      );
+    },
+  );
 }

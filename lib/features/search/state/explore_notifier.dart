@@ -1,4 +1,5 @@
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/config/app_config.dart';
 import 'package:app/core/providers.dart';
 import 'package:app/features/parking_lot/data/models/code_name.dart';
 import 'package:app/features/parking_lot/data/models/parking_lot_summary.dart';
@@ -11,6 +12,7 @@ final exploreProvider = NotifierProvider<ExploreNotifier, ExploreState>(
 
 class ExploreState {
   const ExploreState({
+    required this.origin,
     this.items = const [],
     this.isLoading = false,
     this.failure,
@@ -20,8 +22,10 @@ class ExploreState {
     this.loadMoreFailure,
     this.vehicleType,
     this.vehicleTypes = const [],
+    this.window,
   });
 
+  final SearchOrigin origin;
   final List<ParkingLotSummary> items;
 
   /// The first page is loading and there is nothing to show yet.
@@ -43,7 +47,26 @@ class ExploreState {
   /// The vehicle types seen in unfiltered results, offered as filters.
   final List<CodeName> vehicleTypes;
 
+  /// Arrival and departure: when set, only facilities with a free space
+  /// for the whole window are shown, with how many are free.
+  final SearchWindow? window;
+
   bool get isEmpty => !isLoading && failure == null && items.isEmpty;
+}
+
+/// An arrival and departure to search free spaces for.
+class SearchWindow {
+  const SearchWindow({required this.startAt, required this.endAt});
+
+  final DateTime startAt;
+  final DateTime endAt;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchWindow && other.startAt == startAt && other.endAt == endAt;
+
+  @override
+  int get hashCode => Object.hash(startAt, endAt);
 }
 
 class ExploreNotifier extends Notifier<ExploreState> {
@@ -56,10 +79,11 @@ class ExploreNotifier extends Notifier<ExploreState> {
   ExploreState build() {
     _disposed = false;
     ref.onDispose(() => _disposed = true);
+    final origin = ref.read(appConfigProvider).searchOrigin;
     Future.microtask(() {
       if (!_disposed) load();
     });
-    return const ExploreState(isLoading: true);
+    return ExploreState(isLoading: true, origin: origin);
   }
 
   /// Loads the first page for the current filter. Also the pull-to-refresh
@@ -68,11 +92,13 @@ class ExploreNotifier extends Notifier<ExploreState> {
     final generation = ++_generation;
     final hadItems = state.items.isNotEmpty;
     state = ExploreState(
+      origin: state.origin,
       items: state.items,
       isLoading: !hadItems,
       page: state.page,
       hasMore: state.hasMore,
       vehicleType: state.vehicleType,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
     );
 
@@ -81,10 +107,12 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         items: result.items,
         page: result.page,
         hasMore: result.hasMore,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleType == null
             ? _vehicleTypesIn(result.items)
             : state.vehicleTypes,
@@ -93,6 +121,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         // A failed refresh keeps the list; a failed first load shows the error.
         items: state.items,
         failure: hadItems ? null : failure,
@@ -100,6 +129,7 @@ class ExploreNotifier extends Notifier<ExploreState> {
         page: state.page,
         hasMore: state.hasMore,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleTypes,
       );
     }
@@ -110,11 +140,13 @@ class ExploreNotifier extends Notifier<ExploreState> {
 
     final generation = _generation;
     state = ExploreState(
+      origin: state.origin,
       items: state.items,
       page: state.page,
       hasMore: state.hasMore,
       isLoadingMore: true,
       vehicleType: state.vehicleType,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
     );
 
@@ -123,21 +155,25 @@ class ExploreNotifier extends Notifier<ExploreState> {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         items: [...state.items, ...result.items],
         page: result.page,
         hasMore: result.hasMore,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleTypes,
       );
     } on ApiException catch (failure) {
       if (_disposed || generation != _generation) return;
 
       state = ExploreState(
+        origin: state.origin,
         items: state.items,
         page: state.page,
         hasMore: state.hasMore,
         loadMoreFailure: failure,
         vehicleType: state.vehicleType,
+        window: state.window,
         vehicleTypes: state.vehicleTypes,
       );
     }
@@ -148,24 +184,64 @@ class ExploreNotifier extends Notifier<ExploreState> {
     if (code == state.vehicleType) return;
 
     state = ExploreState(
+      origin: state.origin,
       isLoading: true,
       vehicleType: code,
+      window: state.window,
       vehicleTypes: state.vehicleTypes,
     );
     await load();
   }
 
+  /// Searches free spaces for [window]; null searches without times.
+  /// The API validates the window like a booking.
+  Future<void> selectWindow(SearchWindow? window) async {
+    if (window == state.window) return;
+
+    state = ExploreState(
+      origin: state.origin,
+      isLoading: true,
+      vehicleType: state.vehicleType,
+      vehicleTypes: state.vehicleTypes,
+      window: window,
+    );
+    await load();
+  }
+
+  Future<void> selectOrigin(SearchOrigin origin) async {
+    if (origin.latitude == state.origin.latitude &&
+        origin.longitude == state.origin.longitude) {
+      return;
+    }
+
+    state = ExploreState(
+      origin: origin,
+      isLoading: true,
+      vehicleType: state.vehicleType,
+      window: state.window,
+      vehicleTypes: state.vehicleTypes,
+    );
+    await load();
+  }
+
+  Future<void> useDefaultOrigin() async {
+    await selectOrigin(ref.read(appConfigProvider).searchOrigin);
+  }
+
   Future<({List<ParkingLotSummary> items, int page, bool hasMore})> _fetch(
     int page,
   ) async {
+    final origin = state.origin;
     final config = ref.read(appConfigProvider);
     final result = await ref
         .read(searchRepositoryProvider)
         .near(
-          latitude: config.searchOrigin.latitude,
-          longitude: config.searchOrigin.longitude,
+          latitude: origin.latitude,
+          longitude: origin.longitude,
           radiusKm: config.searchRadiusKm,
           vehicleType: state.vehicleType,
+          startAt: state.window?.startAt,
+          endAt: state.window?.endAt,
           page: page,
         );
     return (items: result.items, page: result.page, hasMore: result.hasMore);

@@ -1,0 +1,2737 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 19826fc..507a083 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -5,8 +5,11 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
+ ## [Unreleased]
+ 
+ ### Added
++- **auth:** Separate existing-account login from registration, add pre-OTP customer/owner selection, and complete registration through supported profile and owner-application APIs.
+ - **explore:** Search by a selected place and view nearby parking; the configured location remains available as the default.
+ - **profile:** Edit the profile name through the existing profile-update endpoint.
++- **profile:** Edit and validate the email address through the existing profile-update endpoint.
++- **booking:** Separate customer bookings into Upcoming and Past tabs using the API's status filters.
+ - **project:** Flutter project for Android and iOS (`com.swanlabstechnologies.parkeasy`).
+ - **docs:** Project overview, open decisions, architecture decision records, engineering conventions, process guides and onboarding.
+ - **ci:** GitHub Actions workflow: PR title, format, analysis and tests.
+@@ -26,6 +29,10 @@ What changed for the people who use or test the app. Format: [Keep a Changelog](
+ - **project:** The app's display name has a single source (`app_identity.json`); the check fails if the name is typed anywhere in code.
+ 
+ ### Changed
++- **owner:** Removed the Profile shortcut that duplicated the Bookings tab.
++- **auth:** Route users into separate customer and owner navigation shells using backend-confirmed roles; hide Owner Area from customer Profile and keep pending applicants in the application flow.
++- **profile:** Distinguish invalid email syntax from email addresses rejected by the API, such as an address already in use.
++- **activity:** Open owner approval-request notifications in the owner booking screen while preserving customer booking links.
+ - **explore:** Keep the configured default as the active area while starting the editable location search field empty.
+ - **explore:** Distinguish empty parking results from filtered no-match results and show a specific no-place-match message.
+ - **api:** Report offline only for actual connection failures; unknown transport errors remain unexpected errors.
+diff --git a/android/gradle.properties b/android/gradle.properties
+index f018a61..475a628 100644
+--- a/android/gradle.properties
++++ b/android/gradle.properties
+@@ -1,3 +1,7 @@
+ org.gradle.jvmargs=-Xmx8G -XX:MaxMetaspaceSize=4G -XX:ReservedCodeCacheSize=512m -XX:+HeapDumpOnOutOfMemoryError
+ android.useAndroidX=true
+ android.enableJetifier=true
++# This builtInKotlin flag was added automatically by Flutter migrator
++android.builtInKotlin=false
++# This newDsl flag was added automatically by Flutter migrator
++android.newDsl=false
+diff --git a/docs/design/screens.md b/docs/design/screens.md
+index 4a3d069..b07d13a 100644
+--- a/docs/design/screens.md
++++ b/docs/design/screens.md
+@@ -2,29 +2,33 @@
+ 
+ Every screen in the first version, and the API call behind it. A screen is in scope only if the API supports it today.
+ 
+-> **Status:** Confirmed scope. **Implemented:** C1 to C4 (launch, phone, code, name), C5 (Explore, list only, starts around the configured city centre with an initially empty place-search field), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (bookings, one list newest first), C14 (profile: view and sign out), and the four-tab shell. C13 (Activity). Owner: O1 (apply and status), O3 and O4 (bookings and every booking action), O5 (facilities), O6 (facility editor: details, spaces and rates, opening hours, submit), O7 (earnings). O2 (dashboard) is replaced by the bookings list opening on requests. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
++> **Status:** Confirmed scope. **Implemented:** C1 to C4 (welcome with login or registration, role selection, phone, code, customer details, and owner application), C5 (Explore, list only, starts around the configured city centre with an initially empty place-search field), C6 (facility), C7 (choose time, with price and availability), C8 (review and book), C10 and C12 (the booking screen is also the result screen; cancel), C11 (Upcoming and Past booking lists), C14 (profile: view, edit name and email, and sign out), and the four-tab shell. C13 (Activity). Owner: O1 (apply and status), O3 and O4 (bookings and every booking action), O5 (facilities), O6 (facility editor: details, spaces and rates, opening hours, submit), O7 (earnings). O2 (dashboard) is replaced by the bookings list opening on requests. C9 (paying online) is built; the Razorpay window has not been tried on a device. Progress: [mvp-status.md](../overview/mvp-status.md).
+ 
+ ## Customer
+ 
+ | # | Screen | Main content | API |
+ |---|---|---|---|
+-| C1 | Launch | Navy, logo, one line, "Get started" | ΓÇö |
+-| C2 | Phone number | `PhoneField`, "Send code" | `POST /auth/otp/request` |
++| C1 | Welcome | Navy, logo, log in or create an account | ΓÇö |
++| C2 | Account choice and phone | Existing-account login, or role selection followed by phone entry for registration | `POST /auth/otp/request` |
+ | C3 | Verification code | `OtpField`, resend countdown | `POST /auth/otp/verify` |
+-| C4 | Your name (new users) | Name, optional email | `PATCH /me` |
++| C4 | Customer details (new users) | Required name, optional email; owner applicants continue to the owner application | `PATCH /me`, `POST /owner/application` |
+ | C5 | Explore | Initially empty place-search field, filter chips (vehicle type, amenities), results as `FacilityCard`s nearest first; friendly empty and no-match states; map view remains deferred | `GET /places/search`, `GET /parking-lots` |
+ | C6 | Facility details | Name, address, distance, hours, amenities, rates per vehicle type, booking mode and payment modes; `ActionBar` "Choose time" | `GET /parking-lots/{id}` |
+ | C7 | Choose time | Vehicle type, start and end (`DateTimeField`), live availability and price | `GET ΓÇª/availability`, `POST /bookings/quote` |
+ | C8 | Review and book | `PriceBreakdown`, payment mode, instant or approval notice, cancellation rule; "Book parking" / "Send request" | `POST /bookings` |
+ | C9 | Payment | Opens checkout, then "Confirming payment" until the API answers | `POST ΓÇª/payment-orders`, `GET ΓÇª/payment` |
+ | C10 | Booking result | Confirmed, request sent, or payment failed, each with its next step | `GET /bookings/{id}` |
+-| C11 | Bookings | Upcoming and past, `BookingCard`s | `GET /bookings` |
++| C11 | Bookings | Upcoming active statuses and past terminal statuses, `BookingCard`s | `GET /bookings?filter[status]=ΓÇª` |
+ | C12 | Booking details | Status, reference, times, facility, price, payment; cancel | `GET /bookings/{id}`, `POST ΓÇª/cancel` |
+ | C13 | Activity | Notifications, unread first | `GET /notifications`, read endpoints |
+-| C14 | Profile | Name, phone, email, edit name (phone and email remain read-only), switch to owner area, sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
++| C14 | Profile | Name, phone, email, edit name and email (phone remains read-only), sign out | `GET /me`, `PATCH /me`, `POST /auth/logout` |
+ 
+ The journey designed first: **Explore ΓåÆ Facility ΓåÆ Choose time ΓåÆ Review ΓåÆ Pay or pay at facility ΓåÆ Result ΓåÆ Booking details.**
+ 
++The mobile API does not accept a requested role during OTP registration: new accounts receive the `customer` role. Owner onboarding uses `POST /owner/application` with the business name and the already verified phone number; the backend grants the `owner` role only after approval. The selected owner option is onboarding intent only and never grants access.
++
++The customer and owner experiences use separate navigation shells. Customers keep the four customer tabs and do not see an Owner Area link in Profile. Users with the backend-confirmed owner role open the owner bookings shell; applicants without that role can see only their owner application/status flow. Owner routes remain protected by the backend as well as by client-side routing.
++
+ ## Owner
+ 
+ | # | Screen | Main content | API |
+diff --git a/lib/app/router.dart b/lib/app/router.dart
+index 123a798..de375d6 100644
+--- a/lib/app/router.dart
++++ b/lib/app/router.dart
+@@ -1,11 +1,13 @@
+ import 'package:app/app/routes.dart';
+ import 'package:app/app/tab_shell.dart';
+ import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/features/auth/state/session_controller.dart';
+ import 'package:app/features/auth/state/session_state.dart';
+ import 'package:app/features/auth/ui/launch_screen.dart';
+ import 'package:app/features/auth/ui/otp_screen.dart';
+ import 'package:app/features/auth/ui/phone_screen.dart';
++import 'package:app/features/auth/ui/registration_role_screen.dart';
+ import 'package:app/features/auth/ui/start_up_screen.dart';
+ import 'package:app/features/booking/state/booking_draft.dart';
+ import 'package:app/features/booking/ui/booking_details_screen.dart';
+@@ -41,8 +43,13 @@ final routerProvider = Provider<GoRouter>((ref) {
+   ref
+     ..listen(sessionControllerProvider, (previous, next) {
+       final routingChanged = switch ((previous, next)) {
+-        (SignedIn(user: final a), SignedIn(user: final b)) =>
+-          a.isProfileComplete != b.isProfileComplete,
++        (
++          SignedIn(user: final a, registrationRole: final roleA),
++          SignedIn(user: final b, registrationRole: final roleB),
++        ) =>
++          a.isProfileComplete != b.isProfileComplete ||
++              !listEquals(a.roles, b.roles) ||
++              roleA != roleB,
+         _ => previous?.runtimeType != next.runtimeType,
+       };
+       if (routingChanged) {
+@@ -69,6 +76,17 @@ final routerProvider = Provider<GoRouter>((ref) {
+         path: Routes.phone,
+         builder: (context, state) => const PhoneScreen(),
+       ),
++      GoRoute(
++        path: Routes.registrationRole,
++        builder: (context, state) => const RegistrationRoleScreen(),
++      ),
++      GoRoute(
++        path: Routes.registrationPhone,
++        redirect: (context, state) =>
++            state.extra is RegistrationRole ? null : Routes.registrationRole,
++        builder: (context, state) =>
++            PhoneScreen(registrationRole: state.extra! as RegistrationRole),
++      ),
+       GoRoute(
+         path: Routes.code,
+         // The phone number travels in memory, never in the location.
+@@ -244,6 +262,28 @@ final routerProvider = Provider<GoRouter>((ref) {
+               ),
+             ],
+           ),
++          StatefulShellBranch(
++            routes: [
++              GoRoute(
++                path: Routes.ownerActivity,
++                builder: (context, state) => const ActivityScreen(),
++              ),
++            ],
++          ),
++          StatefulShellBranch(
++            routes: [
++              GoRoute(
++                path: Routes.ownerProfile,
++                builder: (context, state) => const ProfileScreen(),
++                routes: [
++                  GoRoute(
++                    path: 'edit',
++                    builder: (context, state) => const EditProfileScreen(),
++                  ),
++                ],
++              ),
++            ],
++          ),
+         ],
+       ),
+     ],
+diff --git a/lib/app/routes.dart b/lib/app/routes.dart
+index 8010b7a..456061d 100644
+--- a/lib/app/routes.dart
++++ b/lib/app/routes.dart
+@@ -1,3 +1,4 @@
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/features/auth/state/session_state.dart';
+ 
+ /// Every location in the app. Screens navigate by these, never by typing
+@@ -7,6 +8,8 @@ abstract final class Routes {
+   static const String launch = '/welcome';
+   static const String phone = '/sign-in/phone';
+   static const String code = '/sign-in/code';
++  static const String registrationRole = '/register/role';
++  static const String registrationPhone = '/register/phone';
+   static const String completeProfile = '/complete-profile';
+   static const String explore = '/explore';
+   static const String bookings = '/bookings';
+@@ -34,6 +37,9 @@ abstract final class Routes {
+   static const String ownerBookings = '/owner/bookings';
+   static const String ownerFacilities = '/owner/facilities';
+   static const String ownerEarnings = '/owner/earnings';
++  static const String ownerActivity = '/owner/activity';
++  static const String ownerProfile = '/owner/profile';
++  static const String ownerProfileEdit = '$ownerProfile/edit';
+ 
+   static const String ownerFacilityNew = '$ownerFacilities/new';
+ 
+@@ -50,7 +56,13 @@ abstract final class Routes {
+   /// A booking at one of the owner's facilities.
+   static String ownerBooking(String id) => '$ownerBookings/$id';
+ 
+-  static const Set<String> _signedOut = {launch, phone, code};
++  static const Set<String> _signedOut = {
++    launch,
++    phone,
++    code,
++    registrationRole,
++    registrationPhone,
++  };
+ 
+   /// Where the session allows the user to be. Returns the location to go
+   /// to instead of [location], or null to stay.
+@@ -65,10 +77,28 @@ abstract final class Routes {
+       case SignedOut():
+         return _signedOut.contains(location) ? null : launch;
+ 
+-      case SignedIn(:final user):
++      case SignedIn(:final user, :final registrationRole):
+         if (!user.isProfileComplete) {
+           return location == completeProfile ? null : completeProfile;
+         }
++
++        if (user.isOwner) {
++          if (location == owner) return ownerBookings;
++          if (_isOwnerRoute(location) ||
++              location == ownerProfile ||
++              location == ownerProfileEdit) {
++            return null;
++          }
++          return ownerBookings;
++        }
++
++        if (registrationRole == RegistrationRole.owner) {
++          return location == owner ? null : owner;
++        }
++
++        if (_isOwnerRoute(location)) {
++          return explore;
++        }
+         final isOutside =
+             location == startUp ||
+             location == completeProfile ||
+@@ -76,4 +106,7 @@ abstract final class Routes {
+         return isOutside ? explore : null;
+     }
+   }
++
++  static bool _isOwnerRoute(String location) =>
++      location == owner || location.startsWith('$owner/');
+ }
+diff --git a/lib/app/tab_shell.dart b/lib/app/tab_shell.dart
+index 30a1da1..9996760 100644
+--- a/lib/app/tab_shell.dart
++++ b/lib/app/tab_shell.dart
+@@ -131,6 +131,8 @@ class OwnerShell extends StatelessWidget {
+           icon: Icons.account_balance_wallet_outlined,
+           label: l10n.ownerTabEarnings,
+         ),
++        TabItem(icon: Icons.notifications_outlined, label: l10n.tabActivity),
++        TabItem(icon: Icons.person_outline, label: l10n.tabProfile),
+       ],
+     );
+   }
+diff --git a/lib/core/auth/token_store.dart b/lib/core/auth/token_store.dart
+index 3f10982..1e40819 100644
+--- a/lib/core/auth/token_store.dart
++++ b/lib/core/auth/token_store.dart
+@@ -15,6 +15,9 @@ class StoredToken {
+ abstract interface class TokenStore {
+   Future<StoredToken?> read();
+   Future<void> write(StoredToken token);
++  Future<String?> readRegistrationIntent();
++  Future<void> writeRegistrationIntent(String intent);
++  Future<void> clearRegistrationIntent();
+   Future<void> clear();
+ }
+ 
+@@ -34,6 +37,7 @@ class SecureTokenStore implements TokenStore {
+ 
+   static const _tokenKey = 'auth.token';
+   static const _expiryKey = 'auth.token_expires_at';
++  static const _registrationIntentKey = 'auth.registration_intent';
+ 
+   final FlutterSecureStorage _storage;
+ 
+@@ -58,9 +62,22 @@ class SecureTokenStore implements TokenStore {
+     );
+   }
+ 
++  @override
++  Future<String?> readRegistrationIntent() =>
++      _storage.read(key: _registrationIntentKey);
++
++  @override
++  Future<void> writeRegistrationIntent(String intent) =>
++      _storage.write(key: _registrationIntentKey, value: intent);
++
++  @override
++  Future<void> clearRegistrationIntent() =>
++      _storage.delete(key: _registrationIntentKey);
++
+   @override
+   Future<void> clear() async {
+     await _storage.delete(key: _tokenKey);
+     await _storage.delete(key: _expiryKey);
++    await clearRegistrationIntent();
+   }
+ }
+diff --git a/lib/core/widgets/app_card.dart b/lib/core/widgets/app_card.dart
+index a931a04..b6db518 100644
+--- a/lib/core/widgets/app_card.dart
++++ b/lib/core/widgets/app_card.dart
+@@ -5,20 +5,29 @@ import 'package:flutter/material.dart';
+ /// The standard card: white surface, a hairline border, no shadow. With
+ /// [onTap] the whole card is one button.
+ class AppCard extends StatelessWidget {
+-  const AppCard({required this.child, this.onTap, super.key});
++  const AppCard({
++    required this.child,
++    this.onTap,
++    this.selected = false,
++    super.key,
++  });
+ 
+   final Widget child;
+   final VoidCallback? onTap;
++  final bool selected;
+ 
+   @override
+   Widget build(BuildContext context) {
+     final colors = context.colors;
+ 
+     return Material(
+-      color: colors.surface,
++      color: selected ? colors.primaryContainer : colors.surface,
+       shape: RoundedRectangleBorder(
+         borderRadius: AppRadius.cardAll,
+-        side: BorderSide(color: colors.border),
++        side: BorderSide(
++          color: selected ? colors.primary : colors.border,
++          width: selected ? AppSize.focusBorderWidth : AppSize.borderWidth,
++        ),
+       ),
+       clipBehavior: Clip.antiAlias,
+       child: InkWell(
+diff --git a/lib/features/auth/state/otp_notifier.dart b/lib/features/auth/state/otp_notifier.dart
+index 58e083a..fec208b 100644
+--- a/lib/features/auth/state/otp_notifier.dart
++++ b/lib/features/auth/state/otp_notifier.dart
+@@ -54,7 +54,9 @@ class OtpNotifier extends AutoDisposeFamilyNotifier<OtpState, CodeSent> {
+       final session = await ref
+           .read(authRepositoryProvider)
+           .verifyOtp(phone: arg.phone, code: code, deviceName: _deviceName());
+-      await ref.read(sessionControllerProvider.notifier).start(session);
++      await ref
++          .read(sessionControllerProvider.notifier)
++          .start(session, registrationRole: arg.registrationRole);
+     } on ApiException catch (failure) {
+       state = OtpState(resendAt: state.resendAt, failure: failure);
+     }
+diff --git a/lib/features/auth/state/phone_sign_in_notifier.dart b/lib/features/auth/state/phone_sign_in_notifier.dart
+index ac9d118..50b8823 100644
+--- a/lib/features/auth/state/phone_sign_in_notifier.dart
++++ b/lib/features/auth/state/phone_sign_in_notifier.dart
+@@ -2,6 +2,7 @@ import 'package:app/core/api/api_exception.dart';
+ import 'package:app/core/providers.dart';
+ import 'package:app/features/auth/data/auth_repository.dart';
+ import 'package:app/features/auth/state/phone_number.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ final phoneSignInProvider =
+@@ -11,10 +12,15 @@ final phoneSignInProvider =
+ 
+ /// A code was sent: where, and when another may be requested.
+ class CodeSent {
+-  const CodeSent({required this.phone, required this.resendAt});
++  const CodeSent({
++    required this.phone,
++    required this.resendAt,
++    this.registrationRole,
++  });
+ 
+   final String phone;
+   final DateTime resendAt;
++  final RegistrationRole? registrationRole;
+ }
+ 
+ class PhoneSignInState {
+@@ -37,7 +43,10 @@ class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
+   @override
+   PhoneSignInState build() => const PhoneSignInState();
+ 
+-  Future<void> submit(String input) async {
++  Future<void> submit(
++    String input, {
++    RegistrationRole? registrationRole,
++  }) async {
+     if (state.isSubmitting) return;
+ 
+     final phone = PhoneNumber.toE164(input);
+@@ -54,6 +63,7 @@ class PhoneSignInNotifier extends AutoDisposeNotifier<PhoneSignInState> {
+       state = PhoneSignInState(
+         sent: CodeSent(
+           phone: phone,
++          registrationRole: registrationRole,
+           resendAt: ref
+               .read(clockProvider)()
+               .add(Duration(seconds: challenge.resendIn)),
+diff --git a/lib/features/auth/state/session_controller.dart b/lib/features/auth/state/session_controller.dart
+index af4376f..c25d2c7 100644
+--- a/lib/features/auth/state/session_controller.dart
++++ b/lib/features/auth/state/session_controller.dart
+@@ -7,6 +7,7 @@ import 'package:app/core/providers.dart';
+ import 'package:app/features/auth/data/auth_repository.dart';
+ import 'package:app/features/auth/data/models/session.dart';
+ import 'package:app/features/auth/data/models/user.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/features/auth/state/session_state.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+@@ -40,7 +41,19 @@ class SessionController extends Notifier<SessionState> {
+     }
+ 
+     try {
+-      state = SignedIn(await ref.read(authRepositoryProvider).currentUser());
++      final user = await ref.read(authRepositoryProvider).currentUser();
++      final storedIntent = await ref
++          .read(tokenStoreProvider)
++          .readRegistrationIntent();
++      var registrationRole = RegistrationRole.fromStorageValue(storedIntent);
++      if (user.isOwner ||
++          registrationRole == null ||
++          (registrationRole == RegistrationRole.customer &&
++              user.isProfileComplete)) {
++        await ref.read(tokenStoreProvider).clearRegistrationIntent();
++        registrationRole = null;
++      }
++      state = SignedIn(user, registrationRole: registrationRole);
+     } on ApiException catch (failure) {
+       if (failure.code == ApiErrorCode.unauthenticated) {
+         await expire();
+@@ -51,17 +64,40 @@ class SessionController extends Notifier<SessionState> {
+   }
+ 
+   /// After a sign-in code was verified.
+-  Future<void> start(Session session) async {
+-    await ref
+-        .read(tokenStoreProvider)
+-        .write(StoredToken(value: session.token, expiresAt: session.expiresAt));
+-    state = SignedIn(session.user);
++  Future<void> start(
++    Session session, {
++    RegistrationRole? registrationRole,
++  }) async {
++    final tokenStore = ref.read(tokenStoreProvider);
++    await tokenStore.write(
++      StoredToken(value: session.token, expiresAt: session.expiresAt),
++    );
++    final pendingRole = session.isNewUser
++        ? registrationRole ?? RegistrationRole.customer
++        : null;
++    if (pendingRole == null) {
++      await tokenStore.clearRegistrationIntent();
++    } else {
++      await tokenStore.writeRegistrationIntent(pendingRole.storageValue);
++    }
++    state = SignedIn(session.user, registrationRole: pendingRole);
+   }
+ 
+   /// After the profile changed.
+   void updateUser(User user) {
+-    if (state is SignedIn) {
+-      state = SignedIn(user);
++    final current = state;
++    if (current is SignedIn) {
++      state = SignedIn(user, registrationRole: current.registrationRole);
++    }
++  }
++
++  /// Clears the saved onboarding intent only after the backend step succeeds.
++  Future<void> finishRegistration({User? user}) async {
++    final tokenStore = ref.read(tokenStoreProvider);
++    await tokenStore.clearRegistrationIntent();
++    final current = state;
++    if (current is SignedIn) {
++      state = SignedIn(user ?? current.user);
+     }
+   }
+ 
+diff --git a/lib/features/auth/state/session_state.dart b/lib/features/auth/state/session_state.dart
+index 82b04e7..fc5048a 100644
+--- a/lib/features/auth/state/session_state.dart
++++ b/lib/features/auth/state/session_state.dart
+@@ -1,5 +1,6 @@
+ import 'package:app/core/api/api_exception.dart';
+ import 'package:app/features/auth/data/models/user.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ 
+ /// Whether somebody is signed in. The router shows a different part of
+ /// the app for each case.
+@@ -26,7 +27,8 @@ class SignedOut extends SessionState {
+ }
+ 
+ class SignedIn extends SessionState {
+-  const SignedIn(this.user);
++  const SignedIn(this.user, {this.registrationRole});
+ 
+   final User user;
++  final RegistrationRole? registrationRole;
+ }
+diff --git a/lib/features/auth/ui/launch_screen.dart b/lib/features/auth/ui/launch_screen.dart
+index d0734f4..aecd4a1 100644
+--- a/lib/features/auth/ui/launch_screen.dart
++++ b/lib/features/auth/ui/launch_screen.dart
+@@ -40,9 +40,19 @@ class LaunchScreen extends StatelessWidget {
+           ),
+         ],
+       ),
+-      bottom: PrimaryButton(
+-        label: l10n.launchGetStarted,
+-        onPressed: () => context.push(Routes.phone),
++      bottom: Column(
++        mainAxisSize: MainAxisSize.min,
++        children: [
++          PrimaryButton(
++            label: l10n.launchLogIn,
++            onPressed: () => context.push(Routes.phone),
++          ),
++          const Gap.sm(),
++          SecondaryButton(
++            label: l10n.launchCreateAccount,
++            onPressed: () => context.push(Routes.registrationRole),
++          ),
++        ],
+       ),
+     );
+   }
+diff --git a/lib/features/auth/ui/phone_screen.dart b/lib/features/auth/ui/phone_screen.dart
+index d148ca6..47f921c 100644
+--- a/lib/features/auth/ui/phone_screen.dart
++++ b/lib/features/auth/ui/phone_screen.dart
+@@ -9,6 +9,7 @@ import 'package:app/core/widgets/app_scaffold.dart';
+ import 'package:app/core/widgets/app_text_field.dart';
+ import 'package:app/features/auth/state/phone_number.dart';
+ import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/l10n/l10n.dart';
+ import 'package:flutter/material.dart';
+ import 'package:flutter/services.dart';
+@@ -16,7 +17,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
+ 
+ class PhoneScreen extends ConsumerStatefulWidget {
+-  const PhoneScreen({super.key});
++  const PhoneScreen({this.registrationRole, super.key});
++
++  final RegistrationRole? registrationRole;
+ 
+   @override
+   ConsumerState<PhoneScreen> createState() => _PhoneScreenState();
+@@ -31,8 +34,9 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
+     super.dispose();
+   }
+ 
+-  void _submit() =>
+-      ref.read(phoneSignInProvider.notifier).submit(_controller.text);
++  void _submit() => ref
++      .read(phoneSignInProvider.notifier)
++      .submit(_controller.text, registrationRole: widget.registrationRole);
+ 
+   @override
+   Widget build(BuildContext context) {
+diff --git a/lib/features/booking/data/booking_repository.dart b/lib/features/booking/data/booking_repository.dart
+index 08625de..87a078f 100644
+--- a/lib/features/booking/data/booking_repository.dart
++++ b/lib/features/booking/data/booking_repository.dart
+@@ -4,6 +4,7 @@ import 'package:app/core/api/pagination.dart';
+ import 'package:app/core/providers.dart';
+ import 'package:app/features/booking/data/models/availability.dart';
+ import 'package:app/features/booking/data/models/booking.dart';
++import 'package:app/features/booking/data/models/booking_status.dart';
+ import 'package:app/features/booking/data/models/booking_window_request.dart';
+ import 'package:app/features/booking/data/models/create_booking_request.dart';
+ import 'package:app/features/booking/data/models/quote.dart';
+@@ -59,12 +60,17 @@ class BookingRepository {
+     ),
+   );
+ 
+-  /// The signed-in customer's bookings, newest first.
+-  Future<CursorPage<Booking>> mine({String? cursor}) async =>
+-      CursorPage.fromJson(
+-        await _api.get('/bookings', query: {'cursor': cursor}),
+-        Booking.fromJson,
+-      );
++  /// The signed-in customer's bookings for one API status, newest first.
++  Future<CursorPage<Booking>> mine({
++    required BookingStatus status,
++    String? cursor,
++  }) async => CursorPage.fromJson(
++    await _api.get(
++      '/bookings',
++      query: {'filter[status]': status.wire, 'cursor': cursor},
++    ),
++    Booking.fromJson,
++  );
+ 
+   Future<Booking> find(String id) async =>
+       Booking.fromJson(ApiClient.object(await _api.get('/bookings/$id')));
+diff --git a/lib/features/booking/state/bookings_notifier.dart b/lib/features/booking/state/bookings_notifier.dart
+index 9ad1557..5f79521 100644
+--- a/lib/features/booking/state/bookings_notifier.dart
++++ b/lib/features/booking/state/bookings_notifier.dart
+@@ -1,8 +1,17 @@
+ import 'package:app/core/api/api_exception.dart';
++import 'package:app/core/api/pagination.dart';
+ import 'package:app/features/booking/data/booking_repository.dart';
+ import 'package:app/features/booking/data/models/booking.dart';
++import 'package:app/features/booking/data/models/booking_status.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
++enum CustomerBookingTab { upcoming, past }
++
++final customerBookingTabProvider =
++    StateProvider.autoDispose<CustomerBookingTab>(
++      (ref) => CustomerBookingTab.upcoming,
++    );
++
+ final bookingsProvider =
+     NotifierProvider.autoDispose<BookingsNotifier, BookingsState>(
+       BookingsNotifier.new,
+@@ -13,7 +22,6 @@ class BookingsState {
+     this.items = const [],
+     this.isLoading = false,
+     this.failure,
+-    this.nextCursor,
+     this.hasMore = false,
+     this.isLoadingMore = false,
+     this.loadMoreFailure,
+@@ -22,7 +30,6 @@ class BookingsState {
+   final List<Booking> items;
+   final bool isLoading;
+   final ApiException? failure;
+-  final String? nextCursor;
+   final bool hasMore;
+   final bool isLoadingMore;
+   final ApiException? loadMoreFailure;
+@@ -30,14 +37,40 @@ class BookingsState {
+   bool get isEmpty => !isLoading && failure == null && items.isEmpty;
+ }
+ 
+-/// The customer's bookings, newest first. Invalidated whenever a booking
+-/// is created or changed, so the list is never patched by hand.
++/// The customer's bookings, filtered by API status and merged newest first.
+ class BookingsNotifier extends AutoDisposeNotifier<BookingsState> {
++  static const _upcomingStatuses = [
++    BookingStatus.pendingApproval,
++    BookingStatus.awaitingPayment,
++    BookingStatus.confirmed,
++  ];
++  static const _pastStatuses = [
++    BookingStatus.rejected,
++    BookingStatus.cancelled,
++    BookingStatus.completed,
++    BookingStatus.expired,
++    BookingStatus.noShow,
++  ];
++
+   int _generation = 0;
+   bool _disposed = false;
++  late CustomerBookingTab _tab;
++  late List<BookingStatus> _statuses;
++  final Map<BookingStatus, String> _cursors = {};
++  final Set<BookingStatus> _hasMoreStatuses = {};
++  final Set<BookingStatus> _failedStatuses = {};
+ 
+   @override
+   BookingsState build() {
++    _tab = ref.watch(customerBookingTabProvider);
++    _statuses = switch (_tab) {
++      CustomerBookingTab.upcoming => _upcomingStatuses,
++      CustomerBookingTab.past => _pastStatuses,
++    };
++    _generation++;
++    _cursors.clear();
++    _hasMoreStatuses.clear();
++    _failedStatuses.clear();
+     _disposed = false;
+     ref.onDispose(() => _disposed = true);
+     Future.microtask(() {
+@@ -48,65 +81,145 @@ class BookingsNotifier extends AutoDisposeNotifier<BookingsState> {
+ 
+   Future<void> load() async {
+     final generation = ++_generation;
+-    final hadItems = state.items.isNotEmpty;
++    final previousItems = state.items;
++    final hadItems = previousItems.isNotEmpty;
+     state = BookingsState(
+-      items: state.items,
++      items: previousItems,
+       isLoading: !hadItems,
+-      nextCursor: state.nextCursor,
+-      hasMore: state.hasMore,
++      hasMore: _hasMoreStatuses.isNotEmpty || _failedStatuses.isNotEmpty,
+     );
+ 
+-    try {
+-      final page = await ref.read(bookingRepositoryProvider).mine();
+-      if (_disposed || generation != _generation) return;
+-      state = BookingsState(
+-        items: page.items,
+-        nextCursor: page.nextCursor,
+-        hasMore: page.hasMore,
+-      );
+-    } on ApiException catch (failure) {
+-      if (_disposed || generation != _generation) return;
++    final results = await _fetchPages(_statuses, useCursors: false);
++    if (_disposed || generation != _generation) return;
++
++    final failed = results.where((result) => result.failure != null).toList();
++    if (failed.isNotEmpty) {
++      _failedStatuses
++        ..clear()
++        ..addAll(failed.map((result) => result.status));
+       state = BookingsState(
+-        items: state.items,
+-        failure: hadItems ? null : failure,
+-        loadMoreFailure: hadItems ? failure : null,
+-        nextCursor: state.nextCursor,
+-        hasMore: state.hasMore,
++        items: previousItems,
++        failure: hadItems ? null : failed.first.failure,
++        hasMore: _hasMoreStatuses.isNotEmpty || _failedStatuses.isNotEmpty,
++        loadMoreFailure: hadItems ? failed.first.failure : null,
+       );
++      return;
+     }
++
++    _cursors.clear();
++    _hasMoreStatuses.clear();
++    _failedStatuses.clear();
++    final pages = <CursorPage<Booking>>[];
++    for (final result in results) {
++      final page = result.pageOrThrow;
++      pages.add(page);
++      final cursor = page.nextCursor;
++      if (page.hasMore && cursor != null) {
++        _cursors[result.status] = cursor;
++        _hasMoreStatuses.add(result.status);
++      }
++    }
++    state = BookingsState(
++      items: _mergePages(pages),
++      hasMore: _hasMoreStatuses.isNotEmpty,
++    );
+   }
+ 
+   Future<void> loadMore() async {
+-    final cursor = state.nextCursor;
+     if (state.isLoading || state.isLoadingMore || !state.hasMore) return;
+-    if (cursor == null) return;
++
++    final statuses = _failedStatuses.isNotEmpty
++        ? _failedStatuses.toList()
++        : _statuses.where(_hasMoreStatuses.contains).toList();
++    if (statuses.isEmpty) return;
+ 
+     final generation = _generation;
+     state = BookingsState(
+       items: state.items,
+-      nextCursor: cursor,
+       hasMore: true,
+       isLoadingMore: true,
+     );
++    final results = await _fetchPages(statuses, useCursors: true);
++    if (_disposed || generation != _generation) return;
+ 
+-    try {
+-      final page = await ref
+-          .read(bookingRepositoryProvider)
+-          .mine(cursor: cursor);
+-      if (_disposed || generation != _generation) return;
+-      state = BookingsState(
+-        items: [...state.items, ...page.items],
+-        nextCursor: page.nextCursor,
+-        hasMore: page.hasMore,
+-      );
+-    } on ApiException catch (failure) {
+-      if (_disposed || generation != _generation) return;
+-      state = BookingsState(
+-        items: state.items,
+-        nextCursor: cursor,
+-        hasMore: true,
+-        loadMoreFailure: failure,
+-      );
++    final pages = <CursorPage<Booking>>[];
++    final failures = <ApiException>[];
++    for (final result in results) {
++      final failure = result.failure;
++      if (failure != null) {
++        failures.add(failure);
++        _failedStatuses.add(result.status);
++        continue;
++      }
++
++      _failedStatuses.remove(result.status);
++      final page = result.pageOrThrow;
++      pages.add(page);
++      final cursor = page.nextCursor;
++      if (page.hasMore && cursor != null) {
++        _cursors[result.status] = cursor;
++        _hasMoreStatuses.add(result.status);
++      } else {
++        _cursors.remove(result.status);
++        _hasMoreStatuses.remove(result.status);
++      }
++    }
++
++    state = BookingsState(
++      items: _mergePages(pages, existing: state.items),
++      hasMore: _hasMoreStatuses.isNotEmpty || _failedStatuses.isNotEmpty,
++      loadMoreFailure: failures.isEmpty ? null : failures.first,
++    );
++  }
++
++  Future<List<_BookingPageResult>> _fetchPages(
++    Iterable<BookingStatus> statuses, {
++    required bool useCursors,
++  }) async {
++    final repository = ref.read(bookingRepositoryProvider);
++    return Future.wait(
++      statuses.map((status) async {
++        try {
++          final page = await repository.mine(
++            status: status,
++            cursor: useCursors ? _cursors[status] : null,
++          );
++          return _BookingPageResult.success(status, page);
++        } on ApiException catch (failure) {
++          return _BookingPageResult.failed(status, failure);
++        }
++      }),
++    );
++  }
++
++  List<Booking> _mergePages(
++    Iterable<CursorPage<Booking>> pages, {
++    List<Booking> existing = const [],
++  }) {
++    final byId = <String, Booking>{for (final item in existing) item.id: item};
++    for (final page in pages) {
++      for (final item in page.items) {
++        byId[item.id] = item;
++      }
++    }
++    return byId.values.toList()
++      ..sort((first, second) => second.createdAt.compareTo(first.createdAt));
++  }
++}
++
++class _BookingPageResult {
++  const _BookingPageResult.success(this.status, this.page) : failure = null;
++  const _BookingPageResult.failed(this.status, this.failure) : page = null;
++
++  final BookingStatus status;
++  final CursorPage<Booking>? page;
++  final ApiException? failure;
++
++  CursorPage<Booking> get pageOrThrow {
++    final page = this.page;
++    if (page == null) {
++      throw StateError('A failed booking page has no page.');
+     }
++    return page;
+   }
+ }
+diff --git a/lib/features/booking/ui/bookings_screen.dart b/lib/features/booking/ui/bookings_screen.dart
+index 04561e4..a614938 100644
+--- a/lib/features/booking/ui/bookings_screen.dart
++++ b/lib/features/booking/ui/bookings_screen.dart
+@@ -6,6 +6,7 @@ import 'package:app/core/time/facility_time.dart';
+ import 'package:app/core/widgets/api_error_text.dart';
+ import 'package:app/core/widgets/app_buttons.dart';
+ import 'package:app/core/widgets/app_card.dart';
++import 'package:app/core/widgets/app_filter_chip.dart';
+ import 'package:app/core/widgets/app_scaffold.dart';
+ import 'package:app/core/widgets/state_views.dart';
+ import 'package:app/features/booking/data/models/booking.dart';
+@@ -24,6 +25,7 @@ class BookingsScreen extends ConsumerWidget {
+     final l10n = context.l10n;
+     final state = ref.watch(bookingsProvider);
+     final notifier = ref.read(bookingsProvider.notifier);
++    final selectedTab = ref.watch(customerBookingTabProvider);
+     final failure = state.failure;
+     final loadMoreFailure = state.loadMoreFailure;
+ 
+@@ -45,12 +47,18 @@ class BookingsScreen extends ConsumerWidget {
+         physics: const AlwaysScrollableScrollPhysics(),
+         child: EmptyState(
+           icon: Icons.event_note_outlined,
+-          title: l10n.bookingsEmptyTitle,
+-          body: l10n.bookingsEmptyBody,
+-          action: SecondaryButton(
+-            label: l10n.bookingsFind,
+-            onPressed: () => context.go(Routes.explore),
+-          ),
++          title: selectedTab == CustomerBookingTab.upcoming
++              ? l10n.bookingsEmptyTitle
++              : l10n.bookingsPastEmptyTitle,
++          body: selectedTab == CustomerBookingTab.upcoming
++              ? l10n.bookingsEmptyBody
++              : l10n.bookingsPastEmptyBody,
++          action: selectedTab == CustomerBookingTab.upcoming
++              ? SecondaryButton(
++                  label: l10n.bookingsFind,
++                  onPressed: () => context.go(Routes.explore),
++                )
++              : null,
+         ),
+       );
+     } else {
+@@ -116,7 +124,45 @@ class BookingsScreen extends ConsumerWidget {
+     return AppScaffold(
+       title: l10n.tabBookings,
+       scrollable: false,
+-      body: RefreshIndicator(onRefresh: notifier.load, child: content),
++      body: Column(
++        children: [
++          const Gap.md(),
++          Row(
++            children: [
++              Expanded(
++                child: AppFilterChip(
++                  label: l10n.bookingsUpcoming,
++                  isSelected: selectedTab == CustomerBookingTab.upcoming,
++                  onPressed: selectedTab == CustomerBookingTab.upcoming
++                      ? null
++                      : () =>
++                            ref
++                                    .read(customerBookingTabProvider.notifier)
++                                    .state =
++                                CustomerBookingTab.upcoming,
++                ),
++              ),
++              const Gap.sm(),
++              Expanded(
++                child: AppFilterChip(
++                  label: l10n.bookingsPast,
++                  isSelected: selectedTab == CustomerBookingTab.past,
++                  onPressed: selectedTab == CustomerBookingTab.past
++                      ? null
++                      : () =>
++                            ref
++                                    .read(customerBookingTabProvider.notifier)
++                                    .state =
++                                CustomerBookingTab.past,
++                ),
++              ),
++            ],
++          ),
++          Expanded(
++            child: RefreshIndicator(onRefresh: notifier.load, child: content),
++          ),
++        ],
++      ),
+     );
+   }
+ }
+diff --git a/lib/features/notifications/ui/activity_screen.dart b/lib/features/notifications/ui/activity_screen.dart
+index 7501ef8..e645e58 100644
+--- a/lib/features/notifications/ui/activity_screen.dart
++++ b/lib/features/notifications/ui/activity_screen.dart
+@@ -16,9 +16,9 @@ import 'package:intl/intl.dart';
+ class ActivityScreen extends ConsumerWidget {
+   const ActivityScreen({super.key});
+ 
+-  /// Notification types sent to the owner of a facility. Everything else
+-  /// about a booking is opened as the customer's booking.
+-  static const _ownerTypes = {'booking.approval_requested'};
++  /// This notification is sent to the owner; other booking notifications
++  /// open the customer's booking.
++  static const _ownerBookingTypes = {'booking.approval_requested'};
+ 
+   @override
+   Widget build(BuildContext context, WidgetRef ref) {
+@@ -52,11 +52,10 @@ class ActivityScreen extends ConsumerWidget {
+             notifier.markRead(notification);
+             final bookingId = notification.bookingId;
+             if (bookingId != null) {
+-              context.push(
+-                _ownerTypes.contains(notification.type)
+-                    ? Routes.ownerBooking(bookingId)
+-                    : Routes.booking(bookingId),
+-              );
++              final route = _ownerBookingTypes.contains(notification.type)
++                  ? Routes.ownerBooking(bookingId)
++                  : Routes.booking(bookingId);
++              context.push(route);
+             }
+           },
+         ),
+diff --git a/lib/features/owner/state/owner_application_notifier.dart b/lib/features/owner/state/owner_application_notifier.dart
+index 637cf7c..0cc65aa 100644
+--- a/lib/features/owner/state/owner_application_notifier.dart
++++ b/lib/features/owner/state/owner_application_notifier.dart
+@@ -2,7 +2,9 @@ import 'package:app/core/api/api_error_code.dart';
+ import 'package:app/core/api/api_exception.dart';
+ import 'package:app/features/auth/data/auth_repository.dart';
+ import 'package:app/features/auth/state/phone_number.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/features/auth/state/session_controller.dart';
++import 'package:app/features/auth/state/session_state.dart';
+ import 'package:app/features/owner/data/models/owner_application_input.dart';
+ import 'package:app/features/owner/data/models/parking_owner.dart';
+ import 'package:app/features/owner/data/models/verification_status.dart';
+@@ -55,13 +57,19 @@ class OwnerApplicationNotifier
+ 
+   Future<void> apply({
+     required String businessName,
+-    required String contactPhone,
++    String? contactPhone,
+   }) async {
+     final current = state.valueOrNull;
+     if (current == null || current.isSubmitting) return;
+ 
+     final name = businessName.trim();
+-    final phone = PhoneNumber.toE164(contactPhone);
++    final session = ref.read(sessionControllerProvider);
++    final verifiedPhone =
++        session is SignedIn &&
++            session.registrationRole == RegistrationRole.owner
++        ? session.user.phone
++        : null;
++    final phone = PhoneNumber.toE164(contactPhone ?? verifiedPhone ?? '');
+     if (name.isEmpty || phone == null) {
+       state = AsyncData(
+         OwnerApplicationState(
+@@ -86,6 +94,7 @@ class OwnerApplicationNotifier
+         ref.invalidateSelf();
+         return;
+       }
++
+       final fields = failure.code == ApiErrorCode.validationFailed
+           ? failure.fieldErrors
+           : const <String, List<String>>{};
+@@ -114,7 +123,13 @@ class OwnerApplicationNotifier
+   Future<void> _refreshRoles() async {
+     try {
+       final user = await ref.read(authRepositoryProvider).currentUser();
+-      ref.read(sessionControllerProvider.notifier).updateUser(user);
++      if (user.isOwner) {
++        await ref
++            .read(sessionControllerProvider.notifier)
++            .finishRegistration(user: user);
++      } else {
++        ref.read(sessionControllerProvider.notifier).updateUser(user);
++      }
+     } on ApiException {
+       // The role is only used for display; the API enforces access.
+     }
+diff --git a/lib/features/owner/ui/owner_application_screen.dart b/lib/features/owner/ui/owner_application_screen.dart
+index b7d0880..63724d0 100644
+--- a/lib/features/owner/ui/owner_application_screen.dart
++++ b/lib/features/owner/ui/owner_application_screen.dart
+@@ -12,6 +12,9 @@ import 'package:app/core/widgets/app_scaffold.dart';
+ import 'package:app/core/widgets/app_text_field.dart';
+ import 'package:app/core/widgets/state_views.dart';
+ import 'package:app/features/auth/state/phone_number.dart';
++import 'package:app/features/auth/state/registration_role.dart';
++import 'package:app/features/auth/state/session_controller.dart';
++import 'package:app/features/auth/state/session_state.dart';
+ import 'package:app/features/owner/data/models/parking_owner.dart';
+ import 'package:app/features/owner/data/models/verification_status.dart';
+ import 'package:app/features/owner/state/owner_application_notifier.dart';
+@@ -43,14 +46,22 @@ class _OwnerApplicationScreenState
+     super.dispose();
+   }
+ 
+-  void _submit() => ref
++  void _submit({String? verifiedPhone}) => ref
+       .read(ownerApplicationProvider.notifier)
+-      .apply(businessName: _name.text, contactPhone: _phone.text);
++      .apply(
++        businessName: _name.text,
++        contactPhone: verifiedPhone ?? _phone.text,
++      );
+ 
+   @override
+   Widget build(BuildContext context) {
+     final l10n = context.l10n;
+     final application = ref.watch(ownerApplicationProvider);
++    final verifiedPhone = switch (ref.watch(sessionControllerProvider)) {
++      SignedIn(user: final user, registrationRole: RegistrationRole.owner) =>
++        user.phone,
++      _ => null,
++    };
+ 
+     return application.when(
+       loading: () => AppScaffold(
+@@ -100,23 +111,35 @@ class _OwnerApplicationScreenState
+                 textInputAction: TextInputAction.next,
+                 onChanged: clear,
+               ),
+-              const Gap.sm(),
+-              AppTextField(
+-                label: l10n.ownerContactPhone,
+-                controller: _phone,
+-                enabled: !state.isSubmitting,
+-                prefixText: '${PhoneNumber.countryCode} ',
+-                helperText: l10n.phoneHelper,
+-                errorText: state.isPhoneInvalid ? l10n.phoneInvalid : null,
+-                keyboardType: TextInputType.phone,
+-                textInputAction: TextInputAction.done,
+-                inputFormatters: [
+-                  FilteringTextInputFormatter.digitsOnly,
+-                  LengthLimitingTextInputFormatter(PhoneNumber.nationalLength),
+-                ],
+-                onChanged: clear,
+-                onSubmitted: (_) => _submit(),
+-              ),
++              if (verifiedPhone != null) ...[
++                const Gap.sm(),
++                Text(
++                  l10n.ownerVerifiedContact(PhoneNumber.format(verifiedPhone)),
++                  style: context.text.body.copyWith(
++                    color: context.colors.textSecondary,
++                  ),
++                ),
++              ] else ...[
++                const Gap.sm(),
++                AppTextField(
++                  label: l10n.ownerContactPhone,
++                  controller: _phone,
++                  enabled: !state.isSubmitting,
++                  prefixText: '${PhoneNumber.countryCode} ',
++                  helperText: l10n.phoneHelper,
++                  errorText: state.isPhoneInvalid ? l10n.phoneInvalid : null,
++                  keyboardType: TextInputType.phone,
++                  textInputAction: TextInputAction.done,
++                  inputFormatters: [
++                    FilteringTextInputFormatter.digitsOnly,
++                    LengthLimitingTextInputFormatter(
++                      PhoneNumber.nationalLength,
++                    ),
++                  ],
++                  onChanged: clear,
++                  onSubmitted: (_) => _submit(),
++                ),
++              ],
+               if (failure != null) ...[
+                 const Gap.sm(),
+                 AppBanner(
+@@ -129,7 +152,7 @@ class _OwnerApplicationScreenState
+           bottom: PrimaryButton(
+             label: l10n.ownerApplySubmit,
+             isLoading: state.isSubmitting,
+-            onPressed: _submit,
++            onPressed: () => _submit(verifiedPhone: verifiedPhone),
+           ),
+         );
+       },
+@@ -177,6 +200,10 @@ class _Status extends ConsumerWidget {
+     };
+     final isApproved =
+         application.verificationStatus == VerificationStatus.approved;
++    final hasOwnerRole = switch (ref.watch(sessionControllerProvider)) {
++      SignedIn(user: final user) => user.isOwner,
++      _ => false,
++    };
+ 
+     return AppScaffold(
+       title: l10n.profileOwnerArea,
+@@ -200,7 +227,7 @@ class _Status extends ConsumerWidget {
+           ],
+         ),
+       ),
+-      bottom: isApproved
++      bottom: isApproved && hasOwnerRole
+           ? PrimaryButton(
+               label: l10n.ownerOpen,
+               onPressed: () => context.go(Routes.ownerBookings),
+diff --git a/lib/features/owner/ui/owner_common.dart b/lib/features/owner/ui/owner_common.dart
+index ad6004e..c85c956 100644
+--- a/lib/features/owner/ui/owner_common.dart
++++ b/lib/features/owner/ui/owner_common.dart
+@@ -15,7 +15,7 @@ String? ownerAccessText(AppLocalizations l10n, ApiException failure) =>
+       _ => null,
+     };
+ 
+-/// Leaves the owner area for the customer's.
++/// Opens the owner's shared profile and account actions.
+ class ExitOwnerAreaAction extends StatelessWidget {
+   const ExitOwnerAreaAction({super.key});
+ 
+@@ -23,6 +23,6 @@ class ExitOwnerAreaAction extends StatelessWidget {
+   Widget build(BuildContext context) => IconButton(
+     tooltip: context.l10n.ownerExit,
+     icon: const Icon(Icons.swap_horiz_outlined),
+-    onPressed: () => context.go(Routes.profile),
++    onPressed: () => context.go(Routes.ownerProfile),
+   );
+ }
+diff --git a/lib/features/profile/data/profile_repository.dart b/lib/features/profile/data/profile_repository.dart
+index a3f500d..e4c2d7b 100644
+--- a/lib/features/profile/data/profile_repository.dart
++++ b/lib/features/profile/data/profile_repository.dart
+@@ -12,12 +12,16 @@ class ProfileRepository {
+ 
+   final ApiClient _api;
+ 
+-  /// Changes the signed-in user's name and email. A null email is left
+-  /// as it is.
+-  Future<User> update({required String name, String? email}) async {
++  /// Changes the signed-in user's name and, when [includeEmail] is true,
++  /// their email. A null included email clears it.
++  Future<User> update({
++    String? name,
++    String? email,
++    bool includeEmail = false,
++  }) async {
+     final envelope = await _api.patch(
+       '/me',
+-      body: {'name': name, if (email != null) 'email': email},
++      body: {if (name != null) 'name': name, if (includeEmail) 'email': email},
+     );
+     return User.fromJson(ApiClient.object(envelope));
+   }
+diff --git a/lib/features/profile/state/complete_profile_notifier.dart b/lib/features/profile/state/complete_profile_notifier.dart
+index 735fd96..0abe06c 100644
+--- a/lib/features/profile/state/complete_profile_notifier.dart
++++ b/lib/features/profile/state/complete_profile_notifier.dart
+@@ -1,7 +1,10 @@
+ import 'package:app/core/api/api_error_code.dart';
+ import 'package:app/core/api/api_exception.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/features/auth/state/session_controller.dart';
++import 'package:app/features/auth/state/session_state.dart';
+ import 'package:app/features/profile/data/profile_repository.dart';
++import 'package:app/features/profile/state/profile_validation.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ final completeProfileProvider =
+@@ -27,8 +30,6 @@ class CompleteProfileState {
+ 
+ class CompleteProfileNotifier
+     extends AutoDisposeNotifier<CompleteProfileState> {
+-  static final RegExp _email = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+-
+   @override
+   CompleteProfileState build() => const CompleteProfileState();
+ 
+@@ -40,8 +41,7 @@ class CompleteProfileNotifier
+     final trimmedName = name.trim();
+     final trimmedEmail = email.trim();
+     final nameMissing = trimmedName.isEmpty;
+-    final emailInvalid =
+-        trimmedEmail.isNotEmpty && !_email.hasMatch(trimmedEmail);
++    final emailInvalid = !isOptionalProfileEmailValid(trimmedEmail);
+     if (nameMissing || emailInvalid) {
+       state = CompleteProfileState(
+         isNameMissing: nameMissing,
+@@ -57,8 +57,19 @@ class CompleteProfileNotifier
+           .update(
+             name: trimmedName,
+             email: trimmedEmail.isEmpty ? null : trimmedEmail,
++            includeEmail: trimmedEmail.isNotEmpty,
+           );
+-      ref.read(sessionControllerProvider.notifier).updateUser(user);
++      final session = ref.read(sessionControllerProvider);
++      if (session is SignedIn &&
++          session.registrationRole == RegistrationRole.owner) {
++        ref.read(sessionControllerProvider.notifier).updateUser(user);
++      } else if (session is SignedIn && session.registrationRole != null) {
++        await ref
++            .read(sessionControllerProvider.notifier)
++            .finishRegistration(user: user);
++      } else {
++        ref.read(sessionControllerProvider.notifier).updateUser(user);
++      }
+       state = const CompleteProfileState();
+     } on ApiException catch (failure) {
+       // The API's own validation: show it on the fields it names.
+diff --git a/lib/features/profile/state/edit_profile_notifier.dart b/lib/features/profile/state/edit_profile_notifier.dart
+index 3e4bfb4..6535a2d 100644
+--- a/lib/features/profile/state/edit_profile_notifier.dart
++++ b/lib/features/profile/state/edit_profile_notifier.dart
+@@ -2,6 +2,7 @@ import 'package:app/core/api/api_error_code.dart';
+ import 'package:app/core/api/api_exception.dart';
+ import 'package:app/features/auth/state/session_controller.dart';
+ import 'package:app/features/profile/data/profile_repository.dart';
++import 'package:app/features/profile/state/profile_validation.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+ final editProfileProvider =
+@@ -14,6 +15,8 @@ class EditProfileState {
+     this.isSubmitting = false,
+     this.isNameMissing = false,
+     this.isNameInvalid = false,
++    this.isEmailInvalid = false,
++    this.isEmailRejected = false,
+     this.didSave = false,
+     this.failure,
+   });
+@@ -21,6 +24,8 @@ class EditProfileState {
+   final bool isSubmitting;
+   final bool isNameMissing;
+   final bool isNameInvalid;
++  final bool isEmailInvalid;
++  final bool isEmailRejected;
+   final bool didSave;
+   final ApiException? failure;
+ }
+@@ -29,24 +34,44 @@ class EditProfileNotifier extends AutoDisposeNotifier<EditProfileState> {
+   @override
+   EditProfileState build() => const EditProfileState();
+ 
+-  Future<void> save({required String name}) async {
++  Future<void> save({
++    required String name,
++    required String email,
++    required String initialName,
++    required String? initialEmail,
++  }) async {
+     if (state.isSubmitting) return;
+ 
+     final trimmedName = name.trim();
++    final trimmedEmail = email.trim();
+     final nameLength = trimmedName.runes.length;
+-    if (nameLength < 2 || nameLength > 120) {
++    final emailInvalid = !isOptionalProfileEmailValid(trimmedEmail);
++    final nameChanged = trimmedName != initialName.trim();
++    final emailChanged = trimmedEmail != (initialEmail ?? '').trim();
++    if (nameLength < 2 || nameLength > 120 || emailInvalid) {
+       state = EditProfileState(
+         isNameMissing: trimmedName.isEmpty,
+         isNameInvalid: trimmedName.isNotEmpty,
++        isEmailInvalid: emailInvalid,
+       );
+       return;
+     }
++    if (!nameChanged && !emailChanged) {
++      state = const EditProfileState(didSave: true);
++      return;
++    }
+ 
+     state = const EditProfileState(isSubmitting: true);
+     try {
+       final user = await ref
+           .read(profileRepositoryProvider)
+-          .update(name: trimmedName);
++          .update(
++            name: nameChanged ? trimmedName : null,
++            email: emailChanged && trimmedEmail.isNotEmpty
++                ? trimmedEmail
++                : null,
++            includeEmail: emailChanged,
++          );
+       ref.read(sessionControllerProvider.notifier).updateUser(user);
+       state = const EditProfileState(didSave: true);
+     } on ApiException catch (failure) {
+@@ -55,13 +80,18 @@ class EditProfileNotifier extends AutoDisposeNotifier<EditProfileState> {
+           : const <String, List<String>>{};
+       state = EditProfileState(
+         isNameInvalid: fields.containsKey('name'),
++        isEmailRejected: fields.containsKey('email'),
+         failure: fields.isEmpty ? failure : null,
+       );
+     }
+   }
+ 
+   void clearProblems() {
+-    if (state.isNameMissing || state.isNameInvalid || state.failure != null) {
++    if (state.isNameMissing ||
++        state.isNameInvalid ||
++        state.isEmailInvalid ||
++        state.isEmailRejected ||
++        state.failure != null) {
+       state = const EditProfileState();
+     }
+   }
+diff --git a/lib/features/profile/ui/edit_profile_screen.dart b/lib/features/profile/ui/edit_profile_screen.dart
+index 05f6269..2238f58 100644
+--- a/lib/features/profile/ui/edit_profile_screen.dart
++++ b/lib/features/profile/ui/edit_profile_screen.dart
+@@ -23,25 +23,37 @@ class EditProfileScreen extends ConsumerStatefulWidget {
+ 
+ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+   late final TextEditingController _name;
++  late final TextEditingController _email;
++  late final String _initialName;
++  late final String? _initialEmail;
+ 
+   @override
+   void initState() {
+     super.initState();
+     final session = ref.read(sessionControllerProvider);
+-    _name = TextEditingController(
+-      text: session is SignedIn ? session.user.name ?? '' : '',
+-    );
++    _initialName = session is SignedIn ? session.user.name ?? '' : '';
++    _initialEmail = session is SignedIn ? session.user.email : null;
++    _name = TextEditingController(text: _initialName);
++    _email = TextEditingController(text: _initialEmail ?? '');
+   }
+ 
+   @override
+   void dispose() {
+     _name.dispose();
++    _email.dispose();
+     super.dispose();
+   }
+ 
+   Future<void> _save() async {
+     if (ref.read(editProfileProvider).isSubmitting) return;
+-    await ref.read(editProfileProvider.notifier).save(name: _name.text);
++    await ref
++        .read(editProfileProvider.notifier)
++        .save(
++          name: _name.text,
++          email: _email.text,
++          initialName: _initialName,
++          initialEmail: _initialEmail,
++        );
+     if (mounted && ref.read(editProfileProvider).didSave) {
+       context.pop(true);
+     }
+@@ -70,16 +82,32 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
+                 : null,
+             keyboardType: TextInputType.name,
+             textCapitalization: TextCapitalization.words,
+-            textInputAction: TextInputAction.done,
++            textInputAction: TextInputAction.next,
+             autofillHints: const [AutofillHints.name],
+             onChanged: (_) =>
+                 ref.read(editProfileProvider.notifier).clearProblems(),
++          ),
++          const Gap.lg(),
++          AppTextField(
++            label: l10n.emailLabel,
++            controller: _email,
++            enabled: !state.isSubmitting,
++            errorText: state.isEmailInvalid
++                ? l10n.profileEditEmailInvalid
++                : state.isEmailRejected
++                ? l10n.profileEditEmailRejected
++                : null,
++            keyboardType: TextInputType.emailAddress,
++            textInputAction: TextInputAction.done,
++            autofillHints: const [AutofillHints.email],
++            onChanged: (_) =>
++                ref.read(editProfileProvider.notifier).clearProblems(),
+             onSubmitted: state.isSubmitting ? null : (_) => _save(),
+           ),
+           const Gap.lg(),
+           AppBanner(
+             tone: StatusTone.info,
+-            message: l10n.profileEditContactNotEditable,
++            message: l10n.profileEditPhoneNotEditable,
+           ),
+           if (failure != null) ...[
+             const Gap.md(),
+diff --git a/lib/features/profile/ui/profile_screen.dart b/lib/features/profile/ui/profile_screen.dart
+index f114454..ef5a74d 100644
+--- a/lib/features/profile/ui/profile_screen.dart
++++ b/lib/features/profile/ui/profile_screen.dart
+@@ -2,7 +2,6 @@ import 'package:app/app/routes.dart';
+ import 'package:app/core/theme/app_dimensions.dart';
+ import 'package:app/core/theme/app_theme.dart';
+ import 'package:app/core/widgets/app_buttons.dart';
+-import 'package:app/core/widgets/app_card.dart';
+ import 'package:app/core/widgets/app_scaffold.dart';
+ import 'package:app/core/widgets/confirm_dialog.dart';
+ import 'package:app/features/auth/state/phone_number.dart';
+@@ -58,7 +57,9 @@ class ProfileScreen extends ConsumerWidget {
+               TextAction(
+                 label: l10n.profileEdit,
+                 onPressed: () async {
+-                  final saved = await context.push<bool>(Routes.profileEdit);
++                  final saved = await context.push<bool>(
++                    user.isOwner ? Routes.ownerProfileEdit : Routes.profileEdit,
++                  );
+                   if (saved == true && context.mounted) {
+                     ScaffoldMessenger.of(
+                       context,
+@@ -75,47 +76,6 @@ class ProfileScreen extends ConsumerWidget {
+               (l10n.profileEmail, user.email ?? l10n.profileEmailMissing),
+             ],
+           ),
+-          const Gap.md(),
+-          Semantics(
+-            button: true,
+-            child: AppCard(
+-              onTap: () => context.push(
+-                user.isOwner ? Routes.ownerBookings : Routes.owner,
+-              ),
+-              child: Row(
+-                children: [
+-                  ExcludeSemantics(
+-                    child: Icon(
+-                      Icons.storefront_outlined,
+-                      size: AppSize.icon,
+-                      color: context.colors.primary,
+-                    ),
+-                  ),
+-                  const Gap.md(),
+-                  Expanded(
+-                    child: Column(
+-                      crossAxisAlignment: CrossAxisAlignment.start,
+-                      children: [
+-                        Text(l10n.profileOwnerArea, style: context.text.body),
+-                        Text(
+-                          l10n.profileOwnerAreaHint,
+-                          style: context.text.bodySmall.copyWith(
+-                            color: context.colors.textSecondary,
+-                          ),
+-                        ),
+-                      ],
+-                    ),
+-                  ),
+-                  ExcludeSemantics(
+-                    child: Icon(
+-                      Icons.chevron_right,
+-                      color: context.colors.textSecondary,
+-                    ),
+-                  ),
+-                ],
+-              ),
+-            ),
+-          ),
+           const Gap.xl(),
+           TextAction(
+             label: l10n.profileSignOut,
+diff --git a/lib/l10n/app_en.arb b/lib/l10n/app_en.arb
+index 64d4474..c03a7dd 100644
+--- a/lib/l10n/app_en.arb
++++ b/lib/l10n/app_en.arb
+@@ -9,7 +9,29 @@
+     }
+   },
+   "launchTagline": "Find parking nearby, see the price, and book in a minute.",
+-  "launchGetStarted": "Get started",
++  "launchLogIn": "Already have an account? Log in",
++  "launchCreateAccount": "Create a new account",
++  "registrationRoleTitle": "Choose how to use the app",
++  "registrationRoleQuestion": "How would you like to use {appName}?",
++  "@registrationRoleQuestion": {
++    "placeholders": {
++      "appName": {
++        "type": "String"
++      }
++    }
++  },
++  "registrationOwnerTitle": "Parking Owner",
++  "registrationOwnerDescription": "List and manage your parking facilities and bookings.",
++  "registrationCustomerTitle": "Customer",
++  "registrationCustomerDescription": "Find nearby parking and manage your bookings.",
++  "ownerVerifiedContact": "Your verified mobile number ({phone}) will be used as the contact number.",
++  "@ownerVerifiedContact": {
++    "placeholders": {
++      "phone": {
++        "type": "String"
++      }
++    }
++  },
+   "phoneTitle": "Enter your phone number",
+   "phoneBody": "We'll send a code by SMS to check it's you.",
+   "phoneLabel": "Phone number",
+@@ -55,7 +77,7 @@
+   "otpChangeNumber": "Change number",
+   "nameTitle": "What should we call you?",
+   "nameBody": "Your name appears on your bookings.",
+-  "nameLabel": "Full name",
++  "nameLabel": "Full name (required)",
+   "nameRequired": "Enter your name.",
+   "emailLabel": "Email (optional)",
+   "emailInvalid": "Enter a valid email address.",
+@@ -71,8 +93,10 @@
+   "profileEmailMissing": "Not added",
+   "profileEdit": "Edit profile",
+   "profileEditTitle": "Edit profile",
+-  "profileEditContactNotEditable": "Phone number and email can't be changed here.",
++  "profileEditPhoneNotEditable": "Phone number can't be changed here.",
+   "profileEditNameInvalid": "Enter a name between 2 and 120 characters.",
++  "profileEditEmailInvalid": "Enter a valid email address.",
++  "profileEditEmailRejected": "This email address could not be saved. Check that it is valid and not already in use.",
+   "profileSaveChanges": "Save changes",
+   "profileSaved": "Profile updated.",
+   "profileSignOut": "Sign out",
+@@ -286,6 +310,10 @@
+   "bookingsEmptyTitle": "No bookings yet",
+   "bookingsEmptyBody": "When you book parking, it appears here.",
+   "bookingsFind": "Find parking",
++  "bookingsUpcoming": "Upcoming",
++  "bookingsPast": "Past",
++  "bookingsPastEmptyTitle": "No past bookings",
++  "bookingsPastEmptyBody": "Bookings that have ended or were cancelled appear here.",
+   "bookingTitle": "Booking",
+   "bookingReference": "Reference",
+   "bookingTotal": "Total",
+@@ -406,7 +434,7 @@
+   "ownerExit": "Back to finding parking",
+   "ownerApplyTitle": "Become an owner",
+   "ownerApplyBody": "Tell us about your parking business. We review each application before you can list a facility.",
+-  "ownerBusinessName": "Business name",
++  "ownerBusinessName": "Business name (required)",
+   "ownerBusinessNameRequired": "Enter your business name.",
+   "ownerContactPhone": "Contact phone",
+   "ownerApplySubmit": "Send application",
+diff --git a/pubspec.lock b/pubspec.lock
+index a4b5d63..0321b95 100644
+--- a/pubspec.lock
++++ b/pubspec.lock
+@@ -93,10 +93,10 @@ packages:
+     dependency: transitive
+     description:
+       name: characters
+-      sha256: f71061c654a3380576a52b451dd5532377954cf9dbd272a78fc8479606670803
++      sha256: faf38497bda5ead2a8c7615f4f7939df04333478bf32e4173fcb06d428b5716b
+       url: "https://pub.dev"
+     source: hosted
+-    version: "1.4.0"
++    version: "1.4.1"
+   checked_yaml:
+     dependency: transitive
+     description:
+@@ -361,10 +361,10 @@ packages:
+     dependency: "direct main"
+     description:
+       name: intl
+-      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
++      sha256: "1ca20c894b1717686a2319b8548763d812bc0aabdac580420a44c5178c57a867"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "0.20.2"
++    version: "0.20.3"
+   io:
+     dependency: transitive
+     description:
+@@ -433,26 +433,26 @@ packages:
+     dependency: transitive
+     description:
+       name: matcher
+-      sha256: dc58c723c3c24bf8d3e2d3ad3f2f9d7bd9cf43ec6feaa64181775e60190153f2
++      sha256: "31bd099b47c10cd1aeb55146a2d46ce0277630ecef3f7dae54ad7873f36696cd"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "0.12.17"
++    version: "0.12.20"
+   material_color_utilities:
+     dependency: transitive
+     description:
+       name: material_color_utilities
+-      sha256: f7142bb1154231d7ea5f96bc7bde4bda2a0945d2806bb11670e30b850d56bdec
++      sha256: "9c337007e82b1889149c82ed242ed1cb24a66044e30979c44912381e9be4c48b"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "0.11.1"
++    version: "0.13.0"
+   meta:
+     dependency: transitive
+     description:
+       name: meta
+-      sha256: e3641ec5d63ebf0d9b41bd43201a66e3fc79a65db5f61fc181f04cd27aab950c
++      sha256: "307249ce4ff29d58a18e97f6345f539382eb9c9c29ecda628900f31de0443dd9"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "1.16.0"
++    version: "1.19.0"
+   mime:
+     dependency: transitive
+     description:
+@@ -694,10 +694,10 @@ packages:
+     dependency: transitive
+     description:
+       name: test_api
+-      sha256: "522f00f556e73044315fa4585ec3270f1808a4b186c936e612cab0b565ff1e00"
++      sha256: "2a122cbe059f8b610d3a5415f42e255b6c17b1f21eee1d960f31080237fb4f11"
+       url: "https://pub.dev"
+     source: hosted
+-    version: "0.7.6"
++    version: "0.7.12"
+   typed_data:
+     dependency: transitive
+     description:
+@@ -710,10 +710,10 @@ packages:
+     dependency: transitive
+     description:
+       name: vector_math
+-      sha256: d530bd74fea330e6e364cda7a85019c434070188383e1cd8d9777ee586914c5b
++      sha256: fa49e1674cb84acb900141714e6c6e1f9ae099827c24d141430ff6819db4e1bc
+       url: "https://pub.dev"
+     source: hosted
+-    version: "2.2.0"
++    version: "2.4.4"
+   vm_service:
+     dependency: transitive
+     description:
+@@ -779,5 +779,5 @@ packages:
+     source: hosted
+     version: "3.1.4"
+ sdks:
+-  dart: ">=3.9.2 <4.0.0"
++  dart: ">=3.11.0-0 <4.0.0"
+   flutter: ">=3.35.0"
+diff --git a/test/app/activity_and_owner_flow_test.dart b/test/app/activity_and_owner_flow_test.dart
+index 32450a6..65fb8d0 100644
+--- a/test/app/activity_and_owner_flow_test.dart
++++ b/test/app/activity_and_owner_flow_test.dart
+@@ -21,6 +21,16 @@ void main() {
+   }
+ 
+   group('activity', () {
++    testWidgets('customer profile has no owner-area entry', (tester) async {
++      final h = Harness(token: validToken());
++      await start(tester, h);
++
++      await tester.tap(find.text('Profile'));
++      await tester.pumpAndSettle();
++      expect(find.text('Owner area'), findsNothing);
++      expect(find.text('Owner area'), findsNothing);
++    });
++
+     testWidgets('shows the unread badge, the list, and opens the booking', (
+       tester,
+     ) async {
+@@ -51,6 +61,44 @@ void main() {
+         h.http.requests.any((r) => r.path == '/notifications/n1/read'),
+         isTrue,
+       );
++      expect(
++        h.http.requests.any((r) => r.path == '/bookings/$bookingId'),
++        isTrue,
++      );
++      expect(
++        h.http.requests.any((r) => r.path == '/owner/bookings/$bookingId'),
++        isFalse,
++      );
++    });
++
++    testWidgets('opens an owner approval notification in owner bookings', (
++      tester,
++    ) async {
++      final h = Harness(token: validToken());
++      h.http.stubs['/notifications'] = pageJson([
++        notificationJson(type: 'booking.approval_requested'),
++      ]);
++      h.http.stubs['/owner/bookings/$bookingId'] = {
++        'data': bookingJson(status: 'pending_approval'),
++      };
++      h.http.stubs['/owner/bookings/$bookingId/collection'] = collectionJson();
++      await start(tester, h, roles: ['customer', 'owner']);
++      h.http.respond(200, {'data': notificationJson(read: true)});
++
++      await tester.tap(find.text('Activity'));
++      await tester.pumpAndSettle();
++      await tester.tap(find.text('Booking confirmed'));
++      await tester.pumpAndSettle();
++
++      expect(
++        h.http.requests.any((r) => r.path == '/owner/bookings/$bookingId'),
++        isTrue,
++      );
++      expect(
++        h.http.requests.any((r) => r.path == '/bookings/$bookingId'),
++        isFalse,
++      );
++      expect(find.text('Awaiting approval'), findsOneWidget);
+     });
+ 
+     testWidgets('says so when there is nothing', (tester) async {
+@@ -69,18 +117,56 @@ void main() {
+   group('owner area', () {
+     const path = '/owner/bookings/$bookingId';
+ 
++    testWidgets('owner profile has no duplicate Bookings shortcut', (
++      tester,
++    ) async {
++      final h = Harness(token: validToken());
++      h.http.stubs['/owner/bookings'] = pageJson(const []);
++      h.http.stubs['/owner/parking-lots'] = pageJson(const []);
++      h.http.stubs['/owner/earnings'] = earningsJson();
++      h.http.stubs['/notifications/unread-count'] = unreadJson(0);
++      h.http.stubs['/notifications'] = pageJson(const []);
++      await start(tester, h, roles: ['customer', 'owner']);
++
++      await tester.tap(find.text('Profile'));
++      await tester.pumpAndSettle();
++      expect(find.text('Owner area'), findsNothing);
++      expect(find.text('List your parking and manage bookings.'), findsNothing);
++
++      await tester.tap(find.text('Bookings'));
++      await tester.pumpAndSettle();
++      expect(find.text('Bookings'), findsWidgets);
++
++      await tester.tap(find.text('Facilities'));
++      await tester.pumpAndSettle();
++      expect(find.text('Facilities'), findsWidgets);
++
++      await tester.tap(find.text('Earnings'));
++      await tester.pumpAndSettle();
++      expect(find.text('Earnings'), findsWidgets);
++
++      await tester.tap(find.text('Activity'));
++      await tester.pumpAndSettle();
++      expect(find.text('Nothing yet'), findsOneWidget);
++
++      await tester.tap(find.text('Profile'));
++      await tester.pumpAndSettle();
++      expect(find.text('Profile'), findsWidgets);
++      expect(find.text('Owner area'), findsNothing);
++    });
++
+     testWidgets(
+       'someone who has not applied sees the form, then "under review"',
+       (tester) async {
+         final h = Harness(token: validToken());
+-        await start(tester, h);
+-        await tester.tap(find.text('Profile'));
+-        await tester.pumpAndSettle();
+-
++        h.tokens.registrationIntent = 'owner';
++        h.http.respond(200, {'data': userJson()});
+         h.http.respond(404, {
+           'error': {'code': 'OWNER_PROFILE_NOT_FOUND', 'message': 'None.'},
+         });
+-        await tester.tap(find.text('Owner area'));
++        await tester.pumpWidget(
++          ProviderScope(overrides: h.overrides, child: const App()),
++        );
+         await tester.pumpAndSettle();
+         expect(find.text('Become an owner'), findsOneWidget);
+ 
+@@ -92,7 +178,6 @@ void main() {
+ 
+         h.http.respond(201, ownerJson(status: 'pending'));
+         await tester.enterText(find.byType(TextField).first, 'Ravi Parking');
+-        await tester.enterText(find.byType(TextField).last, '9000000002');
+         await tester.tap(
+           find.widgetWithText(PrimaryButton, 'Send application'),
+         );
+@@ -100,6 +185,7 @@ void main() {
+ 
+         expect(find.text('Application under review'), findsOneWidget);
+         expect(find.text('Open owner area'), findsNothing);
++        expect(h.tokens.registrationIntent, 'owner');
+       },
+     );
+ 
+@@ -113,11 +199,6 @@ void main() {
+         h.http.stubs['$path/collection'] = collectionJson();
+         await start(tester, h, roles: ['customer', 'owner']);
+ 
+-        await tester.tap(find.text('Profile'));
+-        await tester.pumpAndSettle();
+-        await tester.tap(find.text('Owner area'));
+-        await tester.pumpAndSettle();
+-
+         // The owner's own tabs, opening on requests that need an answer.
+         expect(find.text('Facilities'), findsOneWidget);
+         expect(find.text('Earnings'), findsOneWidget);
+@@ -224,10 +305,6 @@ void main() {
+           },
+         ]);
+         await start(tester, h, roles: ['customer', 'owner']);
+-        await tester.tap(find.text('Profile'));
+-        await tester.pumpAndSettle();
+-        await tester.tap(find.text('Owner area'));
+-        await tester.pumpAndSettle();
+         expect(find.text('No requests waiting'), findsOneWidget);
+ 
+         await tester.tap(find.text('Earnings'));
+@@ -250,24 +327,18 @@ void main() {
+       },
+     );
+ 
+-    testWidgets('an account that is not an approved owner is told so', (
++    testWidgets('a pending applicant sees status, not owner management tabs', (
+       tester,
+     ) async {
+       final h = Harness(token: validToken());
+-      await start(tester, h, roles: ['customer', 'owner']);
+-      await tester.tap(find.text('Profile'));
+-      await tester.pumpAndSettle();
+-
+-      h.http.respond(403, {
+-        'error': {'code': 'OWNER_NOT_VERIFIED', 'message': 'Not verified.'},
+-      });
+-      await tester.tap(find.text('Owner area'));
+-      await tester.pumpAndSettle();
++      h.tokens.registrationIntent = 'owner';
++      h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
++      await start(tester, h);
+ 
+-      expect(
+-        find.textContaining("Your owner account isn't approved yet"),
+-        findsOneWidget,
+-      );
++      expect(find.text('Application under review'), findsOneWidget);
++      expect(find.text('Requests'), findsNothing);
++      expect(find.text('Facilities'), findsNothing);
++      expect(find.text('Earnings'), findsNothing);
+     });
+   });
+ }
+diff --git a/test/app/booking_flow_test.dart b/test/app/booking_flow_test.dart
+index 72a3158..242f9f5 100644
+--- a/test/app/booking_flow_test.dart
++++ b/test/app/booking_flow_test.dart
+@@ -186,7 +186,14 @@ void main() {
+     await tester.tap(find.text('Bookings'));
+     await tester.pumpAndSettle();
+ 
++    expect(find.text('Upcoming'), findsOneWidget);
++    expect(find.text('Past'), findsOneWidget);
+     expect(find.text('No bookings yet'), findsOneWidget);
+     expect(find.text('Find parking'), findsOneWidget);
++
++    await tester.tap(find.text('Past'));
++    await tester.pumpAndSettle();
++    expect(find.text('No past bookings'), findsOneWidget);
++    expect(find.text('Find parking'), findsNothing);
+   });
+ }
+diff --git a/test/app/facility_editor_flow_test.dart b/test/app/facility_editor_flow_test.dart
+index afd6283..7c51e52 100644
+--- a/test/app/facility_editor_flow_test.dart
++++ b/test/app/facility_editor_flow_test.dart
+@@ -26,10 +26,7 @@ void main() {
+       ProviderScope(overrides: h.overrides, child: const App()),
+     );
+     await tester.pumpAndSettle();
+-    await tester.tap(find.text('Profile'));
+-    await tester.pumpAndSettle();
+-    await tester.tap(find.text('Owner area'));
+-    await tester.pumpAndSettle();
++    expect(find.text('Requests'), findsOneWidget);
+     await tester.tap(find.text('Facilities'));
+     await tester.pumpAndSettle();
+     return h;
+@@ -229,10 +226,6 @@ void main() {
+       ProviderScope(overrides: h.overrides, child: const App()),
+     );
+     await tester.pumpAndSettle();
+-    await tester.tap(find.text('Profile'));
+-    await tester.pumpAndSettle();
+-    await tester.tap(find.text('Owner area'));
+-    await tester.pumpAndSettle();
+ 
+     await tester.enterText(find.byType(TextField), 'bk-k2m5xcn4');
+     await tester.testTextInput.receiveAction(TextInputAction.search);
+diff --git a/test/app/profile_edit_flow_test.dart b/test/app/profile_edit_flow_test.dart
+index cb315ba..c10091c 100644
+--- a/test/app/profile_edit_flow_test.dart
++++ b/test/app/profile_edit_flow_test.dart
+@@ -12,9 +12,9 @@ import '../support/fakes.dart';
+ import '../support/harness.dart';
+ 
+ void main() {
+-  Future<Harness> openProfile(WidgetTester tester) async {
++  Future<Harness> openProfile(WidgetTester tester, {String? email}) async {
+     final harness = Harness(token: validToken())
+-      ..http.respond(200, {'data': userJson()});
++      ..http.respond(200, {'data': userJson(email: email)});
+     await tester.pumpWidget(
+       ProviderScope(overrides: harness.overrides, child: const App()),
+     );
+@@ -24,7 +24,9 @@ void main() {
+     return harness;
+   }
+ 
+-  testWidgets('opens name-only profile editing from Profile', (tester) async {
++  testWidgets('opens profile editing with the current name and email', (
++    tester,
++  ) async {
+     await openProfile(tester);
+ 
+     expect(find.text('Edit profile'), findsOneWidget);
+@@ -33,13 +35,15 @@ void main() {
+ 
+     expect(find.byType(EditProfileScreen), findsOneWidget);
+     expect(
+-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
++      tester.widget<TextField>(find.byType(TextField).first).controller?.text,
+       'Asha',
+     );
+     expect(
+-      find.text("Phone number and email can't be changed here."),
+-      findsOneWidget,
++      tester.widget<TextField>(find.byType(TextField).last).controller?.text,
++      '',
+     );
++    expect(find.text("Phone number can't be changed here."), findsOneWidget);
++    expect(find.text('Email (optional)'), findsOneWidget);
+   });
+ 
+   testWidgets('validates a blank name without sending an update', (
+@@ -48,7 +52,7 @@ void main() {
+     final harness = await openProfile(tester);
+     await tester.tap(find.text('Edit profile'));
+     await tester.pumpAndSettle();
+-    await tester.enterText(find.byType(TextField), '');
++    await tester.enterText(find.byType(TextField).first, '');
+     await tester.tap(find.text('Save changes'));
+     await tester.pumpAndSettle();
+ 
+@@ -56,7 +60,7 @@ void main() {
+     expect(find.byType(EditProfileScreen), findsOneWidget);
+     expect(find.byType(ProfileScreen), findsNothing);
+ 
+-    await tester.enterText(find.byType(TextField), 'A');
++    await tester.enterText(find.byType(TextField).first, 'A');
+     await tester.tap(find.text('Save changes'));
+     await tester.pumpAndSettle();
+ 
+@@ -81,7 +85,7 @@ void main() {
+     await tester.pumpAndSettle();
+ 
+     harness.http.respond(200, {'data': userJson(name: 'Asha Rao')});
+-    await tester.enterText(find.byType(TextField), '  Asha Rao  ');
++    await tester.enterText(find.byType(TextField).first, '  Asha Rao  ');
+     await tester.tap(find.text('Save changes'));
+     await tester.pumpAndSettle();
+ 
+@@ -95,6 +99,44 @@ void main() {
+     expect(harness.http.lastBody, {'name': 'Asha Rao'});
+   });
+ 
++  testWidgets('validates and saves the email address', (tester) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    await tester.enterText(find.byType(TextField).last, 'not-an-email');
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.text('Enter a valid email address.'), findsOneWidget);
++    expect(
++      harness.http.requests.where(
++        (request) => request.method == 'PATCH' && request.path == '/me',
++      ),
++      isEmpty,
++    );
++
++    harness.http.respond(200, {
++      'data': userJson(name: 'Asha Rao', email: 'deeptimetri6@gmail.com'),
++    });
++    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
++    await tester.enterText(
++      find.byType(TextField).last,
++      '  deeptimetri6@gmail.com ',
++    );
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.byType(EditProfileScreen), findsNothing);
++    expect(find.byType(ProfileScreen), findsOneWidget);
++    expect(find.text('Asha Rao'), findsOneWidget);
++    expect(find.text('deeptimetri6@gmail.com'), findsOneWidget);
++    expect(harness.http.lastBody, {
++      'name': 'Asha Rao',
++      'email': 'deeptimetri6@gmail.com',
++    });
++  });
++
+   testWidgets('shows a loading state while the profile update is pending', (
+     tester,
+   ) async {
+@@ -106,7 +148,7 @@ void main() {
+     harness.http.respondLater(200, {
+       'data': userJson(name: 'Asha Rao'),
+     }, release: releaseResponse);
+-    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
+     await tester.tap(find.text('Save changes'));
+     await tester.pump();
+ 
+@@ -134,7 +176,7 @@ void main() {
+       'data': userJson(name: 'Asha Rao'),
+     }, release: releaseResponse);
+ 
+-    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
+     await tester.tap(find.text('Save changes'));
+     await tester.pump();
+ 
+@@ -178,7 +220,7 @@ void main() {
+         'request_id': 'profile-update-ref',
+       },
+     });
+-    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
+     await tester.tap(find.text('Save changes'));
+     await tester.pumpAndSettle();
+ 
+@@ -208,7 +250,7 @@ void main() {
+         },
+       },
+     });
+-    await tester.enterText(find.byType(TextField), 'Asha Rao');
++    await tester.enterText(find.byType(TextField).first, 'Asha Rao');
+     await tester.tap(find.text('Save changes'));
+     await tester.pumpAndSettle();
+ 
+@@ -220,4 +262,37 @@ void main() {
+       findsOneWidget,
+     );
+   });
++
++  testWidgets('shows API email validation separately from format errors', (
++    tester,
++  ) async {
++    final harness = await openProfile(tester);
++    await tester.tap(find.text('Edit profile'));
++    await tester.pumpAndSettle();
++
++    harness.http.respond(422, {
++      'error': {
++        'code': 'VALIDATION_FAILED',
++        'message': 'Invalid.',
++        'details': {
++          'email': ['The email has already been taken.'],
++        },
++      },
++    });
++    await tester.enterText(
++      find.byType(TextField).last,
++      'deeptimetri6@gmail.com',
++    );
++    await tester.tap(find.text('Save changes'));
++    await tester.pumpAndSettle();
++
++    expect(find.byType(EditProfileScreen), findsOneWidget);
++    expect(
++      find.text(
++        'This email address could not be saved. Check that it is valid and not already in use.',
++      ),
++      findsOneWidget,
++    );
++    expect(find.text('Enter a valid email address.'), findsNothing);
++  });
+ }
+diff --git a/test/app/routes_test.dart b/test/app/routes_test.dart
+index ae52d3f..3e4da82 100644
+--- a/test/app/routes_test.dart
++++ b/test/app/routes_test.dart
+@@ -2,6 +2,7 @@ import 'package:app/app/routes.dart';
+ import 'package:app/core/api/api_error_code.dart';
+ import 'package:app/core/api/api_exception.dart';
+ import 'package:app/features/auth/data/models/user.dart';
++import 'package:app/features/auth/state/registration_role.dart';
+ import 'package:app/features/auth/state/session_state.dart';
+ import 'package:flutter_test/flutter_test.dart';
+ 
+@@ -19,11 +20,20 @@ void main() {
+     Routes.launch,
+     Routes.phone,
+     Routes.code,
++    Routes.registrationRole,
++    Routes.registrationPhone,
+     Routes.completeProfile,
+     Routes.explore,
+     Routes.bookings,
+     Routes.activity,
+     Routes.profile,
++    Routes.owner,
++    Routes.ownerBookings,
++    Routes.ownerFacilities,
++    Routes.ownerEarnings,
++    Routes.ownerActivity,
++    Routes.ownerProfile,
++    Routes.ownerProfileEdit,
+   ];
+ 
+   test('until the session is known, everything waits on start-up', () {
+@@ -42,7 +52,13 @@ void main() {
+   });
+ 
+   test('signed out: only the sign-in screens are reachable', () {
+-    for (final location in [Routes.launch, Routes.phone, Routes.code]) {
++    for (final location in [
++      Routes.launch,
++      Routes.phone,
++      Routes.code,
++      Routes.registrationRole,
++      Routes.registrationPhone,
++    ]) {
+       expect(Routes.redirect(signedOut, location), isNull, reason: location);
+     }
+     for (final location in [
+@@ -71,6 +87,30 @@ void main() {
+     }
+   });
+ 
++  test(
++    'owner registration resumes at the application after profile completion',
++    () {
++      final ownerRegistration = SignedIn(
++        User.fromJson(userJson()),
++        registrationRole: RegistrationRole.owner,
++      );
++      expect(Routes.redirect(ownerRegistration, Routes.explore), Routes.owner);
++      expect(Routes.redirect(ownerRegistration, Routes.owner), isNull);
++    },
++  );
++
++  test('incomplete owner registration resumes at profile completion', () {
++    final ownerRegistration = SignedIn(
++      User.fromJson(userJson(name: null, complete: false)),
++      registrationRole: RegistrationRole.owner,
++    );
++    expect(
++      Routes.redirect(ownerRegistration, Routes.explore),
++      Routes.completeProfile,
++    );
++    expect(Routes.redirect(ownerRegistration, Routes.completeProfile), isNull);
++  });
++
+   test('signed in: the app is open and the sign-in screens are not', () {
+     for (final location in [
+       Routes.explore,
+@@ -85,6 +125,8 @@ void main() {
+       Routes.launch,
+       Routes.phone,
+       Routes.code,
++      Routes.registrationRole,
++      Routes.registrationPhone,
+       Routes.completeProfile,
+     ]) {
+       expect(
+@@ -94,4 +136,47 @@ void main() {
+       );
+     }
+   });
++
++  test('owner-only routes require the backend-granted owner role', () {
++    final customer = SignedIn(User.fromJson(userJson()));
++    final owner = SignedIn(
++      User.fromJson(userJson(roles: const ['customer', 'owner'])),
++    );
++
++    expect(Routes.redirect(customer, Routes.owner), Routes.explore);
++    expect(Routes.redirect(customer, Routes.ownerBookings), Routes.explore);
++    expect(Routes.redirect(customer, Routes.ownerFacilities), Routes.explore);
++    expect(Routes.redirect(customer, Routes.ownerEarnings), Routes.explore);
++    expect(Routes.redirect(customer, Routes.ownerActivity), Routes.explore);
++    expect(Routes.redirect(customer, Routes.ownerProfile), Routes.explore);
++    expect(Routes.redirect(owner, Routes.ownerBookings), isNull);
++    expect(Routes.redirect(owner, Routes.ownerFacilities), isNull);
++    expect(Routes.redirect(owner, Routes.ownerEarnings), isNull);
++    expect(Routes.redirect(owner, Routes.ownerActivity), isNull);
++    expect(Routes.redirect(owner, Routes.ownerProfile), isNull);
++    expect(Routes.redirect(owner, Routes.explore), Routes.ownerBookings);
++    expect(Routes.redirect(owner, Routes.startUp), Routes.ownerBookings);
++  });
++
++  test('pending owner intent opens application but never owner modules', () {
++    final pending = SignedIn(
++      User.fromJson(userJson()),
++      registrationRole: RegistrationRole.owner,
++    );
++    expect(Routes.redirect(pending, Routes.explore), Routes.owner);
++    expect(Routes.redirect(pending, Routes.owner), isNull);
++    expect(Routes.redirect(pending, Routes.ownerBookings), Routes.owner);
++    expect(Routes.redirect(pending, Routes.ownerFacilities), Routes.owner);
++  });
++
++  test('unknown or missing role is treated as customer, never owner', () {
++    for (final roles in [
++      const <String>[],
++      const ['future_role'],
++    ]) {
++      final session = SignedIn(User.fromJson(userJson(roles: roles)));
++      expect(Routes.redirect(session, Routes.explore), isNull);
++      expect(Routes.redirect(session, Routes.ownerBookings), Routes.explore);
++    }
++  });
+ }
+diff --git a/test/app/sign_in_flow_test.dart b/test/app/sign_in_flow_test.dart
+index f20a554..2970efd 100644
+--- a/test/app/sign_in_flow_test.dart
++++ b/test/app/sign_in_flow_test.dart
+@@ -26,8 +26,8 @@ void main() {
+   ) async {
+     final h = await launch(tester);
+ 
+-    expect(find.text('Get started'), findsOneWidget);
+-    await tester.tap(find.text('Get started'));
++    expect(find.text('Already have an account? Log in'), findsOneWidget);
++    await tester.tap(find.text('Already have an account? Log in'));
+     await tester.pumpAndSettle();
+ 
+     // An invalid number is explained and nothing is sent.
+@@ -89,7 +89,7 @@ void main() {
+ 
+     await launch(tester, harness: h);
+ 
+-    expect(find.text('Get started'), findsNothing);
++    expect(find.text('Already have an account? Log in'), findsNothing);
+     expect(find.text('Explore'), findsWidgets);
+   });
+ 
+@@ -120,7 +120,7 @@ void main() {
+     await tester.pumpAndSettle();
+ 
+     expect(h.tokens.token, isNull);
+-    expect(find.text('Get started'), findsOneWidget);
++    expect(find.text('Already have an account? Log in'), findsOneWidget);
+   });
+ 
+   testWidgets('offline at start-up: an explanation and a retry, not sign-in', (
+@@ -134,7 +134,7 @@ void main() {
+       find.text("You're offline. Check your connection and try again."),
+       findsOneWidget,
+     );
+-    expect(find.text('Get started'), findsNothing);
++    expect(find.text('Already have an account? Log in'), findsNothing);
+     expect(h.tokens.token, isNotNull);
+ 
+     h.http.respond(200, {'data': userJson()});
+diff --git a/test/features/auth/state/session_controller_test.dart b/test/features/auth/state/session_controller_test.dart
+index 5944599..408b053 100644
+--- a/test/features/auth/state/session_controller_test.dart
++++ b/test/features/auth/state/session_controller_test.dart
+@@ -66,6 +66,21 @@ void main() {
+       expect(harness.http.last.path, '/me');
+     });
+ 
++    test('restores owner access only from the backend role', () async {
++      start(token: validToken());
++      harness.tokens.registrationIntent = 'owner';
++      harness.http.respond(200, {
++        'data': userJson(roles: ['customer', 'owner']),
++      });
++
++      await controller().restore();
++
++      final restored = state() as SignedIn;
++      expect(restored.user.isOwner, isTrue);
++      expect(restored.registrationRole, isNull);
++      expect(harness.tokens.registrationIntent, isNull);
++    });
++
+     test('when the API refuses the token: signed out, token removed', () async {
+       start(token: validToken());
+       harness.http.respond(401, errorUnauthenticated);
+@@ -128,6 +143,7 @@ void main() {
+   group('signOut', () {
+     test('tells the server, removes the token and signs out', () async {
+       start(token: validToken());
++      harness.tokens.registrationIntent = 'owner';
+       harness.http.respond(200, {'data': <String, Object?>{}});
+ 
+       await controller().signOut();
+@@ -135,6 +151,7 @@ void main() {
+       expect(harness.http.last.path, '/auth/logout');
+       expect(harness.http.last.headers['authorization'], 'Bearer token-1');
+       expect(harness.tokens.token, isNull);
++      expect(harness.tokens.registrationIntent, isNull);
+       expect(state(), isA<SignedOut>());
+     });
+ 
+diff --git a/test/features/booking/state/bookings_state_test.dart b/test/features/booking/state/bookings_state_test.dart
+index 13b486f..a1ade20 100644
+--- a/test/features/booking/state/bookings_state_test.dart
++++ b/test/features/booking/state/bookings_state_test.dart
+@@ -23,34 +23,128 @@ void main() {
+     BookingsState state() => container.read(bookingsProvider);
+ 
+     test('loads newest first and pages by cursor', () async {
+-      harness.http.respond(
+-        200,
+-        bookingsJson([bookingJson()], nextCursor: 'next-1'),
+-      );
++      for (var index = 0; index < 3; index++) {
++        harness.http.respond(
++          200,
++          bookingsJson([bookingJson()], nextCursor: 'next-1'),
++        );
++      }
+       container.listen(bookingsProvider, (_, _) {});
+       await settle();
+ 
+       expect(state().items, hasLength(1));
+       expect(state().hasMore, isTrue);
+ 
+-      harness.http.respond(
+-        200,
+-        bookingsJson([bookingJson(id: 'second', reference: 'BK-2')]),
+-      );
++      for (var index = 0; index < 3; index++) {
++        harness.http.respond(
++          200,
++          bookingsJson([bookingJson(id: 'second', reference: 'BK-2')]),
++        );
++      }
+       await container.read(bookingsProvider.notifier).loadMore();
+ 
+-      expect(harness.http.last.uri.queryParameters['cursor'], 'next-1');
++      final bookingRequests = harness.http.requests.where(
++        (request) => request.path == '/bookings',
++      );
++      expect(
++        bookingRequests.map(
++          (request) => request.uri.queryParameters['filter[status]'],
++        ),
++        [
++          'pending_approval',
++          'awaiting_payment',
++          'confirmed',
++          'pending_approval',
++          'awaiting_payment',
++          'confirmed',
++        ],
++      );
++      expect(
++        bookingRequests
++            .skip(3)
++            .map((request) => request.uri.queryParameters['cursor']),
++        ['next-1', 'next-1', 'next-1'],
++      );
+       expect(state().items.map((b) => b.reference), ['BK-K2M5XCN4', 'BK-2']);
+       expect(state().hasMore, isFalse);
+     });
+ 
++    test('requests documented terminal statuses in the Past tab', () async {
++      harness.http.stubs['/bookings'] = bookingsJson(const []);
++      container.listen(bookingsProvider, (_, _) {});
++      await settle();
++      container.read(customerBookingTabProvider.notifier).state =
++          CustomerBookingTab.past;
++      await settle();
++
++      expect(
++        harness.http.requests
++            .where((request) => request.path == '/bookings')
++            .skip(3)
++            .map((request) => request.uri.queryParameters['filter[status]']),
++        ['rejected', 'cancelled', 'completed', 'expired', 'no_show'],
++      );
++    });
++
++    test(
++      'keeps pages on load failure and retries only failed status streams',
++      () async {
++        for (var index = 0; index < 3; index++) {
++          harness.http.respond(
++            200,
++            bookingsJson([bookingJson()], nextCursor: 'next-$index'),
++          );
++        }
++        container.listen(bookingsProvider, (_, _) {});
++        await settle();
++
++        harness.http
++          ..fail(DioExceptionType.receiveTimeout)
++          ..respond(
++            200,
++            bookingsJson([bookingJson(id: 'second', reference: 'BK-2')]),
++          )
++          ..respond(
++            200,
++            bookingsJson([bookingJson(id: 'third', reference: 'BK-3')]),
++          );
++        await container.read(bookingsProvider.notifier).loadMore();
++
++        expect(state().items, hasLength(3));
++        expect(state().loadMoreFailure?.code, ApiErrorCode.timeout);
++        expect(state().hasMore, isTrue);
++
++        harness.http.respond(
++          200,
++          bookingsJson([bookingJson(id: 'fourth', reference: 'BK-4')]),
++        );
++        await container.read(bookingsProvider.notifier).loadMore();
++
++        final bookingRequests = harness.http.requests.where(
++          (request) => request.path == '/bookings',
++        );
++        expect(bookingRequests, hasLength(7));
++        expect(
++          bookingRequests.last.uri.queryParameters['filter[status]'],
++          'pending_approval',
++        );
++        expect(bookingRequests.last.uri.queryParameters['cursor'], 'next-0');
++        expect(state().items, hasLength(4));
++        expect(state().loadMoreFailure, isNull);
++        expect(state().hasMore, isFalse);
++      },
++    );
++
+     test('no bookings is empty, not an error; a failure is an error', () async {
+-      harness.http.respond(200, bookingsJson(const []));
++      harness.http.stubs['/bookings'] = bookingsJson(const []);
+       container.listen(bookingsProvider, (_, _) {});
+       await settle();
+       expect(state().isEmpty, isTrue);
+ 
++      harness.http.stubs.remove('/bookings');
+       harness.http.fail(DioExceptionType.connectionError);
++      harness.http.respond(200, bookingsJson(const []));
++      harness.http.respond(200, bookingsJson(const []));
+       container.invalidate(bookingsProvider);
+       await settle();
+       expect(state().failure?.code, ApiErrorCode.network);
+diff --git a/test/features/profile/state/edit_profile_notifier_test.dart b/test/features/profile/state/edit_profile_notifier_test.dart
+index e13ed30..8a3cf29 100644
+--- a/test/features/profile/state/edit_profile_notifier_test.dart
++++ b/test/features/profile/state/edit_profile_notifier_test.dart
+@@ -31,7 +31,12 @@ void main() {
+     test(
+       'validates an empty or invalid name without calling the API',
+       () async {
+-        await notifier().save(name: '   ');
++        await notifier().save(
++          name: '   ',
++          email: '',
++          initialName: 'Asha',
++          initialEmail: null,
++        );
+         expect(state().isNameMissing, isTrue);
+         expect(state().isNameInvalid, isFalse);
+         expect(harness.http.requests, isEmpty);
+@@ -39,28 +44,70 @@ void main() {
+         notifier().clearProblems();
+         expect(state().isNameMissing, isFalse);
+ 
+-        await notifier().save(name: 'A');
++        await notifier().save(
++          name: 'A',
++          email: '',
++          initialName: 'Asha',
++          initialEmail: null,
++        );
+         expect(state().isNameMissing, isFalse);
+         expect(state().isNameInvalid, isTrue);
+         expect(harness.http.requests, isEmpty);
+       },
+     );
+ 
+-    test('saves a trimmed name, updates session and sets didSave', () async {
+-      harness.tokens.token = validToken();
+-      harness.http.respond(200, {'data': userJson()});
+-      await container.read(sessionControllerProvider.notifier).restore();
++    test(
++      'saves trimmed profile fields, updates session and sets didSave',
++      () async {
++        harness.tokens.token = validToken();
++        harness.http.respond(200, {'data': userJson()});
++        await container.read(sessionControllerProvider.notifier).restore();
++
++        harness.http.respond(200, {
++          'data': userJson(name: 'Asha Rao', email: 'deeptimetri6@gmail.com'),
++        });
++        await notifier().save(
++          name: '  Asha Rao ',
++          email: ' deeptimetri6@gmail.com ',
++          initialName: 'Asha',
++          initialEmail: null,
++        );
++
++        expect(harness.http.last.method, 'PATCH');
++        expect(harness.http.lastBody, {
++          'name': 'Asha Rao',
++          'email': 'deeptimetri6@gmail.com',
++        });
++        expect(state().didSave, isTrue);
++        expect(state().isSubmitting, isFalse);
++
++        final session = container.read(sessionControllerProvider) as SignedIn;
++        expect(session.user.name, 'Asha Rao');
++        expect(session.user.email, 'deeptimetri6@gmail.com');
++      },
++    );
++
++    test('validates email and allows clearing it', () async {
++      await notifier().save(
++        name: 'Asha Rao',
++        email: 'not-an-email',
++        initialName: 'Asha Rao',
++        initialEmail: null,
++      );
++      expect(state().isEmailInvalid, isTrue);
++      expect(state().isEmailRejected, isFalse);
++      expect(harness.http.requests, isEmpty);
+ 
+       harness.http.respond(200, {'data': userJson(name: 'Asha Rao')});
+-      await notifier().save(name: '  Asha Rao ');
++      await notifier().save(
++        name: 'Asha Rao',
++        email: '',
++        initialName: 'Asha Rao',
++        initialEmail: 'asha@example.test',
++      );
+ 
+-      expect(harness.http.last.method, 'PATCH');
+-      expect(harness.http.lastBody, {'name': 'Asha Rao'});
++      expect(harness.http.lastBody, {'email': null});
+       expect(state().didSave, isTrue);
+-      expect(state().isSubmitting, isFalse);
+-
+-      final session = container.read(sessionControllerProvider) as SignedIn;
+-      expect(session.user.name, 'Asha Rao');
+     });
+ 
+     test('prevents duplicate submissions while save is in progress', () async {
+@@ -73,11 +120,21 @@ void main() {
+         'data': userJson(name: 'Asha Rao'),
+       }, release: releaseResponse);
+ 
+-      final firstCall = notifier().save(name: 'Asha Rao');
++      final firstCall = notifier().save(
++        name: 'Asha Rao',
++        email: '',
++        initialName: 'Asha',
++        initialEmail: null,
++      );
+       expect(state().isSubmitting, isTrue);
+ 
+       // Second call while submitting
+-      final secondCall = notifier().save(name: 'Another Name');
++      final secondCall = notifier().save(
++        name: 'Another Name',
++        email: '',
++        initialName: 'Asha',
++        initialEmail: null,
++      );
+       await secondCall;
+ 
+       releaseResponse.complete();
+@@ -105,13 +162,42 @@ void main() {
+         },
+       });
+ 
+-      await notifier().save(name: 'Bad Name');
++      await notifier().save(
++        name: 'Bad Name',
++        email: '',
++        initialName: 'Asha',
++        initialEmail: null,
++      );
+ 
+       expect(state().isNameInvalid, isTrue);
+       expect(state().failure, isNull);
+       expect(state().didSave, isFalse);
+     });
+ 
++    test('shows API validation error on the email field', () async {
++      harness.http.respond(422, {
++        'error': {
++          'code': 'VALIDATION_FAILED',
++          'message': 'Invalid.',
++          'details': {
++            'email': ['The email is not accepted.'],
++          },
++        },
++      });
++
++      await notifier().save(
++        name: 'Asha Rao',
++        email: 'asha@example.test',
++        initialName: 'Asha',
++        initialEmail: null,
++      );
++
++      expect(state().isEmailInvalid, isFalse);
++      expect(state().isEmailRejected, isTrue);
++      expect(state().failure, isNull);
++      expect(state().didSave, isFalse);
++    });
++
+     test('shows an API failure and does not update session', () async {
+       harness.tokens.token = validToken();
+       harness.http.respond(200, {'data': userJson()});
+@@ -125,7 +211,12 @@ void main() {
+         },
+       });
+ 
+-      await notifier().save(name: 'Asha Rao');
++      await notifier().save(
++        name: 'Asha Rao',
++        email: '',
++        initialName: 'Asha',
++        initialEmail: null,
++      );
+ 
+       expect(state().failure?.code, ApiErrorCode.serviceUnavailable);
+       expect(state().didSave, isFalse);
+diff --git a/test/support/fakes.dart b/test/support/fakes.dart
+index e3869fb..bcaf712 100644
+--- a/test/support/fakes.dart
++++ b/test/support/fakes.dart
+@@ -22,6 +22,7 @@ class InMemoryTokenStore implements TokenStore {
+   InMemoryTokenStore([this.token]);
+ 
+   StoredToken? token;
++  String? registrationIntent;
+ 
+   @override
+   Future<StoredToken?> read() async => token;
+@@ -30,7 +31,20 @@ class InMemoryTokenStore implements TokenStore {
+   Future<void> write(StoredToken token) async => this.token = token;
+ 
+   @override
+-  Future<void> clear() async => token = null;
++  Future<String?> readRegistrationIntent() async => registrationIntent;
++
++  @override
++  Future<void> writeRegistrationIntent(String intent) async =>
++      registrationIntent = intent;
++
++  @override
++  Future<void> clearRegistrationIntent() async => registrationIntent = null;
++
++  @override
++  Future<void> clear() async {
++    token = null;
++    registrationIntent = null;
++  }
+ }
+ 
+ StoredToken validToken([String value = 'token-1']) =>
+diff --git a/test/support/harness.dart b/test/support/harness.dart
+index d7c268c..e0ec2b1 100644
+--- a/test/support/harness.dart
++++ b/test/support/harness.dart
+@@ -44,13 +44,14 @@ class Harness {
+ 
+ Map<String, dynamic> userJson({
+   String? name = 'Asha',
++  String? email,
+   bool complete = true,
+   List<String> roles = const ['customer'],
+ }) => {
+   'id': '01M4JQSZSNAVTVCMS8A7AJ0USR',
+   'name': name,
+   'phone': '+919000000001',
+-  'email': null,
++  'email': email,
+   'status': 'active',
+   'roles': roles,
+   'is_profile_complete': complete,

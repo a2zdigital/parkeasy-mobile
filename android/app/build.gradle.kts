@@ -42,3 +42,10 @@ android {
 flutter {
     source = "../.."
 }
+
+// Firebase reads android/app/google-services.json (not in the repository:
+// it comes from the Firebase console). Without it the app builds and runs
+// with push notifications off, instead of failing the build.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}

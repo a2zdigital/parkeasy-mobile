@@ -35,46 +35,54 @@ class TabShell extends StatelessWidget {
 
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: colors.surface,
-          surfaceTintColor: colors.surface,
-          indicatorColor: colors.primaryContainer,
-          labelTextStyle: WidgetStateProperty.resolveWith(
-            (states) => text.label.copyWith(
-              color: states.contains(WidgetState.selected)
-                  ? colors.primary
-                  : colors.textSecondary,
-            ),
-          ),
-          iconTheme: WidgetStateProperty.resolveWith(
-            (states) => IconThemeData(
-              color: states.contains(WidgetState.selected)
-                  ? colors.primary
-                  : colors.textSecondary,
-            ),
-          ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: colors.border)),
         ),
-        child: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          // Pressing the current tab returns to its first screen.
-          onDestinationSelected: (index) => navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          ),
-          destinations: [
-            for (final item in items)
-              NavigationDestination(
-                icon: Badge(
-                  isLabelVisible: (item.badge ?? 0) > 0,
-                  backgroundColor: colors.danger.solid,
-                  textColor: colors.onPrimary,
-                  label: Text('${item.badge}'),
-                  child: Icon(item.icon),
-                ),
-                label: item.label,
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            backgroundColor: colors.surface,
+            surfaceTintColor: colors.surface,
+            indicatorColor: colors.primaryContainer,
+            height: 68,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            indicatorShape: const StadiumBorder(),
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (states) => text.label.copyWith(
+                color: states.contains(WidgetState.selected)
+                    ? colors.primary
+                    : colors.textSecondary,
               ),
-          ],
+            ),
+            iconTheme: WidgetStateProperty.resolveWith(
+              (states) => IconThemeData(
+                color: states.contains(WidgetState.selected)
+                    ? colors.primary
+                    : colors.textSecondary,
+              ),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: navigationShell.currentIndex,
+            // Pressing the current tab returns to its first screen.
+            onDestinationSelected: (index) => navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            ),
+            destinations: [
+              for (final item in items)
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: (item.badge ?? 0) > 0,
+                    backgroundColor: colors.danger.solid,
+                    textColor: colors.onPrimary,
+                    label: Text('${item.badge}'),
+                    child: Icon(item.icon),
+                  ),
+                  label: item.label,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -131,6 +139,8 @@ class OwnerShell extends StatelessWidget {
           icon: Icons.account_balance_wallet_outlined,
           label: l10n.ownerTabEarnings,
         ),
+        TabItem(icon: Icons.notifications_outlined, label: l10n.tabActivity),
+        TabItem(icon: Icons.person_outline, label: l10n.tabProfile),
       ],
     );
   }

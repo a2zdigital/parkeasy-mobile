@@ -55,11 +55,20 @@ enum ApiErrorCode {
   cancellationNotAllowed('CANCELLATION_NOT_ALLOWED'),
   checkInNotAllowed('CHECK_IN_NOT_ALLOWED'),
   checkOutNotAllowed('CHECK_OUT_NOT_ALLOWED'),
+  checkInCodeNotFound('CHECK_IN_CODE_NOT_FOUND'),
+
+  // Numbered bays
+  parkingSpaceInUse('PARKING_SPACE_IN_USE'),
+  parkingSpaceUnavailable('PARKING_SPACE_UNAVAILABLE'),
+
+  // Gate attendants
+  attendantNotAllowed('ATTENDANT_NOT_ALLOWED'),
 
   // Payment
   paymentPending('PAYMENT_PENDING'),
   paymentNotRequired('PAYMENT_NOT_REQUIRED'),
   paymentAlreadyCompleted('PAYMENT_ALREADY_COMPLETED'),
+  paymentSignatureInvalid('PAYMENT_SIGNATURE_INVALID'),
   paymentModeNotSupported('PAYMENT_MODE_NOT_SUPPORTED'),
   paymentProviderUnavailable('PAYMENT_PROVIDER_UNAVAILABLE'),
   refundNotAllowed('REFUND_NOT_ALLOWED'),

@@ -13,6 +13,12 @@ abstract class PoolSummary with _$PoolSummary {
     required CodeName vehicleType,
     @MoneyAmountConverter() Decimal? hourlyRate,
     @MoneyAmountConverter() Decimal? dailyRate,
+
+    /// Only when the search gave an arrival and departure time: spaces of
+    /// this type and how many are free for the whole window (an estimate
+    /// until booked).
+    int? capacity,
+    int? spacesLeft,
   }) = _PoolSummary;
 
   factory PoolSummary.fromJson(Map<String, dynamic> json) =>

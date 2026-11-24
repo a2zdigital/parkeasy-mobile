@@ -16,6 +16,9 @@ abstract class CreateBookingRequest with _$CreateBookingRequest {
     @UtcDateTimeConverter() required DateTime endAt,
     required PaymentMode paymentMode,
     @MoneyAmountConverter() Decimal? expectedTotalAmount,
+
+    /// A bay the customer chose; left out to get the first free bay.
+    String? parkingSpaceId,
   }) = _CreateBookingRequest;
 
   factory CreateBookingRequest.fromJson(Map<String, dynamic> json) =>
