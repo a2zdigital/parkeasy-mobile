@@ -639,7 +639,9 @@ class _FormState extends ConsumerState<_Form> {
     ValueChanged<String>? onSubmitted,
     Widget? suffix,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: AppSpace.md),
+    // The field keeps a line under it for a message; without a helper that
+    // line is already the gap to the next field.
+    padding: EdgeInsets.only(bottom: helper == null ? 0 : AppSpace.md),
     child: AppTextField(
       label: label,
       controller: _text[key],

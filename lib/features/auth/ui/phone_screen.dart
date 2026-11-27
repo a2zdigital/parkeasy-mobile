@@ -1,13 +1,13 @@
 import 'package:app/app/routes.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
-import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/core/widgets/countdown_builder.dart';
+import 'package:app/core/widgets/screen_intro.dart';
 import 'package:app/features/auth/state/phone_number.dart';
 import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
 import 'package:app/features/auth/state/registration_role.dart';
@@ -59,13 +59,10 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Gap.lg(),
-          Text(l10n.phoneTitle, style: context.text.h1),
-          const Gap.sm(),
-          Text(
-            l10n.phoneBody,
-            style: context.text.body.copyWith(
-              color: context.colors.textSecondary,
-            ),
+          ScreenIntro(
+            icon: Icons.smartphone_outlined,
+            title: l10n.phoneTitle,
+            body: l10n.phoneBody,
           ),
           const Gap.xl(),
           AppTextField(
@@ -87,6 +84,8 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
                 ref.read(phoneSignInProvider.notifier).clearProblems(),
             onSubmitted: (_) => _submit(),
           ),
+          const Gap.lg(),
+          PrivacyNote(text: l10n.phonePrivacy),
           if (failure != null) ...[
             const Gap.md(),
             if (retryAt != null)

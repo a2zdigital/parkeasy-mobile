@@ -25,7 +25,7 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Centered(
     icon: icon,
-    iconColor: context.colors.textSecondary,
+    iconColor: context.colors.primary,
     title: title,
     body: body,
     footer: action,

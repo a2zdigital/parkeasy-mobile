@@ -458,6 +458,7 @@ void main() {
     expect(find.text('3 spaces free'), findsOneWidget);
     expect(find.text('0 Car free'), findsOneWidget);
     expect(find.text('5 Two wheeler free'), findsOneWidget);
-    expect(find.text('Any time'), findsOneWidget);
+    expect(find.text('Any time'), findsNothing);
+    expect(find.text('All vehicles'), findsOneWidget);
   });
 }

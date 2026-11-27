@@ -9,6 +9,7 @@ import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/countdown_builder.dart';
 import 'package:app/core/widgets/otp_field.dart';
+import 'package:app/core/widgets/screen_intro.dart';
 import 'package:app/features/auth/state/otp_notifier.dart';
 import 'package:app/features/auth/state/phone_number.dart';
 import 'package:app/features/auth/state/phone_sign_in_notifier.dart';
@@ -82,12 +83,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Gap.lg(),
-          Text(l10n.otpTitle, style: context.text.h1),
-          const Gap.sm(),
-          Text(
-            l10n.otpBody(otpLength, PhoneNumber.format(widget.sent.phone)),
-            style: context.text.body.copyWith(
-              color: context.colors.textSecondary,
+          ScreenIntro(
+            icon: Icons.sms_outlined,
+            title: l10n.otpTitle,
+            body: l10n.otpBody(
+              otpLength,
+              PhoneNumber.format(widget.sent.phone),
             ),
           ),
           TextAction(

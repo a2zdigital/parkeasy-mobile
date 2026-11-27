@@ -3,6 +3,7 @@ import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/app_card.dart';
+import 'package:app/core/widgets/screen_intro.dart';
 import 'package:app/core/widgets/status_chip.dart';
 import 'package:app/features/parking_lot/data/models/booking_mode.dart';
 import 'package:app/features/parking_lot/data/models/parking_lot_summary.dart';
@@ -50,28 +51,79 @@ class FacilityCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              lot.name,
-              style: text.h3,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const AppIconTile(icon: Icons.local_parking),
+                const Gap.md(),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lot.name,
+                        style: text.h3,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Gap.xs(),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(
+                              Icons.near_me_outlined,
+                              size: 14,
+                              color: colors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpace.xs),
+                          Expanded(
+                            child: Text.rich(
+                              TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: distance(l10n, lot.distanceKm),
+                                    style: TextStyle(
+                                      color: colors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  TextSpan(text: ' · ${lot.addressLine}'),
+                                ],
+                              ),
+                              style: text.bodySmall.copyWith(
+                                color: colors.textSecondary,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (lot.amenityDetails.isNotEmpty) ...[
+                        const Gap.xs(),
+                        Text(
+                          lot.amenityDetails
+                              .map((amenity) => amenity.name)
+                              .join(' · '),
+                          style: text.bodySmall.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const Gap.sm(),
+                Icon(Icons.chevron_right, color: colors.textSecondary),
+              ],
             ),
-            const Gap.xs(),
-            Text(
-              '${distance(l10n, lot.distanceKm)} · ${lot.addressLine}',
-              style: text.bodySmall.copyWith(color: colors.textSecondary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (lot.amenityDetails.isNotEmpty) ...[
-              const Gap.xs(),
-              Text(
-                lot.amenityDetails.map((amenity) => amenity.name).join(' · '),
-                style: text.bodySmall.copyWith(color: colors.textSecondary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            const Gap.md(),
+            Divider(height: 1, color: colors.border),
             const Gap.md(),
             Wrap(
               spacing: AppSpace.sm,

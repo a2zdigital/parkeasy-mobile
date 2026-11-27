@@ -6,6 +6,7 @@ import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/cursor_list_view.dart';
+import 'package:app/core/widgets/screen_intro.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/core/widgets/status_chip.dart';
 import 'package:app/core/widgets/title_with_status.dart';
@@ -77,31 +78,40 @@ class OwnerFacilitiesScreen extends ConsumerWidget {
 
           return AppCard(
             onTap: () => context.push(Routes.ownerFacility(facility.lot.id)),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TitleWithStatus(
-                  title: Text(
-                    facility.lot.name,
-                    style: context.text.h3,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                const AppIconTile(icon: Icons.local_parking),
+                const Gap.md(),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TitleWithStatus(
+                        title: Text(
+                          facility.lot.name,
+                          style: context.text.h3,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        status: StatusChip(tone: tone, label: label),
+                      ),
+                      const Gap.xs(),
+                      Text(
+                        '${facility.lot.addressLine} · ${l10n.lotSpaces(spaces)}',
+                        style: context.text.bodySmall.copyWith(
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                      if (facility.approvalStatus == ApprovalStatus.rejected &&
+                          reason != null &&
+                          reason.isNotEmpty) ...[
+                        const Gap.sm(),
+                        Text(reason, style: context.text.bodySmall),
+                      ],
+                    ],
                   ),
-                  status: StatusChip(tone: tone, label: label),
                 ),
-                const Gap.xs(),
-                Text(
-                  '${facility.lot.addressLine} · ${l10n.lotSpaces(spaces)}',
-                  style: context.text.bodySmall.copyWith(
-                    color: context.colors.textSecondary,
-                  ),
-                ),
-                if (facility.approvalStatus == ApprovalStatus.rejected &&
-                    reason != null &&
-                    reason.isNotEmpty) ...[
-                  const Gap.sm(),
-                  Text(reason, style: context.text.bodySmall),
-                ],
               ],
             ),
           );
