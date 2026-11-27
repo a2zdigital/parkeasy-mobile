@@ -4,6 +4,7 @@ import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/core/validation/identity_numbers.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
@@ -15,9 +16,12 @@ import 'package:app/features/auth/state/phone_number.dart';
 import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_controller.dart';
 import 'package:app/features/auth/state/session_state.dart';
+import 'package:app/features/owner/data/models/owner_document.dart';
 import 'package:app/features/owner/data/models/parking_owner.dart';
 import 'package:app/features/owner/data/models/verification_status.dart';
 import 'package:app/features/owner/state/owner_application_notifier.dart';
+import 'package:app/features/owner/state/owner_documents_notifier.dart';
+import 'package:app/features/owner/ui/identity_cards_section.dart';
 import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
@@ -205,6 +209,12 @@ class _Status extends ConsumerWidget {
       SignedIn(user: final user) => user.isOwner,
       _ => false,
     };
+    final documents =
+        ref.watch(ownerDocumentsProvider).valueOrNull?.documents ??
+        const <OwnerDocument>[];
+    final cardsDone = IdentityCardKind.values.every(
+      (kind) => IdentityCardsSection.cardOf(documents, kind) != null,
+    );
 
     return AppScaffold(
       title: l10n.profileOwnerArea,
@@ -226,7 +236,14 @@ class _Status extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             const Gap.xl(),
-            OwnerDocumentsSection(canRemove: !isApproved),
+            OwnerDocumentsSection(
+              canRemove: !isApproved,
+              onCardsComplete: () => goHomeAfterIdentityCards(
+                context,
+                ref,
+                ownerArea: isApproved && hasOwnerRole,
+              ),
+            ),
             const Gap.xl(),
           ],
         ),
@@ -235,6 +252,12 @@ class _Status extends ConsumerWidget {
           ? PrimaryButton(
               label: l10n.ownerOpen,
               onPressed: () => context.go(Routes.ownerBookings),
+            )
+          : cardsDone
+          // Both cards are in: nothing more to do here while staff review.
+          ? PrimaryButton(
+              label: l10n.identityGoHome,
+              onPressed: () => leaveApplicationForHome(context, ref),
             )
           : null,
     );

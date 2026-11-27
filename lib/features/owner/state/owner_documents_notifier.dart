@@ -32,12 +32,16 @@ final ownerDocumentsProvider =
 class OwnerDocumentsState {
   const OwnerDocumentsState({
     required this.documents,
+    this.identity = const IdentityRequirements(),
     this.isBusy = false,
     this.failure,
     this.problem,
   });
 
   final List<OwnerDocument> documents;
+
+  /// What the identity service needs: the PAN's date of birth, an Aadhaar OTP.
+  final IdentityRequirements identity;
   final bool isBusy;
   final ApiException? failure;
 
@@ -50,30 +54,52 @@ class OwnerDocumentsState {
 class OwnerDocumentsNotifier
     extends AutoDisposeAsyncNotifier<OwnerDocumentsState> {
   @override
-  Future<OwnerDocumentsState> build() async => OwnerDocumentsState(
-    documents: await ref.watch(ownerRepositoryProvider).documents(),
-  );
+  Future<OwnerDocumentsState> build() async {
+    final list = await ref.watch(ownerRepositoryProvider).documentList();
+    return OwnerDocumentsState(
+      documents: list.documents,
+      identity: list.identity,
+    );
+  }
 
-  Future<void> upload(
+  /// Reads the list again, e.g. after an Aadhaar OTP check.
+  Future<void> reload() async {
+    final current = state.valueOrNull;
+    try {
+      final list = await ref.read(ownerRepositoryProvider).documentList();
+      state = AsyncData(
+        OwnerDocumentsState(documents: list.documents, identity: list.identity),
+      );
+    } on Object {
+      if (current != null) state = AsyncData(current);
+    }
+  }
+
+  /// Returns whether the document was saved.
+  Future<bool> upload(
     OwnerDocumentType type,
     PickedFile file, {
     String? expiresOn,
     String? parkingLotId,
+    String? documentNumber,
+    String? identityKind,
+    String? dateOfBirth,
   }) async {
     final current = state.valueOrNull;
-    if (current == null || current.isBusy) return;
+    if (current == null || current.isBusy) return false;
 
     if (file.sizeBytes > maxUploadBytes) {
       state = AsyncData(
         OwnerDocumentsState(
           documents: current.documents,
+          identity: current.identity,
           problem: PickProblem.tooLarge,
         ),
       );
-      return;
+      return false;
     }
 
-    await _run(current, () async {
+    return _run(current, () async {
       await ref
           .read(ownerRepositoryProvider)
           .uploadDocument(
@@ -81,6 +107,9 @@ class OwnerDocumentsNotifier
             file,
             expiresOn: expiresOn,
             parkingLotId: parkingLotId,
+            documentNumber: documentNumber,
+            identityKind: identityKind,
+            dateOfBirth: dateOfBirth,
           );
     });
   }
@@ -90,7 +119,11 @@ class OwnerDocumentsNotifier
     final current = state.valueOrNull;
     if (current == null || current.isBusy) return;
     state = AsyncData(
-      OwnerDocumentsState(documents: current.documents, problem: problem),
+      OwnerDocumentsState(
+        documents: current.documents,
+        identity: current.identity,
+        problem: problem,
+      ),
     );
   }
 
@@ -102,28 +135,42 @@ class OwnerDocumentsNotifier
     });
   }
 
-  Future<void> _run(
+  Future<bool> _run(
     OwnerDocumentsState current,
     Future<void> Function() change,
   ) async {
     state = AsyncData(
-      OwnerDocumentsState(documents: current.documents, isBusy: true),
+      OwnerDocumentsState(
+        documents: current.documents,
+        identity: current.identity,
+        isBusy: true,
+      ),
     );
     try {
       await change();
-      final documents = await ref.read(ownerRepositoryProvider).documents();
-      state = AsyncData(OwnerDocumentsState(documents: documents));
+      final list = await ref.read(ownerRepositoryProvider).documentList();
+      state = AsyncData(
+        OwnerDocumentsState(documents: list.documents, identity: list.identity),
+      );
+      return true;
     } on ApiException catch (failure) {
       state = AsyncData(
-        OwnerDocumentsState(documents: current.documents, failure: failure),
+        OwnerDocumentsState(
+          documents: current.documents,
+          identity: current.identity,
+          failure: failure,
+        ),
       );
+      return false;
     } on Object {
       state = AsyncData(
         OwnerDocumentsState(
           documents: current.documents,
+          identity: current.identity,
           failure: const ApiException(code: ApiErrorCode.unknown),
         ),
       );
+      return false;
     }
   }
 }

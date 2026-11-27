@@ -769,7 +769,79 @@
   "ownerFindReference": "Find by reference",
   "ownerFindReferenceHint": "BK-…",
   "documentsTitle": "Documents",
-  "documentsHint": "Optional. Add proof of identity, business, property or a parking licence now or later from Profile. Link a licence to the facility it covers. PDF, JPG or PNG, up to 5 MB each.",
+  "documentsHint": "Add your Aadhaar card and PAN card above. Proof of business, property or a parking licence can be added now or later from Profile. PDF, JPG or PNG, up to 5 MB each.",
+  "profileOwnerApplication": "List your parking",
+  "profileOwnerApplicationHint": "Apply as an owner, or see your application and ID cards",
+  "phonePrivacy": "Your number is only used to sign you in and to send booking updates. We never share it.",
+  "identityCardsTitle": "Identity cards",
+  "identityGoHome": "Go to home",
+  "identityCardsSaved": "Your Aadhaar and PAN cards are saved. We will let you know once your account is verified.",
+  "documentsOtherTitle": "Other documents",
+  "identityCardsHint": "Your Aadhaar card and PAN card are both needed for your application. Enter the number exactly as it is printed on the card.",
+  "identityAadhaar": "Aadhaar card",
+  "identityPan": "PAN card",
+  "identityAadhaarNumber": "Aadhaar number",
+  "identityPanNumber": "PAN",
+  "identityAadhaarHelp": "12 digits, as printed on your card",
+  "identityPanHelp": "10 characters, like ABCDE1234F",
+  "identityVerifyAadhaar": "Please verify your Aadhaar number. It must be the 12 digits printed on your Aadhaar card.",
+  "identityVerifyPan": "Please verify your PAN. It must be 5 letters, 4 digits and 1 letter, like ABCDE1234F.",
+  "identityAddCard": "Add {card}",
+  "@identityAddCard": {
+    "placeholders": {
+      "card": {
+        "type": "String"
+      }
+    }
+  },
+  "identityChooseFile": "Choose a photo or PDF of the card",
+  "identityFileChosen": "File: {name}",
+  "@identityFileChosen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "identityFileNeeded": "Choose a photo or PDF of the card.",
+  "identitySave": "Save card",
+  "identityNotAdded": "Not added yet",
+  "identityAddedNumber": "Number: {number}",
+  "@identityAddedNumber": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "identityAadhaarPrivacy": "Only the last 4 digits of your Aadhaar number are kept.",
+  "identityVerified": "Verified",
+  "identityNeedsReview": "Our team will review this card.",
+  "identityVerifyWithOtp": "Verify with OTP",
+  "identityOtpTitle": "Verify your Aadhaar",
+  "identityOtpIntro": "We will ask UIDAI to send an OTP to the mobile number linked to your Aadhaar. This may be a different phone from the one you sign in with.",
+  "identityOtpNumberAgain": "Enter your Aadhaar number again to confirm it is the card you added.",
+  "identityOtpConsent": "I agree that ParkEasy may verify my Aadhaar with UIDAI through its verification partner. Only the last 4 digits of my Aadhaar number and the result are kept.",
+  "identityOtpConsentNeeded": "Please agree before we send the OTP.",
+  "identityOtpSend": "Send OTP",
+  "identityOtpCode": "OTP from your Aadhaar-linked mobile",
+  "identityOtpSentTo": "Enter the 6-digit OTP sent to the mobile number linked to your Aadhaar.",
+  "identityOtpVerify": "Verify",
+  "identityOtpResend": "Send a new OTP",
+  "identityOtpAttemptsLeft": "{count, plural, =1{1 try left} other{{count} tries left}}",
+  "@identityOtpAttemptsLeft": {"placeholders": {"count": {"type": "int"}}},
+  "identityOtpVerified": "Your Aadhaar is verified.",
+  "identityOtpLater": "Verify later",
+  "identityOtpConfirmed": "OTP confirmed. Now add a photo or PDF of your Aadhaar card.",
+  "identityOtpSkipped": "Your Aadhaar could not be checked automatically right now. Add a photo or PDF of your card and our team will check it.",
+  "identityAadhaarResultVerified": "Your Aadhaar is verified. Please add your PAN details next.",
+  "identityAadhaarResultReview": "Your Aadhaar card is saved, but it could not be verified automatically. Our team will review it. Please add your PAN details next.",
+  "identityAddPanDetails": "Add PAN details",
+  "identityStepFile": "Now add a photo or PDF of your Aadhaar card.",
+  "identityPanDateOfBirth": "Date of birth on your PAN",
+  "identityPanDateOfBirthHelp": "Needed to check your PAN. It is not kept.",
+  "identityPanDateOfBirthNeeded": "Choose the date of birth printed on your PAN.",
+  "identityPanDateOfBirthChoose": "Choose date",
   "documentsLockedHint": "These documents were checked with your application.",
   "documentsEmpty": "No documents yet.",
   "documentAdd": "Add a document",

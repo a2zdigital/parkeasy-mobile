@@ -2,15 +2,15 @@ import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/features/owner/data/models/verification_status.dart';
 import 'package:app/features/owner/state/owner_application_notifier.dart';
+import 'package:app/features/owner/ui/identity_cards_section.dart';
 import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Profile > Documents: verification documents an owner can add at any
-/// time after applying. Nothing here is required to apply or to list a
-/// facility. Once the owner is approved, documents can be added but not
-/// removed (the API keeps them as the verification record).
+/// Profile > Documents: the owner's Aadhaar and PAN cards. Once the owner is
+/// approved, cards can be added but not removed (the API keeps them as the
+/// verification record).
 class OwnerDocumentsScreen extends ConsumerWidget {
   const OwnerDocumentsScreen({super.key});
 
@@ -29,7 +29,12 @@ class OwnerDocumentsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Gap.md(),
-          OwnerDocumentsSection(canRemove: !approved, showTitle: false),
+          OwnerDocumentsSection(
+            canRemove: !approved,
+            showTitle: false,
+            onCardsComplete: () =>
+                goHomeAfterIdentityCards(context, ref, ownerArea: approved),
+          ),
           const Gap.xl(),
         ],
       ),

@@ -52,21 +52,90 @@ class OwnerRepository {
   );
 
   /// The documents sent with the application, oldest first.
-  Future<List<OwnerDocument>> documents() async {
-    final data = (await _api.get('/owner/application/documents'))['data'];
-    if (data is! List) return const [];
-    return [
-      for (final item in data)
-        if (item is Map)
-          OwnerDocument.fromJson(Map<String, dynamic>.from(item)),
-    ];
+  Future<List<OwnerDocument>> documents() async =>
+      (await documentList()).documents;
+
+  /// The documents, and what the identity service needs for each card.
+  Future<({List<OwnerDocument> documents, IdentityRequirements identity})>
+  documentList() async {
+    final body = await _api.get('/owner/application/documents');
+    final data = body['data'];
+    final meta = body['meta'];
+    final identity = meta is Map ? meta['identity'] : null;
+    return (
+      documents: [
+        if (data is List)
+          for (final item in data)
+            if (item is Map)
+              OwnerDocument.fromJson(Map<String, dynamic>.from(item)),
+      ],
+      identity: IdentityRequirements(
+        panNeedsDateOfBirth:
+            identity is Map && identity['pan_needs_date_of_birth'] == true,
+        aadhaarNeedsOtp:
+            identity is Map && identity['aadhaar_needs_otp'] == true,
+      ),
+    );
   }
+
+  /// Before the Aadhaar card is added: an OTP to the mobile linked to
+  /// [aadhaarNumber]. The result is attached to the card added next with the
+  /// same number.
+  Future<AadhaarOtpReply> sendAadhaarOtpBeforeUpload(
+    String aadhaarNumber,
+  ) async => AadhaarOtpReply.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/owner/application/aadhaar-otp',
+        body: {'aadhaar_number': aadhaarNumber, 'consent': true},
+      ),
+    ),
+  );
+
+  Future<AadhaarOtpReply> verifyAadhaarOtpBeforeUpload(String otp) async =>
+      AadhaarOtpReply.fromJson(
+        ApiClient.object(
+          await _api.post(
+            '/owner/application/aadhaar-otp/verify',
+            body: {'otp': otp},
+          ),
+        ),
+      );
+
+  /// Asks for an OTP to the mobile linked to the Aadhaar on card [documentId].
+  /// [aadhaarNumber] is the full number again; it is not kept.
+  Future<AadhaarOtpReply> sendAadhaarOtp(
+    String documentId,
+    String aadhaarNumber,
+  ) async => AadhaarOtpReply.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/owner/application/documents/$documentId/aadhaar-otp',
+        body: {'aadhaar_number': aadhaarNumber, 'consent': true},
+      ),
+    ),
+  );
+
+  Future<AadhaarOtpReply> verifyAadhaarOtp(
+    String documentId,
+    String otp,
+  ) async => AadhaarOtpReply.fromJson(
+    ApiClient.object(
+      await _api.post(
+        '/owner/application/documents/$documentId/aadhaar-otp/verify',
+        body: {'otp': otp},
+      ),
+    ),
+  );
 
   Future<OwnerDocument> uploadDocument(
     OwnerDocumentType type,
     PickedFile file, {
     String? expiresOn,
     String? parkingLotId,
+    String? documentNumber,
+    String? identityKind,
+    String? dateOfBirth,
   }) async => OwnerDocument.fromJson(
     ApiClient.object(
       await _api.upload(
@@ -77,6 +146,9 @@ class OwnerRepository {
           'type': type.wire,
           'expires_on': ?expiresOn,
           'parking_lot_id': ?parkingLotId,
+          'document_number': ?documentNumber,
+          'identity_kind': ?identityKind,
+          'date_of_birth': ?dateOfBirth,
         },
       ),
     ),
@@ -385,4 +457,51 @@ class OwnerRepository {
   /// end the last rate of an active pool (`RATE_REQUIRED`).
   Future<void> endRate(String poolId, RateType type) =>
       _api.delete('/owner/pools/$poolId/rates/${type.wire}');
+}
+
+/// What the identity service needs from the owner's cards.
+class IdentityRequirements {
+  const IdentityRequirements({
+    this.panNeedsDateOfBirth = false,
+    this.aadhaarNeedsOtp = false,
+  });
+
+  /// The PAN check matches the date of birth printed on the PAN.
+  final bool panNeedsDateOfBirth;
+
+  /// Aadhaar is confirmed with an OTP to the Aadhaar-linked mobile.
+  final bool aadhaarNeedsOtp;
+}
+
+/// The answer to an Aadhaar OTP request or check. [status] is sent,
+/// not_sent, verified, not_verified, unavailable or otp_rejected; a service
+/// problem is never the owner's fault, and the card then waits for a person.
+class AadhaarOtpReply {
+  const AadhaarOtpReply({
+    required this.status,
+    this.message = '',
+    this.expiresInSeconds,
+    this.attemptsLeft,
+  });
+
+  factory AadhaarOtpReply.fromJson(Map<String, dynamic> json) =>
+      AadhaarOtpReply(
+        status: json['status'] is String ? json['status'] as String : '',
+        message: json['message'] is String ? json['message'] as String : '',
+        expiresInSeconds: json['expires_in_seconds'] is int
+            ? json['expires_in_seconds'] as int
+            : null,
+        attemptsLeft: json['attempts_left'] is int
+            ? json['attempts_left'] as int
+            : null,
+      );
+
+  final String status;
+  final String message;
+  final int? expiresInSeconds;
+  final int? attemptsLeft;
+
+  bool get sent => status == 'sent';
+  bool get verified => status == 'verified';
+  bool get otpRejected => status == 'otp_rejected';
 }

@@ -4,7 +4,6 @@ import 'package:app/app/app.dart';
 import 'package:app/core/files/picked_file.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/features/booking/ui/rate_booking_card.dart';
-import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -332,129 +331,343 @@ void main() {
   });
 
   group('owner uploads', () {
-    testWidgets('an applicant adds and removes a document', (tester) async {
-      final h = Harness(token: validToken());
-      h.tokens.registrationIntent = 'owner';
-      h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
-      h.http.stubs['/owner/application/documents'] = {'data': <Object?>[]};
-      await start(tester, h);
-      expect(find.text('No documents yet.'), findsOneWidget);
+    testWidgets(
+      'an applicant adds an Aadhaar card, and a wrong number asks them to verify it',
+      (tester) async {
+        final h = Harness(token: validToken());
+        h.tokens.registrationIntent = 'owner';
+        h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
+        h.http.stubs['/owner/application/documents'] = {'data': <Object?>[]};
+        await start(tester, h);
+        expect(find.text('Not added yet'), findsNWidgets(2));
 
-      // Too large: refused before anything is sent.
-      h.files.next = pickedFile('huge.pdf', sizeBytes: 6 * 1024 * 1024);
-      await tester.ensureVisible(find.text('Add a document'));
-      await tester.tap(find.text('Add a document'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Proof of identity'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('larger than 5 MB'), findsOneWidget);
-      expect(writes(h), isEmpty);
+        await tester.ensureVisible(find.text('Add Aadhaar card').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Add Aadhaar card').first);
+        await tester.pumpAndSettle();
 
-      final document = {
-        'id': 'd1',
-        'type': 'identity',
-        'file_name': 'aadhaar.pdf',
-        'mime_type': 'application/pdf',
-        'size_bytes': 2048,
-        'url': 'https://files.test/d1',
-        'created_at': '2026-11-02T04:00:00Z',
-        'expires_on': '2030-01-31',
-        'is_expired': false,
-      };
-      h.files.next = pickedFile('aadhaar.pdf');
-      h.http.respond(201, {'data': document});
-      h.http.stubs['/owner/application/documents'] = {
-        'data': [document],
-      };
-      await tester.ensureVisible(find.text('Add a document'));
-      await tester.tap(find.text('Add a document'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Proof of identity'));
-      await tester.pumpAndSettle();
-      expect(find.text('When does it expire?'), findsOneWidget);
-      await tester.tap(find.byTooltip('Next month'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('15'));
-      await tester.tap(find.text('OK'));
-      await tester.pumpAndSettle();
-      final now = DateTime.now();
+        // A wrong check digit: nothing is sent, the owner is asked to verify it.
+        await tester.enterText(find.byType(TextField).last, '234123412345');
+        await tester.pumpAndSettle();
+        expect(find.text('2341 2341 2345'), findsOneWidget);
+        await tester.tap(find.text('Save card'));
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('Please verify your Aadhaar number'),
+          findsOneWidget,
+        );
+        expect(find.text('Choose a photo or PDF of the card.'), findsOneWidget);
+        expect(writes(h), isEmpty);
 
-      final upload = writes(h).single;
-      expect(upload.path, '/owner/application/documents');
-      final form = upload.data as FormData;
-      expect(Map.fromEntries(form.fields), {
-        'type': 'identity',
-        'expires_on': isoDate(DateTime(now.year, now.month + 1, 15)),
-      });
-      expect(find.text('Expires 2030-01-31'), findsOneWidget);
-      expect(form.files.single.key, 'document');
-      expect(form.files.single.value.filename, 'aadhaar.pdf');
-      expect(h.files.asked.last, ['pdf', 'jpg', 'jpeg', 'png']);
-      expect(find.text('aadhaar.pdf · 2 KB'), findsOneWidget);
+        final card = {
+          'id': 'd9',
+          'type': 'identity',
+          'file_name': 'aadhaar.jpg',
+          'mime_type': 'image/jpeg',
+          'size_bytes': 2048,
+          'url': 'https://files.test/d9',
+          'created_at': '2026-11-02T04:00:00Z',
+          'document_number': 'XXXX XXXX 2346',
+          'is_expired': false,
+        };
+        await tester.enterText(find.byType(TextField).last, '234123412346');
+        h.files.next = pickedFile('aadhaar.jpg');
+        await tester.tap(find.text('Choose a photo or PDF of the card'));
+        await tester.pumpAndSettle();
+        h.http.respond(201, {'data': card});
+        h.http.stubs['/owner/application/documents'] = {
+          'data': [card],
+        };
+        await tester.tap(find.text('Save card'));
+        await tester.pumpAndSettle();
 
-      h.http.respond(204, '');
-      h.http.stubs['/owner/application/documents'] = {'data': <Object?>[]};
-      await tester.tap(find.byTooltip('Remove document'));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(
-          of: find.byType(Dialog),
-          matching: find.text('Remove document'),
-        ),
-      );
-      await tester.pumpAndSettle();
+        final upload = writes(h).single;
+        expect(upload.path, '/owner/application/documents');
+        expect(Map.fromEntries((upload.data as FormData).fields), {
+          'type': 'identity',
+          'document_number': '234123412346',
+          'identity_kind': 'aadhaar',
+        });
+        expect(find.text('Number: XXXX XXXX 2346'), findsOneWidget);
+        expect(
+          find.text('Not added yet'),
+          findsOneWidget,
+          reason: 'PAN card still to add',
+        );
 
-      expect(writes(h).last.method, 'DELETE');
-      expect(writes(h).last.path, '/owner/application/documents/d1');
-      expect(find.text('No documents yet.'), findsOneWidget);
-    });
+        // The second card: a valid PAN is saved and the owner goes to the home page.
+        final pan = {
+          ...card,
+          'id': 'd10',
+          'file_name': 'pan.jpg',
+          'document_number': 'ABCPE1234F',
+        };
+        await tester.ensureVisible(find.text('Add PAN card').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Add PAN card').first);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).last, 'abcpe1234f');
+        h.files.next = pickedFile('pan.jpg');
+        await tester.tap(find.text('Choose a photo or PDF of the card'));
+        await tester.pumpAndSettle();
+        h.http.respond(201, {'data': pan});
+        h.http.stubs['/owner/application/documents'] = {
+          'data': [card, pan],
+        };
+        await tester.tap(find.text('Save card'));
+        await tester.pumpAndSettle();
 
-    testWidgets('an owner links a parking licence to a selected facility', (
+        expect(Map.fromEntries((writes(h).last.data as FormData).fields), {
+          'type': 'identity',
+          'document_number': 'ABCPE1234F',
+          'identity_kind': 'pan',
+        });
+        expect(
+          find.textContaining('Your Aadhaar and PAN cards are saved'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Add PAN card'),
+          findsNothing,
+          reason: 'Left the application screen for home',
+        );
+      },
+    );
+
+    testWidgets(
+      'an Aadhaar card is verified with the OTP sent to the Aadhaar-linked mobile, only with consent',
+      (tester) async {
+        final h = Harness(token: validToken());
+        h.tokens.registrationIntent = 'owner';
+        h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
+        Map<String, dynamic> aadhaar({required bool waiting, String? status}) =>
+            {
+              'id': 'd9',
+              'type': 'identity',
+              'file_name': 'aadhaar.jpg',
+              'mime_type': 'image/jpeg',
+              'size_bytes': 2048,
+              'created_at': '2026-11-02T04:00:00Z',
+              'document_number': 'XXXX XXXX 2346',
+              'identity_verification': {
+                'status': status,
+                'message': null,
+                'awaits_aadhaar_otp': waiting,
+              },
+            };
+        const meta = {
+          'identity': {
+            'pan_needs_date_of_birth': false,
+            'aadhaar_needs_otp': true,
+          },
+        };
+        h.http.stubs['/owner/application/documents'] = {
+          'data': [aadhaar(waiting: true)],
+          'meta': meta,
+        };
+        await start(tester, h);
+
+        await tester.ensureVisible(find.text('Verify with OTP'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Verify with OTP'));
+        await tester.pumpAndSettle();
+
+        // No consent: nothing is sent.
+        await tester.enterText(find.byType(TextField).last, '234123412346');
+        await tester.tap(find.text('Send OTP'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Please agree before we send the OTP.'),
+          findsOneWidget,
+        );
+        expect(writes(h), isEmpty);
+
+        await tester.tap(find.byType(Checkbox));
+        h.http.respond(200, {
+          'data': {
+            'status': 'sent',
+            'message': 'An OTP was sent.',
+            'expires_in_seconds': 600,
+          },
+        });
+        await tester.tap(find.text('Send OTP'));
+        await tester.pumpAndSettle();
+        final send = writes(h).single;
+        expect(send.path, '/owner/application/documents/d9/aadhaar-otp');
+        expect(send.data, {'aadhaar_number': '234123412346', 'consent': true});
+
+        // A wrong OTP can be tried again.
+        h.http.respond(200, {
+          'data': {
+            'status': 'otp_rejected',
+            'message': 'The OTP is incorrect or has expired.',
+            'attempts_left': 2,
+          },
+        });
+        await tester.enterText(find.byType(TextField).last, '111111');
+        await tester.pumpAndSettle();
+        expect(find.textContaining('2 tries left'), findsOneWidget);
+
+        h.http.respond(200, {
+          'data': {'status': 'verified', 'message': 'Confirmed.'},
+        });
+        h.http.stubs['/owner/application/documents'] = {
+          'data': [aadhaar(waiting: false, status: 'verified')],
+          'meta': meta,
+        };
+        await tester.enterText(find.byType(TextField).last, '482913');
+        await tester.pumpAndSettle();
+
+        expect(writes(h).last.data, {'otp': '482913'});
+        expect(find.text('Your Aadhaar is verified.'), findsOneWidget);
+        expect(find.text('Verified'), findsOneWidget);
+        expect(find.text('Verify with OTP'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Aadhaar: number, then OTP, then the card file, then the result, then PAN',
+      (tester) async {
+        final h = Harness(token: validToken());
+        h.tokens.registrationIntent = 'owner';
+        h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
+        const meta = {
+          'identity': {
+            'pan_needs_date_of_birth': false,
+            'aadhaar_needs_otp': true,
+          },
+        };
+        h.http.stubs['/owner/application/documents'] = {
+          'data': <Object?>[],
+          'meta': meta,
+        };
+        await start(tester, h);
+
+        await tester.ensureVisible(find.text('Add Aadhaar card').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Add Aadhaar card').first);
+        await tester.pumpAndSettle();
+
+        // 1. The number and consent.
+        await tester.enterText(find.byType(TextField).last, '234123412346');
+        await tester.tap(find.byType(Checkbox));
+        h.http.respond(200, {
+          'data': {
+            'status': 'sent',
+            'message': 'Sent.',
+            'expires_in_seconds': 600,
+          },
+        });
+        await tester.tap(find.text('Send OTP'));
+        await tester.pumpAndSettle();
+        expect(writes(h).last.path, '/owner/application/aadhaar-otp');
+        expect(writes(h).last.data, {
+          'aadhaar_number': '234123412346',
+          'consent': true,
+        });
+
+        // 2. The OTP, on the same sheet.
+        h.http.respond(200, {
+          'data': {'status': 'verified', 'message': 'Confirmed.'},
+        });
+        await tester.enterText(find.byType(TextField).last, '482913');
+        await tester.pumpAndSettle();
+        expect(writes(h).last.path, '/owner/application/aadhaar-otp/verify');
+        expect(find.textContaining('OTP confirmed'), findsOneWidget);
+
+        // 3. The file.
+        final card = {
+          'id': 'd9',
+          'type': 'identity',
+          'file_name': 'aadhaar.jpg',
+          'mime_type': 'image/jpeg',
+          'size_bytes': 2048,
+          'created_at': '2026-11-02T04:00:00Z',
+          'document_number': 'XXXX XXXX 2346',
+          'identity_verification': {
+            'status': 'verified',
+            'message': 'Confirmed.',
+            'awaits_aadhaar_otp': false,
+          },
+        };
+        h.files.next = pickedFile('aadhaar.jpg');
+        await tester.tap(find.text('Choose a photo or PDF of the card'));
+        await tester.pumpAndSettle();
+        h.http.respond(201, {'data': card});
+        h.http.stubs['/owner/application/documents'] = {
+          'data': [card],
+          'meta': meta,
+        };
+        await tester.tap(find.text('Save card'));
+        await tester.pumpAndSettle();
+        expect(Map.fromEntries((writes(h).last.data as FormData).fields), {
+          'type': 'identity',
+          'document_number': '234123412346',
+          'identity_kind': 'aadhaar',
+        });
+
+        // 4. The result, then on to the PAN details.
+        expect(find.textContaining('Your Aadhaar is verified'), findsOneWidget);
+        await tester.tap(find.text('Add PAN details'));
+        await tester.pumpAndSettle();
+        expect(find.text('Add PAN card'), findsWidgets);
+        expect(find.text('PAN'), findsOneWidget);
+      },
+    );
+
+    testWidgets('an identity card the picker cannot open is explained', (
       tester,
     ) async {
       final h = Harness(token: validToken());
       h.tokens.registrationIntent = 'owner';
       h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
       h.http.stubs['/owner/application/documents'] = {'data': <Object?>[]};
-      h.http.stubs['/owner/parking-lots'] = pageJson([facilityJson()['data']!]);
-      h.files.next = pickedFile('parking-permit.pdf');
       await start(tester, h);
+      h.files.problem = PickProblem.unreadable;
 
-      await tester.ensureVisible(find.text('Add a document'));
-      await tester.tap(find.text('Add a document'));
+      await tester.ensureVisible(find.text('Add Aadhaar card').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Parking licence or permit'));
+      await tester.tap(find.text('Add Aadhaar card').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('MG Road Metro Parking'));
+      await tester.tap(find.text('Choose a photo or PDF of the card'));
       await tester.pumpAndSettle();
 
-      final document = {
-        'id': 'd2',
-        'type': 'licence',
-        'file_name': 'parking-permit.pdf',
-        'mime_type': 'application/pdf',
-        'size_bytes': 2048,
-        'url': 'https://files.test/d2',
-        'created_at': '2026-11-02T04:00:00Z',
-        'parking_lot': {'id': facilityId, 'name': 'MG Road Metro Parking'},
-      };
-      h.http.respond(201, {'data': document});
+      expect(find.textContaining('could not be opened'), findsOneWidget);
+      expect(writes(h), isEmpty);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the documents page shows only the Aadhaar and PAN cards', (
+      tester,
+    ) async {
+      final h = Harness(token: validToken());
+      h.http.stubs['/owner/bookings'] = pageJson(const []);
+      h.http.stubs['/owner/application'] = ownerJson();
       h.http.stubs['/owner/application/documents'] = {
-        'data': [document],
+        'data': [
+          {
+            'id': 'd1',
+            'type': 'identity',
+            'file_name': 'aadhaar.pdf',
+            'mime_type': 'application/pdf',
+            'size_bytes': 2048,
+            'created_at': '2026-11-02T04:00:00Z',
+            'document_number': 'XXXX XXXX 2346',
+          },
+        ],
       };
-
-      await tester.tap(find.text('When does it expire?'));
+      await start(tester, h, roles: ['customer', 'owner']);
+      await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('No expiry date'));
+      await tester.tap(find.text('Documents'));
       await tester.pumpAndSettle();
 
-      final upload = writes(h).single;
-      expect(upload.path, '/owner/application/documents');
-      expect(Map.fromEntries((upload.data as FormData).fields), {
-        'type': 'licence',
-        'parking_lot_id': facilityId,
-      });
-      expect(find.text('Facility: MG Road Metro Parking'), findsOneWidget);
+      expect(find.text('Number: XXXX XXXX 2346'), findsOneWidget);
+      expect(find.text('Add PAN card'), findsOneWidget);
+      expect(find.text('Add a document'), findsNothing);
+      expect(find.text('Other documents'), findsNothing);
+      // Approved: kept as the verification record.
+      expect(find.byTooltip('Remove document'), findsNothing);
     });
 
     testWidgets('an owner adds, reorders and removes facility photos', (
@@ -596,75 +809,6 @@ void main() {
         find.widgetWithText(TextAction, 'Add a photo'),
       );
       expect(add.onPressed, isNotNull);
-    });
-
-    testWidgets('an approved owner adds documents later from Profile', (
-      tester,
-    ) async {
-      final h = Harness(token: validToken());
-      h.http.stubs['/owner/bookings'] = pageJson(const []);
-      h.http.stubs['/owner/application'] = ownerJson();
-      final document = {
-        'id': 'd1',
-        'type': 'business',
-        'file_name': 'gst.pdf',
-        'mime_type': 'application/pdf',
-        'size_bytes': 2048,
-        'url': 'https://files.test/d1',
-        'created_at': '2026-11-02T04:00:00Z',
-      };
-      h.http.stubs['/owner/application/documents'] = {
-        'data': [document],
-      };
-      await start(tester, h, roles: ['customer', 'owner']);
-      await tester.tap(find.text('Profile'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Documents'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('gst.pdf · 2 KB'), findsOneWidget);
-      expect(
-        find.textContaining('You can add more at any time'),
-        findsOneWidget,
-      );
-      // Approved: kept as the verification record.
-      expect(find.byTooltip('Remove document'), findsNothing);
-
-      h.files.next = pickedFile('deed.pdf');
-      h.http.respond(201, {'data': document});
-      await tester.tap(find.text('Add a document'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Proof of property'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('No expiry date'));
-      await tester.pumpAndSettle();
-
-      final upload = writes(h).single;
-      expect(upload.path, '/owner/application/documents');
-      expect(Map.fromEntries((upload.data as FormData).fields), {
-        'type': 'property',
-      });
-      expect(h.files.askedImages.last, isFalse);
-    });
-
-    testWidgets('a document the picker cannot open is explained', (
-      tester,
-    ) async {
-      final h = Harness(token: validToken());
-      h.tokens.registrationIntent = 'owner';
-      h.http.stubs['/owner/application'] = ownerJson(status: 'pending');
-      await start(tester, h);
-      h.files.problem = PickProblem.unreadable;
-
-      await tester.ensureVisible(find.text('Add a document'));
-      await tester.tap(find.text('Add a document'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Proof of identity'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('could not be opened'), findsOneWidget);
-      expect(writes(h), isEmpty);
-      expect(tester.takeException(), isNull);
     });
   });
 

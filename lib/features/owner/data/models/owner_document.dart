@@ -57,11 +57,35 @@ abstract class OwnerDocument with _$OwnerDocument {
     /// owner is reminded before it and staff review it after.
     String? expiresOn,
     @JsonKey(readValue: _parkingLotName) String? parkingLotName,
+
+    /// The number on the card. An Aadhaar number comes back masked
+    /// ("XXXX XXXX 1234"); a PAN in capitals.
+    String? documentNumber,
     @Default(false) bool isExpired,
+
+    /// Aadhaar and PAN only: what the identity service said about the card
+    /// (verified, not_verified or unavailable); null before it answered.
+    @JsonKey(readValue: _identityStatus) String? identityStatus,
+
+    /// An Aadhaar card the owner can still confirm with the OTP sent to the
+    /// mobile linked to their Aadhaar.
+    @JsonKey(readValue: _awaitsAadhaarOtp)
+    @Default(false)
+    bool awaitsAadhaarOtp,
   }) = _OwnerDocument;
 
   factory OwnerDocument.fromJson(Map<String, dynamic> json) =>
       _$OwnerDocumentFromJson(json);
+}
+
+Object? _identityStatus(Map<dynamic, dynamic> json, String key) {
+  final identity = json['identity_verification'];
+  return identity is Map ? identity['status'] : null;
+}
+
+Object? _awaitsAadhaarOtp(Map<dynamic, dynamic> json, String key) {
+  final identity = json['identity_verification'];
+  return identity is Map ? identity['awaits_aadhaar_otp'] : null;
 }
 
 Object? _parkingLotName(Map<dynamic, dynamic> json, String key) {
