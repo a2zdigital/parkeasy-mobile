@@ -96,6 +96,14 @@ class ProfileScreen extends ConsumerWidget {
                     subtitle: l10n.profileGateHint,
                     onTap: () => context.push(Routes.gate),
                   ),
+                // Apply, or see an application waiting for review.
+                if (!user.isOwner)
+                  AppListRow(
+                    icon: Icons.storefront_outlined,
+                    title: l10n.profileOwnerApplication,
+                    subtitle: l10n.profileOwnerApplicationHint,
+                    onTap: () => context.push(Routes.owner),
+                  ),
                 if (user.isOwner)
                   AppListRow(
                     icon: Icons.description_outlined,

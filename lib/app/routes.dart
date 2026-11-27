@@ -136,7 +136,10 @@ abstract final class Routes {
           return location == owner ? null : owner;
         }
 
-        if (_isOwnerRoute(location)) {
+        // The application page itself is open to anyone signed in (anyone
+        // may apply, and an applicant comes back to see it); the owner
+        // modules behind it need the owner role.
+        if (_isOwnerRoute(location) && location != owner) {
           return explore;
         }
         final isOutside =

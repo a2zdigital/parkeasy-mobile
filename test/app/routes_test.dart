@@ -164,7 +164,8 @@ void main() {
       User.fromJson(userJson(roles: const ['customer', 'owner'])),
     );
 
-    expect(Routes.redirect(customer, Routes.owner), Routes.explore);
+    // The application page is open to anyone signed in; the modules are not.
+    expect(Routes.redirect(customer, Routes.owner), isNull);
     expect(Routes.redirect(customer, Routes.ownerBookings), Routes.explore);
     expect(Routes.redirect(customer, Routes.ownerFacilities), Routes.explore);
     expect(Routes.redirect(customer, Routes.ownerEarnings), Routes.explore);
