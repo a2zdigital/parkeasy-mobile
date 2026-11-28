@@ -7,23 +7,49 @@ import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
+import 'package:app/core/widgets/app_segmented_control.dart';
 import 'package:app/core/widgets/state_views.dart';
+import 'package:app/core/widgets/title_with_status.dart';
 import 'package:app/features/booking/data/models/booking.dart';
+import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/state/bookings_notifier.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
+import 'package:app/features/booking/ui/live_booking_refresh.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-class BookingsScreen extends ConsumerWidget {
+class BookingsScreen extends ConsumerStatefulWidget {
   const BookingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BookingsScreen> createState() => _BookingsScreenState();
+}
+
+class _BookingsScreenState extends ConsumerState<BookingsScreen> {
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleListener = AppLifecycleListener(
+      onResume: () => ref.read(bookingsProvider.notifier).load(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final state = ref.watch(bookingsProvider);
     final notifier = ref.read(bookingsProvider.notifier);
+    final selectedTab = ref.watch(customerBookingTabProvider);
     final failure = state.failure;
     final loadMoreFailure = state.loadMoreFailure;
 
@@ -45,12 +71,22 @@ class BookingsScreen extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         child: EmptyState(
           icon: Icons.event_note_outlined,
-          title: l10n.bookingsEmptyTitle,
-          body: l10n.bookingsEmptyBody,
-          action: SecondaryButton(
-            label: l10n.bookingsFind,
-            onPressed: () => context.go(Routes.explore),
-          ),
+          title: switch (selectedTab) {
+            CustomerBookingTab.upcoming => l10n.bookingsEmptyTitle,
+            CustomerBookingTab.ongoing => l10n.bookingsOngoingEmptyTitle,
+            CustomerBookingTab.past => l10n.bookingsPastEmptyTitle,
+          },
+          body: switch (selectedTab) {
+            CustomerBookingTab.upcoming => l10n.bookingsEmptyBody,
+            CustomerBookingTab.ongoing => l10n.bookingsOngoingEmptyBody,
+            CustomerBookingTab.past => l10n.bookingsPastEmptyBody,
+          },
+          action: selectedTab == CustomerBookingTab.upcoming
+              ? SecondaryButton(
+                  label: l10n.bookingsFind,
+                  onPressed: () => context.go(Routes.explore),
+                )
+              : null,
         ),
       );
     } else {
@@ -116,7 +152,37 @@ class BookingsScreen extends ConsumerWidget {
     return AppScaffold(
       title: l10n.tabBookings,
       scrollable: false,
-      body: RefreshIndicator(onRefresh: notifier.load, child: content),
+      body: Column(
+        children: [
+          const Gap.md(),
+          AppSegmentedControl<CustomerBookingTab>(
+            segments: [
+              (CustomerBookingTab.upcoming, l10n.bookingsUpcoming),
+              (CustomerBookingTab.ongoing, l10n.bookingsOngoing),
+              (CustomerBookingTab.past, l10n.bookingsPast),
+            ],
+            selected: selectedTab,
+            onChanged: (tab) =>
+                ref.read(customerBookingTabProvider.notifier).state = tab,
+          ),
+          // While a listed booking can change at the gate (a code is on
+          // show, or the vehicle is parked), the list is read again every
+          // few seconds, so check-in and check-out move it between tabs.
+          LiveBookingRefresh(
+            active: state.items.any(
+              (booking) =>
+                  booking.checkInCode != null ||
+                  booking.checkOutCode != null ||
+                  booking.status == BookingStatus.parked,
+            ),
+            every: const Duration(seconds: 10),
+            onTick: notifier.load,
+          ),
+          Expanded(
+            child: RefreshIndicator(onRefresh: notifier.load, child: content),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -140,34 +206,60 @@ class _BookingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            BookingStatusChip(booking: booking),
+            TitleWithStatus(
+              title: Text(
+                booking.parkingLot.name,
+                style: text.h3,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              status: BookingStatusChip(booking: booking),
+            ),
             const Gap.sm(),
-            Text(
-              booking.parkingLot.name,
-              style: text.h3,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const Gap.xs(),
-            Text(
-              '${FacilityTime.dayAndTime(booking.startAt, booking.timezone, locale)} – '
-              '${FacilityTime.time(booking.endAt, booking.timezone, locale)}',
-              style: text.bodySmall.copyWith(color: colors.textSecondary),
-            ),
-            const Gap.md(),
-            Wrap(
-              spacing: AppSpace.lg,
-              runSpacing: AppSpace.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
               children: [
-                Text(formatMoney(booking.total), style: text.price),
-                Text(
-                  booking.reference,
-                  style: text.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                    fontFeatures: text.price.fontFeatures,
+                Icon(
+                  Icons.schedule,
+                  size: AppSize.iconSmall,
+                  color: colors.textSecondary,
+                ),
+                const Gap.sm(),
+                Expanded(
+                  child: Text(
+                    '${FacilityTime.dayAndTime(booking.startAt, booking.timezone, locale)} – '
+                    '${FacilityTime.time(booking.endAt, booking.timezone, locale)}',
+                    style: text.bodySmall.copyWith(color: colors.textSecondary),
                   ),
                 ),
+              ],
+            ),
+            // Ongoing and parked: when they arrived and when to leave by.
+            if (booking.isCheckedIn)
+              if (booking.checkedInAt case final arrived?) ...[
+                const Gap.xs(),
+                Text(
+                  context.l10n.bookingsCheckedInLine(
+                    FacilityTime.time(arrived, booking.timezone, locale),
+                    FacilityTime.time(booking.endAt, booking.timezone, locale),
+                  ),
+                  style: text.bodySmall.copyWith(color: colors.textSecondary),
+                ),
+              ],
+            const Gap.md(),
+            const Divider(height: AppSize.borderWidth),
+            const Gap.md(),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    booking.reference,
+                    style: text.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                      fontFeatures: text.price.fontFeatures,
+                    ),
+                  ),
+                ),
+                Text(formatMoney(booking.total), style: text.price),
               ],
             ),
           ],

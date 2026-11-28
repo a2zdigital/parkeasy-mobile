@@ -4,11 +4,12 @@ import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/time/facility_time.dart';
 import 'package:app/core/widgets/app_card.dart';
-import 'package:app/core/widgets/app_filter_chip.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
+import 'package:app/core/widgets/app_segmented_control.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/core/widgets/cursor_list_view.dart';
 import 'package:app/core/widgets/state_views.dart';
+import 'package:app/core/widgets/title_with_status.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
@@ -41,7 +42,6 @@ class OwnerBookingsScreen extends ConsumerWidget {
 
     return AppScaffold(
       title: l10n.ownerTabBookings,
-      actions: const [ExitOwnerAreaAction()],
       scrollable: false,
       body: CursorListView<Booking>(
         state: state,
@@ -64,26 +64,17 @@ class OwnerBookingsScreen extends ConsumerWidget {
                     reference.isEmpty ? null : reference;
               },
             ),
-            if (reference == null)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    for (final (index, (status, label)) in filters.indexed) ...[
-                      if (index > 0) const Gap.sm(),
-                      AppFilterChip(
-                        label: label,
-                        isSelected: filter == status,
-                        onPressed: () =>
-                            ref
-                                    .read(ownerBookingFilterProvider.notifier)
-                                    .state =
-                                status,
-                      ),
-                    ],
-                  ],
-                ),
+            if (reference == null) ...[
+              const Gap.md(),
+              AppSegmentedControl<BookingStatus?>(
+                segments: filters,
+                selected: filter,
+                onChanged: (status) =>
+                    ref.read(ownerBookingFilterProvider.notifier).state =
+                        status,
               ),
+              const Gap.sm(),
+            ],
           ],
         ),
         empty: EmptyState(
@@ -123,11 +114,9 @@ class _OwnerBookingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(child: Text(booking.reference, style: text.price)),
-                BookingStatusChip(booking: booking),
-              ],
+            TitleWithStatus(
+              title: Text(booking.reference, style: text.price),
+              status: BookingStatusChip(booking: booking),
             ),
             const Gap.sm(),
             Text(

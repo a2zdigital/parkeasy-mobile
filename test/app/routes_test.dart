@@ -2,6 +2,7 @@ import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/features/auth/data/models/user.dart';
+import 'package:app/features/auth/state/registration_role.dart';
 import 'package:app/features/auth/state/session_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,11 +20,20 @@ void main() {
     Routes.launch,
     Routes.phone,
     Routes.code,
+    Routes.registrationRole,
+    Routes.registrationPhone,
     Routes.completeProfile,
     Routes.explore,
     Routes.bookings,
     Routes.activity,
     Routes.profile,
+    Routes.owner,
+    Routes.ownerBookings,
+    Routes.ownerFacilities,
+    Routes.ownerEarnings,
+    Routes.ownerActivity,
+    Routes.ownerProfile,
+    Routes.ownerProfileEdit,
   ];
 
   test('until the session is known, everything waits on start-up', () {
@@ -41,14 +51,23 @@ void main() {
     }
   });
 
-  test('signed out: only the sign-in screens are reachable', () {
-    for (final location in [Routes.launch, Routes.phone, Routes.code]) {
+  test('signed out: sign-in screens and guest browsing are reachable', () {
+    for (final location in [
+      Routes.launch,
+      Routes.phone,
+      Routes.code,
+      Routes.registrationRole,
+      Routes.registrationPhone,
+      Routes.explore,
+      Routes.parkingLot('01M4JQSZSNAVTVCMS8A7AJ0WJ9'),
+    ]) {
       expect(Routes.redirect(signedOut, location), isNull, reason: location);
     }
     for (final location in [
       Routes.startUp,
       Routes.completeProfile,
-      Routes.explore,
+      Routes.chooseTime('01M4JQSZSNAVTVCMS8A7AJ0WJ9'),
+      Routes.review('01M4JQSZSNAVTVCMS8A7AJ0WJ9'),
       Routes.bookings,
       Routes.activity,
       Routes.profile,
@@ -61,6 +80,24 @@ void main() {
     }
   });
 
+  test('after signing in, a guest returns to what they were booking', () {
+    final lot = Routes.chooseTime('01M4JQSZSNAVTVCMS8A7AJ0WJ9');
+    for (final from in [
+      Routes.code,
+      Routes.launch,
+      Routes.startUp,
+      Routes.explore,
+    ]) {
+      expect(Routes.redirect(complete, from, returnTo: lot), lot);
+    }
+    // Only customer places are returned to.
+    expect(
+      Routes.redirect(complete, Routes.code, returnTo: Routes.ownerEarnings),
+      Routes.explore,
+    );
+    expect(Routes.redirect(complete, Routes.code), Routes.explore);
+  });
+
   test('a new user must finish their profile before anything else', () {
     for (final location in everywhere) {
       expect(
@@ -69,6 +106,30 @@ void main() {
         reason: location,
       );
     }
+  });
+
+  test(
+    'owner registration resumes at the application after profile completion',
+    () {
+      final ownerRegistration = SignedIn(
+        User.fromJson(userJson()),
+        registrationRole: RegistrationRole.owner,
+      );
+      expect(Routes.redirect(ownerRegistration, Routes.explore), Routes.owner);
+      expect(Routes.redirect(ownerRegistration, Routes.owner), isNull);
+    },
+  );
+
+  test('incomplete owner registration resumes at profile completion', () {
+    final ownerRegistration = SignedIn(
+      User.fromJson(userJson(name: null, complete: false)),
+      registrationRole: RegistrationRole.owner,
+    );
+    expect(
+      Routes.redirect(ownerRegistration, Routes.explore),
+      Routes.completeProfile,
+    );
+    expect(Routes.redirect(ownerRegistration, Routes.completeProfile), isNull);
   });
 
   test('signed in: the app is open and the sign-in screens are not', () {
@@ -85,6 +146,8 @@ void main() {
       Routes.launch,
       Routes.phone,
       Routes.code,
+      Routes.registrationRole,
+      Routes.registrationPhone,
       Routes.completeProfile,
     ]) {
       expect(
@@ -92,6 +155,50 @@ void main() {
         Routes.explore,
         reason: location,
       );
+    }
+  });
+
+  test('owner-only routes require the backend-granted owner role', () {
+    final customer = SignedIn(User.fromJson(userJson()));
+    final owner = SignedIn(
+      User.fromJson(userJson(roles: const ['customer', 'owner'])),
+    );
+
+    // The application page is open to anyone signed in; the modules are not.
+    expect(Routes.redirect(customer, Routes.owner), isNull);
+    expect(Routes.redirect(customer, Routes.ownerBookings), Routes.explore);
+    expect(Routes.redirect(customer, Routes.ownerFacilities), Routes.explore);
+    expect(Routes.redirect(customer, Routes.ownerEarnings), Routes.explore);
+    expect(Routes.redirect(customer, Routes.ownerActivity), Routes.explore);
+    expect(Routes.redirect(customer, Routes.ownerProfile), Routes.explore);
+    expect(Routes.redirect(owner, Routes.ownerBookings), isNull);
+    expect(Routes.redirect(owner, Routes.ownerFacilities), isNull);
+    expect(Routes.redirect(owner, Routes.ownerEarnings), isNull);
+    expect(Routes.redirect(owner, Routes.ownerActivity), isNull);
+    expect(Routes.redirect(owner, Routes.ownerProfile), isNull);
+    expect(Routes.redirect(owner, Routes.explore), Routes.ownerBookings);
+    expect(Routes.redirect(owner, Routes.startUp), Routes.ownerBookings);
+  });
+
+  test('pending owner intent opens application but never owner modules', () {
+    final pending = SignedIn(
+      User.fromJson(userJson()),
+      registrationRole: RegistrationRole.owner,
+    );
+    expect(Routes.redirect(pending, Routes.explore), Routes.owner);
+    expect(Routes.redirect(pending, Routes.owner), isNull);
+    expect(Routes.redirect(pending, Routes.ownerBookings), Routes.owner);
+    expect(Routes.redirect(pending, Routes.ownerFacilities), Routes.owner);
+  });
+
+  test('unknown or missing role is treated as customer, never owner', () {
+    for (final roles in [
+      const <String>[],
+      const ['future_role'],
+    ]) {
+      final session = SignedIn(User.fromJson(userJson(roles: roles)));
+      expect(Routes.redirect(session, Routes.explore), isNull);
+      expect(Routes.redirect(session, Routes.ownerBookings), Routes.explore);
     }
   });
 }

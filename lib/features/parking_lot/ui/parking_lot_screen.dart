@@ -6,18 +6,20 @@ import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/time/facility_time.dart';
-import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
+import 'package:app/core/widgets/app_list_row.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/core/widgets/status_chip.dart';
+import 'package:app/features/booking/ui/rate_booking_card.dart';
 import 'package:app/features/parking_lot/data/models/booking_mode.dart';
 import 'package:app/features/parking_lot/data/models/inventory_pool.dart';
 import 'package:app/features/parking_lot/data/models/operating_hour.dart';
 import 'package:app/features/parking_lot/data/models/parking_lot.dart';
 import 'package:app/features/parking_lot/data/models/rate_type.dart';
 import 'package:app/features/parking_lot/state/parking_lot_provider.dart';
+import 'package:app/features/parking_lot/ui/photo_strip.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -91,36 +93,65 @@ class _Details extends StatelessWidget {
       children: [
         const Gap.sm(),
         Text(lot.name, style: text.h1),
+        if (lot.rating.average case final average?) ...[
+          const Gap.xs(),
+          Row(
+            children: [
+              Icon(Icons.star_rounded, size: 18, color: colors.warning.solid),
+              const Gap.xs(),
+              Text(
+                l10n.ratingSummary(average, lot.rating.count),
+                style: text.bodySmall.copyWith(color: colors.textSecondary),
+              ),
+            ],
+          ),
+        ],
         const Gap.sm(),
-        Text(
-          '${lot.addressLine}, ${lot.city} ${lot.postalCode}',
-          style: text.body.copyWith(color: colors.textSecondary),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ExcludeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Icon(
+                  Icons.place_outlined,
+                  size: AppSize.iconSmall,
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
+            const Gap.xs(),
+            Expanded(
+              child: Text(
+                '${lot.addressLine}, ${lot.city} ${lot.postalCode}',
+                style: text.bodySmall.copyWith(color: colors.textSecondary),
+              ),
+            ),
+          ],
         ),
+        if (lot.photos.isNotEmpty) ...[
+          const Gap.md(),
+          PhotoStrip(photos: lot.photos),
+        ],
         if (description != null && description.isNotEmpty) ...[
           const Gap.md(),
           Text(description, style: text.body),
         ],
         const Gap.lg(),
-        AppBanner(
-          tone: lot.bookingMode == BookingMode.ownerApproval
-              ? StatusTone.warning
-              : StatusTone.info,
-          message: lot.bookingMode == BookingMode.ownerApproval
-              ? l10n.lotApprovalNote
-              : l10n.lotInstantNote,
-        ),
-        const Gap.md(),
-        Row(
+        AppListGroup(
           children: [
-            ExcludeSemantics(
-              child: Icon(
-                Icons.payments_outlined,
-                size: AppSize.iconSmall,
-                color: colors.textSecondary,
-              ),
+            AppListRow(
+              icon: lot.bookingMode == BookingMode.ownerApproval
+                  ? Icons.schedule
+                  : Icons.bolt_outlined,
+              tone: lot.bookingMode == BookingMode.ownerApproval
+                  ? colors.warning
+                  : colors.success,
+              title: lot.bookingMode == BookingMode.ownerApproval
+                  ? l10n.lotApprovalNote
+                  : l10n.lotInstantNote,
             ),
-            const Gap.sm(),
-            Expanded(child: Text(payment, style: text.bodySmall)),
+            AppListRow(icon: Icons.payments_outlined, title: payment),
           ],
         ),
         SectionHeader(l10n.lotRates),
@@ -149,8 +180,84 @@ class _Details extends StatelessWidget {
             ],
           ),
         ],
+        SectionHeader(l10n.reviewsTitle),
+        _Reviews(lotId: lot.id, count: lot.rating.count),
         const Gap.xl(),
       ],
+    );
+  }
+}
+
+/// The facility's newest reviews: stars, the comment if any, and the date.
+class _Reviews extends ConsumerWidget {
+  const _Reviews({required this.lotId, required this.count});
+
+  final String lotId;
+  final int count;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final text = context.text;
+    final colors = context.colors;
+    final reviews = ref.watch(facilityReviewsProvider(lotId));
+
+    return reviews.when(
+      loading: () => const SkeletonCard(),
+      error: (error, _) => ErrorState(
+        failure: error is ApiException
+            ? error
+            : const ApiException(code: ApiErrorCode.unknown),
+        onRetry: () => ref.invalidate(facilityReviewsProvider(lotId)),
+      ),
+      data: (list) {
+        if (list.isEmpty) {
+          return Text(
+            l10n.reviewsEmpty,
+            style: text.body.copyWith(color: colors.textSecondary),
+          );
+        }
+        final dates = MaterialLocalizations.of(context);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (index, review) in list.indexed) ...[
+              if (index > 0) const Gap.sm(),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        RatingStars(score: review.score, size: 16),
+                        const Spacer(),
+                        Text(
+                          dates.formatMediumDate(review.createdAt.toLocal()),
+                          style: text.bodySmall.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (review.comment case final comment?
+                        when comment.trim().isNotEmpty) ...[
+                      const Gap.xs(),
+                      Text(comment, style: text.body),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            if (count > list.length) ...[
+              const Gap.sm(),
+              Text(
+                l10n.reviewsShowingLatest(list.length, count),
+                style: text.bodySmall.copyWith(color: colors.textSecondary),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

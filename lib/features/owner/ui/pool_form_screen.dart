@@ -1,3 +1,4 @@
+import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
@@ -5,11 +6,11 @@ import 'package:app/core/theme/app_theme.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
-import 'package:app/core/widgets/app_filter_chip.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/features/owner/state/owner_facility_notifier.dart';
 import 'package:app/features/owner/ui/facility_form_screen.dart';
+import 'package:app/features/parking_lot/data/models/allocation_mode.dart';
 import 'package:app/features/parking_lot/data/models/code_name.dart';
 import 'package:app/features/parking_lot/data/models/inventory_pool.dart';
 import 'package:app/features/parking_lot/data/models/rate_type.dart';
@@ -71,7 +72,11 @@ class _PoolFormScreenState extends ConsumerState<PoolFormScreen> {
     if (_saving) return;
     final l10n = context.l10n;
 
-    final capacity = int.tryParse(_capacity.text.trim());
+    // A numbered pool's capacity follows its bays; it is never sent.
+    final numbered = pool?.allocationMode == AllocationMode.numbered;
+    final capacity = numbered
+        ? pool!.capacity
+        : int.tryParse(_capacity.text.trim());
     final hourlyText = _hourly.text.trim();
     final dailyText = _daily.text.trim();
     final hourly = hourlyText.isEmpty ? null : parseRate(hourlyText);
@@ -164,8 +169,10 @@ class _PoolFormScreenState extends ConsumerState<PoolFormScreen> {
         .firstOrNull;
     if (pool != null) _fillFrom(pool);
 
-    // A facility has one pool per vehicle type: offer only the unused ones.
-    final used = {for (final p in facility.lot.pools) p.vehicleType.code};
+    // A facility has one pool per vehicle type: offer only the unused ones,
+    // and show the ones already set up with a way to edit them.
+    final configured = facility.lot.pools;
+    final used = {for (final p in configured) p.vehicleType.code};
     final available = <CodeName>[
       for (final type in options.vehicleTypes)
         if (!used.contains(type.code)) type,
@@ -178,17 +185,47 @@ class _PoolFormScreenState extends ConsumerState<PoolFormScreen> {
     const money = TextInputType.numberWithOptions(decimal: true);
     final moneyOnly = [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))];
 
+    final configuredList = pool == null && configured.isNotEmpty
+        ? <Widget>[
+            const Gap.lg(),
+            Text(l10n.poolConfiguredTitle, style: context.text.h3),
+            const Gap.sm(),
+            for (final existing in configured) ...[
+              _ConfiguredType(
+                pool: existing,
+                onEdit: _saving
+                    ? null
+                    : () => context.pushReplacement(
+                        Routes.ownerFacilityPool(
+                          widget.facilityId,
+                          poolId: existing.id,
+                        ),
+                      ),
+              ),
+              const Gap.sm(),
+            ],
+          ]
+        : const <Widget>[];
+
     if (pool == null && available.isEmpty) {
       return AppScaffold(
         title: title,
-        body: Center(
-          child: Text(
-            l10n.poolNoneLeft,
-            style: context.text.body.copyWith(
-              color: context.colors.textSecondary,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Gap.md(),
+            Text(
+              // No types at all means the platform has not set any up yet;
+              // otherwise every type already has spaces here.
+              options.vehicleTypes.isEmpty
+                  ? l10n.poolNoTypes
+                  : l10n.poolNoneLeft,
+              style: context.text.body.copyWith(
+                color: context.colors.textSecondary,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
+            ...configuredList,
+          ],
         ),
       );
     }
@@ -206,40 +243,71 @@ class _PoolFormScreenState extends ConsumerState<PoolFormScreen> {
                 color: context.colors.textSecondary,
               ),
             ),
-            Wrap(
-              spacing: AppSpace.sm,
-              children: [
-                for (final type in available)
-                  AppFilterChip(
-                    label: type.name,
-                    isSelected: _vehicleType == type.code,
-                    onPressed: _saving
-                        ? null
-                        : () => setState(() => _vehicleType = type.code),
-                  ),
-              ],
-            ),
-            const Gap.md(),
+            const Gap.sm(),
+            for (final type in available) ...[
+              AppCard(
+                selected: _vehicleType == type.code,
+                onTap: _saving
+                    ? null
+                    : () => setState(() => _vehicleType = type.code),
+                child: Row(
+                  children: [
+                    Icon(vehicleTypeIcon(type), color: context.colors.primary),
+                    const Gap.md(),
+                    Expanded(child: Text(type.name, style: context.text.body)),
+                    if (_vehicleType == type.code)
+                      Icon(Icons.check_circle, color: context.colors.primary),
+                  ],
+                ),
+              ),
+              const Gap.sm(),
+            ],
+            const Gap.sm(),
           ] else ...[
             Text(pool.vehicleType.name, style: context.text.h2),
             const Gap.lg(),
+            _BaysCard(
+              pool: pool,
+              onManage: _saving
+                  ? null
+                  : () => context.push(
+                      Routes.ownerPoolSpaces(widget.facilityId, pool.id),
+                    ),
+            ),
+            const Gap.md(),
           ],
-          AppTextField(
-            label: l10n.poolCapacity,
-            controller: _capacity,
-            enabled: !_saving,
-            errorText: _capacityError,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            textInputAction: TextInputAction.next,
+          if (pool?.allocationMode == AllocationMode.numbered)
+            Text(
+              l10n.poolCapacityFromBays,
+              style: context.text.bodySmall.copyWith(
+                color: context.colors.textSecondary,
+              ),
+            )
+          else
+            AppTextField(
+              label: l10n.poolCapacity,
+              controller: _capacity,
+              enabled: !_saving,
+              errorText: _capacityError,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textInputAction: TextInputAction.next,
+            ),
+          const Gap.lg(),
+          Text(l10n.lotRates, style: context.text.h3),
+          const Gap.xs(),
+          Text(
+            l10n.poolRateHelp,
+            style: context.text.bodySmall.copyWith(
+              color: context.colors.textSecondary,
+            ),
           ),
-          const Gap.sm(),
+          const Gap.md(),
           AppTextField(
             label: l10n.poolHourly,
             controller: _hourly,
             enabled: !_saving,
             errorText: _hourlyError,
-            helperText: l10n.poolRateHelp,
             keyboardType: money,
             inputFormatters: moneyOnly,
             textInputAction: TextInputAction.next,
@@ -250,7 +318,6 @@ class _PoolFormScreenState extends ConsumerState<PoolFormScreen> {
             controller: _daily,
             enabled: !_saving,
             errorText: _dailyError,
-            helperText: l10n.poolRateHelp,
             keyboardType: money,
             inputFormatters: moneyOnly,
             textInputAction: TextInputAction.done,
@@ -267,12 +334,104 @@ class _PoolFormScreenState extends ConsumerState<PoolFormScreen> {
               message: facilityFailureText(l10n, failure),
             ),
           ],
+          ...configuredList,
         ],
       ),
       bottom: PrimaryButton(
         label: l10n.facilitySave,
         isLoading: _saving,
         onPressed: () => _save(pool),
+      ),
+    );
+  }
+}
+
+/// An icon for a vehicle type, from its code or name (2, 4, 6 or 8 wheels).
+IconData vehicleTypeIcon(CodeName type) {
+  final text = '${type.code} ${type.name}'.toLowerCase();
+  if (RegExp(r'\b(2|two)[-_ ]?wheel|bike|scooter|motorcycle').hasMatch(text)) {
+    return Icons.two_wheeler;
+  }
+  if (RegExp(r'\b(8|eight)[-_ ]?wheel|truck|trailer').hasMatch(text)) {
+    return Icons.local_shipping;
+  }
+  if (RegExp(r'\b(6|six)[-_ ]?wheel|bus|van|tempo').hasMatch(text)) {
+    return Icons.airport_shuttle;
+  }
+  return Icons.directions_car;
+}
+
+/// A vehicle type this facility already has spaces for, with its capacity.
+class _ConfiguredType extends StatelessWidget {
+  const _ConfiguredType({required this.pool, required this.onEdit});
+
+  final InventoryPool pool;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AppCard(
+      child: Row(
+        children: [
+          Icon(
+            vehicleTypeIcon(pool.vehicleType),
+            color: context.colors.textSecondary,
+          ),
+          const Gap.md(),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(pool.vehicleType.name, style: context.text.body),
+                Text(
+                  l10n.poolConfiguredCapacity(pool.capacity),
+                  style: context.text.bodySmall.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(onPressed: onEdit, child: Text(l10n.poolEdit)),
+        ],
+      ),
+    );
+  }
+}
+
+/// How this vehicle type hands out spaces, and the way to its bays.
+class _BaysCard extends StatelessWidget {
+  const _BaysCard({required this.pool, required this.onManage});
+
+  final InventoryPool pool;
+  final VoidCallback? onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final numbered = pool.allocationMode == AllocationMode.numbered;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.poolBaysTitle, style: context.text.h3),
+          const Gap.xs(),
+          Text(
+            numbered
+                ? l10n.poolBaysNumbered(pool.capacity)
+                : l10n.poolBaysPooled,
+            style: context.text.bodySmall.copyWith(
+              color: context.colors.textSecondary,
+            ),
+          ),
+          const Gap.sm(),
+          SecondaryButton(
+            label: numbered ? l10n.poolBaysManage : l10n.poolBaysUseNumbered,
+            onPressed: onManage,
+          ),
+        ],
       ),
     );
   }

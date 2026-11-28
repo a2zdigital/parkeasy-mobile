@@ -13,6 +13,11 @@ abstract class OnlineEarnings with _$OnlineEarnings {
     @MoneyAmountConverter() required Decimal commission,
     @MoneyAmountConverter() required Decimal earned,
     @MoneyAmountConverter() required Decimal refunded,
+
+    /// GST on parking collected for the owner (ADR-0017). Absent from older API builds.
+    @MoneyAmountConverter() Decimal? parkingGst,
+    @MoneyAmountConverter() Decimal? commissionTax,
+    @MoneyAmountConverter() Decimal? tcs,
   }) = _OnlineEarnings;
 
   factory OnlineEarnings.fromJson(Map<String, dynamic> json) =>

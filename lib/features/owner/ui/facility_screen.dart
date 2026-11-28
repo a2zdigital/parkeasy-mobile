@@ -1,6 +1,7 @@
 import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/files/picked_file.dart';
 import 'package:app/core/money/money_format.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
@@ -10,13 +11,17 @@ import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
 import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
+import 'package:app/core/widgets/confirm_dialog.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/features/owner/data/models/approval_status.dart';
 import 'package:app/features/owner/data/models/owner_parking_lot.dart';
 import 'package:app/features/owner/state/owner_facility_notifier.dart';
+import 'package:app/features/owner/ui/attendants_section.dart';
 import 'package:app/features/owner/ui/facility_form_screen.dart';
 import 'package:app/features/owner/ui/owner_common.dart';
+import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:app/features/parking_lot/data/models/rate_type.dart';
+import 'package:app/features/parking_lot/ui/photo_strip.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -35,6 +40,10 @@ class FacilityScreen extends ConsumerWidget {
   ) {
     final reason = facility.rejectionReason;
     return switch (facility.approvalStatus) {
+      ApprovalStatus.approved when facility.isPaused => (
+        StatusTone.warning,
+        l10n.facilityPausedNote,
+      ),
       ApprovalStatus.approved => (StatusTone.success, l10n.facilityLiveNote),
       ApprovalStatus.pending => (StatusTone.warning, l10n.facilityPendingNote),
       ApprovalStatus.rejected => (
@@ -135,6 +144,10 @@ class FacilityScreen extends ConsumerWidget {
                   onRefresh: () async => ref.invalidate(provider),
                   child: ListView(
                     children: [
+                      if (!state.canEdit && lot.photos.isNotEmpty) ...[
+                        const Gap.md(),
+                        PhotoStrip(photos: lot.photos),
+                      ],
                       _Section(
                         title: l10n.facilityDetails,
                         action: state.canEdit ? l10n.facilityEdit : null,
@@ -268,6 +281,36 @@ class FacilityScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
+                      if (state.canEdit) _PhotoManager(id: id, state: state),
+                      if (state.canPause) AttendantsSection(facilityId: id),
+                      if (state.canPause) ...[
+                        const Gap.xl(),
+                        if (facility.isPaused)
+                          SecondaryButton(
+                            label: l10n.facilityResume,
+                            isLoading: state.isBusy,
+                            onPressed: () => ref
+                                .read(provider.notifier)
+                                .setPaused(paused: false),
+                          )
+                        else
+                          SecondaryButton(
+                            label: l10n.facilityPause,
+                            isLoading: state.isBusy,
+                            onPressed: () => _confirmPause(context, ref, id),
+                          ),
+                      ],
+                      if (state.canDelete) ...[
+                        const Gap.xl(),
+                        Center(
+                          child: TextAction(
+                            label: l10n.facilityDelete,
+                            onPressed: state.isBusy
+                                ? null
+                                : () => _confirmDelete(context, ref, id),
+                          ),
+                        ),
+                      ],
                       const Gap.xl(),
                     ],
                   ),
@@ -277,6 +320,180 @@ class FacilityScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+Future<void> _confirmDelete(
+  BuildContext context,
+  WidgetRef ref,
+  String id,
+) async {
+  final l10n = context.l10n;
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.facilityDeleteTitle,
+    body: l10n.facilityDeleteBody,
+    confirmLabel: l10n.facilityDelete,
+    cancelLabel: l10n.actionCancel,
+    isDestructive: true,
+  );
+  if (!confirmed) return;
+  final deleted = await ref.read(ownerFacilityProvider(id).notifier).delete();
+  if (deleted && context.mounted) context.pop();
+}
+
+Future<void> _confirmPause(
+  BuildContext context,
+  WidgetRef ref,
+  String id,
+) async {
+  final l10n = context.l10n;
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.facilityPauseTitle,
+    body: l10n.facilityPauseBody,
+    confirmLabel: l10n.facilityPause,
+    cancelLabel: l10n.actionCancel,
+  );
+  if (confirmed) {
+    await ref.read(ownerFacilityProvider(id).notifier).setPaused(paused: true);
+  }
+}
+
+/// The facility's photos while it can be edited: add, put in order, remove.
+class _PhotoManager extends ConsumerWidget {
+  const _PhotoManager({required this.id, required this.state});
+
+  final String id;
+  final OwnerFacilityState state;
+
+  static const _extensions = ['jpg', 'jpeg', 'png', 'webp'];
+
+  Future<void> _add(WidgetRef ref) async {
+    final notifier = ref.read(ownerFacilityProvider(id).notifier);
+    final PickedFile? file;
+    try {
+      file = await ref
+          .read(filePickerServiceProvider)
+          .pick(extensions: _extensions, images: true);
+    } on PickException catch (error) {
+      notifier.photoPickFailed(error.problem);
+      return;
+    }
+    if (file == null) return;
+    await notifier.addPhoto(file);
+  }
+
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    String photoId,
+  ) async {
+    final l10n = context.l10n;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.photoRemoveTitle,
+      body: l10n.photoRemoveBody,
+      confirmLabel: l10n.photoRemove,
+      cancelLabel: l10n.actionCancel,
+      isDestructive: true,
+    );
+    if (confirmed) {
+      await ref.read(ownerFacilityProvider(id).notifier).removePhoto(photoId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final text = context.text;
+    final colors = context.colors;
+    final photos = state.facility.lot.photos;
+    final notifier = ref.read(ownerFacilityProvider(id).notifier);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Section(
+          title: l10n.photosTitle,
+          action: state.isBusy ? null : l10n.photoAdd,
+          onAction: () => _add(ref),
+        ),
+        Text(
+          l10n.photosHint,
+          style: text.bodySmall.copyWith(color: colors.textSecondary),
+        ),
+        const Gap.sm(),
+        if (state.photoProblem case final problem?) ...[
+          AppBanner(
+            tone: StatusTone.danger,
+            message: pickProblemText(l10n, problem, photo: true),
+          ),
+          const Gap.sm(),
+        ],
+        if (photos.isEmpty)
+          Text(
+            l10n.photosEmpty,
+            style: text.body.copyWith(color: colors.textSecondary),
+          ),
+        for (final (index, photo) in photos.indexed) ...[
+          if (index > 0) const Gap.sm(),
+          AppCard(
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadius.small),
+                  child: SizedBox(
+                    width: 72,
+                    height: 54,
+                    child: Image.network(
+                      photo.url,
+                      fit: BoxFit.cover,
+                      semanticLabel: l10n.lotPhoto(index + 1, photos.length),
+                      errorBuilder: (context, _, _) => ColoredBox(
+                        color: colors.surfaceSubtle,
+                        child: Icon(
+                          Icons.image_not_supported_outlined,
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const Gap.md(),
+                Expanded(
+                  child: Text(
+                    l10n.lotPhoto(index + 1, photos.length),
+                    style: text.body,
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.photoMoveEarlier,
+                  icon: const Icon(Icons.arrow_upward),
+                  onPressed: state.isBusy || index == 0
+                      ? null
+                      : () => notifier.movePhoto(photo.id, -1),
+                ),
+                IconButton(
+                  tooltip: l10n.photoMoveLater,
+                  icon: const Icon(Icons.arrow_downward),
+                  onPressed: state.isBusy || index == photos.length - 1
+                      ? null
+                      : () => notifier.movePhoto(photo.id, 1),
+                ),
+                IconButton(
+                  tooltip: l10n.photoRemove,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: state.isBusy
+                      ? null
+                      : () => _remove(context, ref, photo.id),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

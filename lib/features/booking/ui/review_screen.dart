@@ -14,7 +14,6 @@ import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/state/booking_draft.dart';
 import 'package:app/features/booking/state/create_booking_notifier.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
-import 'package:app/features/parking_lot/data/models/booking_mode.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +29,7 @@ class ReviewScreen extends ConsumerWidget {
   static String _failureText(AppLocalizations l10n, ApiException failure) =>
       switch (failure.code) {
         ApiErrorCode.slotUnavailable => l10n.errSlotUnavailable,
+        ApiErrorCode.parkingSpaceUnavailable => l10n.errBayUnavailable,
         ApiErrorCode.quoteExpired => l10n.errQuoteExpired,
         ApiErrorCode.paymentModeNotSupported => l10n.errPaymentModeNotSupported,
         ApiErrorCode.outsideOperatingHours => l10n.errOutsideHours,
@@ -43,6 +43,7 @@ class ReviewScreen extends ConsumerWidget {
   /// Failures that mean the choice itself must change, not be retried.
   static bool _needsNewChoice(ApiException failure) => switch (failure.code) {
     ApiErrorCode.slotUnavailable ||
+    ApiErrorCode.parkingSpaceUnavailable ||
     ApiErrorCode.quoteExpired ||
     ApiErrorCode.outsideOperatingHours ||
     ApiErrorCode.invalidBookingWindow => true,
@@ -60,8 +61,6 @@ class ReviewScreen extends ConsumerWidget {
     final quote = draft.quote;
     final failure = state.failure;
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final needsApproval = quote.bookingMode == BookingMode.ownerApproval;
-
     ref.listen(provider, (previous, next) {
       final created = next.created;
       if (created != null && previous?.created == null) {
@@ -98,11 +97,19 @@ class ReviewScreen extends ConsumerWidget {
                   l10n.reviewLeave,
                   FacilityTime.dayAndTime(draft.endAt, quote.timezone, locale),
                 ),
+                if (draft.bay case final bay?) ...[
+                  const Gap.sm(),
+                  _Row(l10n.reviewBay, bay.label),
+                ],
               ],
             ),
           ),
           const Gap.md(),
-          PriceBreakdown(lines: quote.lines, total: quote.total),
+          PriceBreakdown(
+            lines: quote.lines,
+            total: quote.total,
+            charges: quote.charges,
+          ),
           SectionHeader(l10n.reviewPayment),
           if (quote.acceptsOnsitePayment)
             _PaymentOption(
@@ -121,17 +128,14 @@ class ReviewScreen extends ConsumerWidget {
               onTap: () => notifier.selectPaymentMode(PaymentMode.online),
             ),
           const Gap.lg(),
-          AppBanner(
-            tone: needsApproval ? StatusTone.warning : StatusTone.info,
-            message: needsApproval
-                ? l10n.reviewApprovalNote
-                : l10n.reviewInstantNote,
-          ),
+          AppBanner(tone: StatusTone.info, message: l10n.reviewInstantNote),
           const Gap.sm(),
-          Text(
-            l10n.reviewCancelNote,
-            style: text.bodySmall.copyWith(color: colors.textSecondary),
-          ),
+          Text(switch (quote.freeCancellationUntil) {
+            final until? => l10n.reviewCancelUntil(
+              FacilityTime.dayAndTime(until, quote.timezone, locale),
+            ),
+            null => l10n.reviewCancelNote,
+          }, style: text.bodySmall.copyWith(color: colors.textSecondary)),
           if (failure != null) ...[
             const Gap.md(),
             AppBanner(
@@ -151,7 +155,7 @@ class ReviewScreen extends ConsumerWidget {
         ],
       ),
       bottom: PrimaryButton(
-        label: needsApproval ? l10n.reviewSendRequest : l10n.reviewBook,
+        label: l10n.reviewBook,
         isLoading: state.isSubmitting,
         onPressed: notifier.submit,
       ),

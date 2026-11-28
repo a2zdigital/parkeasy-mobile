@@ -30,17 +30,17 @@ class AppTextStyles extends ThemeExtension<AppTextStyles> {
         );
 
     return AppTextStyles(
-      display: style(32, 40, FontWeight.w700),
-      h1: style(28, 36, FontWeight.w700),
-      h2: style(22, 30, FontWeight.w600),
-      h3: style(18, 26, FontWeight.w600),
-      body: style(16, 24, FontWeight.w400),
-      bodySmall: style(14, 20, FontWeight.w400),
+      display: style(30, 38, FontWeight.w700).copyWith(letterSpacing: -0.5),
+      h1: style(26, 34, FontWeight.w700).copyWith(letterSpacing: -0.4),
+      h2: style(20, 28, FontWeight.w600).copyWith(letterSpacing: -0.2),
+      h3: style(17, 24, FontWeight.w600),
+      body: style(15, 22, FontWeight.w400),
+      bodySmall: style(13, 18, FontWeight.w400),
       label: style(12, 16, FontWeight.w500),
-      button: style(16, 20, FontWeight.w600),
+      button: style(15, 20, FontWeight.w600),
       price: style(
-        18,
-        26,
+        17,
+        24,
         FontWeight.w600,
       ).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
     );

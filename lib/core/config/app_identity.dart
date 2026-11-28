@@ -2,3 +2,7 @@
 
 /// The name shown to users. Never type the name anywhere else.
 const String appDisplayName = 'ParkEasy';
+
+/// The Android application ID and iOS bundle ID, for services that ask an
+/// app to identify itself (such as the OpenStreetMap tile servers).
+const String appApplicationId = 'com.swanlabstechnologies.parkeasy';

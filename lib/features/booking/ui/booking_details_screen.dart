@@ -1,7 +1,9 @@
 import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/money/money.dart';
 import 'package:app/core/money/money_format.dart';
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
@@ -13,12 +15,18 @@ import 'package:app/core/widgets/app_card.dart';
 import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/confirm_dialog.dart';
 import 'package:app/core/widgets/state_views.dart';
+import 'package:app/core/widgets/title_with_status.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
 import 'package:app/features/booking/state/booking_details_notifier.dart';
+import 'package:app/features/booking/state/bookings_notifier.dart';
 import 'package:app/features/booking/ui/booking_status_chip.dart';
+import 'package:app/features/booking/ui/check_in_code_card.dart';
+import 'package:app/features/booking/ui/live_booking_refresh.dart';
 import 'package:app/features/booking/ui/price_breakdown.dart';
+import 'package:app/features/booking/ui/rate_booking_card.dart';
+import 'package:app/features/booking/ui/rating_sheet.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,9 +47,17 @@ class BookingDetailsScreen extends ConsumerWidget {
     final confirmed = await showConfirmDialog(
       context,
       title: l10n.cancelConfirmTitle,
-      body: booking.paymentMode == PaymentMode.online
-          ? l10n.cancelConfirmBodyOnline
-          : l10n.cancelConfirmBodyOnSite,
+      body: switch ((booking.paymentMode, booking.refundIfCancelledNow)) {
+        // A paid booking: say exactly what happens to the money.
+        (PaymentMode.online, true)
+            when booking.status == BookingStatus.confirmed =>
+          l10n.cancelConfirmBodyRefund,
+        (PaymentMode.online, false)
+            when booking.status == BookingStatus.confirmed =>
+          l10n.cancelConfirmBodyNoRefund,
+        (PaymentMode.online, _) => l10n.cancelConfirmBodyOnline,
+        _ => l10n.cancelConfirmBodyOnSite,
+      },
       confirmLabel: isRequest ? l10n.bookingCancelRequest : l10n.bookingCancel,
       cancelLabel: l10n.cancelKeep,
       isDestructive: true,
@@ -55,6 +71,22 @@ class BookingDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final details = ref.watch(bookingDetailsProvider(id));
+
+    // Checked out at the gate while this page is open: ask for a rating
+    // straight away, once. Only a change seen here opens it, so opening the
+    // booking later (from Past bookings) never shows it again.
+    ref.listen(bookingDetailsProvider(id), (previous, next) {
+      final before = previous?.valueOrNull?.booking;
+      final after = next.valueOrNull?.booking;
+      if (before == null || after == null) return;
+      // Checked in or out at the gate: the Bookings tabs move it too.
+      if (before.status != after.status) ref.invalidate(bookingsProvider);
+      if (before.status != BookingStatus.completed &&
+          after.status == BookingStatus.completed &&
+          after.myRating == null) {
+        showRatingSheet(context, after);
+      }
+    });
 
     return details.when(
       loading: () => AppScaffold(
@@ -99,8 +131,20 @@ class BookingDetailsScreen extends ConsumerWidget {
             onRefresh: ref.read(bookingDetailsProvider(id).notifier).refresh,
             child: ListView(
               children: [
+                // While a gate code is on screen, the booking is re-read
+                // every few seconds, so check-in and check-out show at once.
+                LiveBookingRefresh(
+                  active:
+                      booking.checkInCode != null ||
+                      booking.checkOutCode != null,
+                  onTick: ref.read(bookingDetailsProvider(id).notifier).refresh,
+                ),
                 const Gap.md(),
                 _Body(booking: booking),
+                if (booking.status == BookingStatus.completed) ...[
+                  const Gap.lg(),
+                  RateBookingCard(booking: booking),
+                ],
                 if (cancelFailure != null) ...[
                   const Gap.md(),
                   AppBanner(
@@ -176,11 +220,20 @@ class _Body extends StatelessWidget {
             ? l10n.bannerAwaitingPaymentNoTime
             : l10n.bannerAwaitingPayment(at(paymentDeadline)),
       ),
+      BookingStatus.parked => (
+        StatusTone.success,
+        l10n.bannerParkedShowCode(at(booking.endAt)),
+      ),
       BookingStatus.confirmed when booking.isCheckedIn => (
         StatusTone.success,
         l10n.bannerParked(at(booking.endAt)),
       ),
-      BookingStatus.confirmed => (StatusTone.success, l10n.bannerConfirmed),
+      BookingStatus.confirmed => (
+        StatusTone.success,
+        booking.checkInCode == null
+            ? l10n.bannerConfirmed
+            : l10n.bannerConfirmedWithCode,
+      ),
       BookingStatus.completed => (StatusTone.neutral, l10n.bannerCompleted),
       BookingStatus.cancelled => (
         StatusTone.neutral,
@@ -193,7 +246,7 @@ class _Body extends StatelessWidget {
       ),
       BookingStatus.rejected => (StatusTone.danger, l10n.bannerRejected),
       BookingStatus.expired => (StatusTone.neutral, l10n.bannerExpired),
-      BookingStatus.noShow => (StatusTone.neutral, l10n.bannerNoShow),
+      BookingStatus.noShow => (StatusTone.warning, l10n.bannerNoShow),
       BookingStatus.unknown => (StatusTone.neutral, l10n.statusAwaitingUpdate),
     };
   }
@@ -208,29 +261,41 @@ class _Body extends StatelessWidget {
     final isOpen = switch (booking.status) {
       BookingStatus.pendingApproval ||
       BookingStatus.awaitingPayment ||
-      BookingStatus.confirmed => true,
+      BookingStatus.confirmed ||
+      BookingStatus.parked => true,
       _ => false,
     };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: BookingStatusChip(booking: booking),
+        // The banner follows the status: a new state cross-fades in.
+        AnimatedSwitcher(
+          duration: reduceMotion(context) ? Duration.zero : AppMotion.base,
+          child: AppBanner(
+            key: ValueKey(message),
+            tone: tone,
+            message: message,
+          ),
         ),
-        const Gap.md(),
-        AppBanner(tone: tone, message: message),
         const Gap.md(),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                l10n.bookingReference,
-                style: text.label.copyWith(color: colors.textSecondary),
+              TitleWithStatus(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.bookingReference,
+                      style: text.label.copyWith(color: colors.textSecondary),
+                    ),
+                    SelectableText(booking.reference, style: text.h2),
+                  ],
+                ),
+                status: BookingStatusChip(booking: booking),
               ),
-              SelectableText(booking.reference, style: text.h2),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: AppSpace.md),
                 child: Divider(),
@@ -242,11 +307,53 @@ class _Body extends StatelessWidget {
                 '${FacilityTime.dayAndTime(booking.endAt, booking.timezone, locale)}',
                 style: text.bodySmall.copyWith(color: colors.textSecondary),
               ),
+              if (booking.spaceLabel case final bay?) ...[
+                const Gap.xs(),
+                Text(
+                  '${l10n.bookingSpace} $bay',
+                  style: text.body.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
             ],
           ),
         ),
+        if (booking.checkInCode case final code?) ...[
+          const Gap.md(),
+          // The code is revealed, not just drawn: it is what to show next.
+          Reveal(
+            child: CheckInCodeCard(code: code, bookingId: booking.id),
+          ),
+        ],
+        if (booking.overstay case final extra?) ...[
+          const Gap.md(),
+          AppBanner(
+            tone: StatusTone.warning,
+            message: booking.isCheckedIn
+                ? l10n.overstayWhileParked(
+                    extra.minutes,
+                    formatMoney(Money(extra.totalAmount, booking.currency)),
+                  )
+                : l10n.overstayCharged(
+                    formatMoney(Money(extra.totalAmount, booking.currency)),
+                  ),
+          ),
+        ],
+        if (booking.checkOutCode case final code?) ...[
+          const Gap.md(),
+          Reveal(
+            child: CheckInCodeCard(
+              code: code,
+              bookingId: booking.id,
+              checkOut: true,
+            ),
+          ),
+        ],
         const Gap.md(),
-        PriceBreakdown(lines: booking.priceLines, total: booking.total),
+        PriceBreakdown(
+          lines: booking.priceLines,
+          total: booking.total,
+          charges: booking.charges,
+        ),
         if (isOpen && booking.paymentMode == PaymentMode.onSite) ...[
           const Gap.md(),
           AppBanner(

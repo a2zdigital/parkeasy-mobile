@@ -1,3 +1,4 @@
+import 'package:app/features/booking/data/models/bay_option.dart';
 import 'package:app/features/booking/data/models/quote.dart';
 import 'package:app/features/parking_lot/data/models/parking_lot.dart';
 
@@ -10,7 +11,11 @@ class BookingDraft {
     required this.startAt,
     required this.endAt,
     required this.quote,
+    this.bay,
   });
+
+  /// The bay the customer chose, or null for the first free one.
+  final BayOption? bay;
 
   final ParkingLot lot;
 

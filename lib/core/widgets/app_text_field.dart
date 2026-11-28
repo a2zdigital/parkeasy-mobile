@@ -20,10 +20,13 @@ class AppTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.autofillHints,
+    this.prefixIcon,
+    this.suffixIcon,
     this.autofocus = false,
     this.enabled = true,
     this.onChanged,
     this.onSubmitted,
+    this.reserveMessageLine = true,
     super.key,
   });
 
@@ -41,10 +44,17 @@ class AppTextField extends StatelessWidget {
   final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final Iterable<String>? autofillHints;
+  final Widget? prefixIcon;
+  final Widget? suffixIcon;
   final bool autofocus;
   final bool enabled;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
+
+  /// Keeps an empty line under the field when there is no helper or error,
+  /// so an error appearing later does not move the layout. Off where the
+  /// field stands alone and the blank line would only look like a gap.
+  final bool reserveMessageLine;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +100,8 @@ class AppTextField extends StatelessWidget {
             hintStyle: text.body.copyWith(color: colors.textSecondary),
             prefixText: prefixText,
             prefixStyle: text.body,
+            prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: enabled ? colors.surface : colors.surfaceSubtle,
             constraints: const BoxConstraints(minHeight: AppSize.inputHeight),
@@ -108,8 +120,10 @@ class AppTextField extends StatelessWidget {
             disabledBorder: border(colors.border, AppSize.borderWidth),
           ),
         ).withSemanticsLabel(label),
-        const Gap.xs(),
-        _SupportingText(error: errorText, helper: helperText),
+        if (reserveMessageLine || errorText != null || helperText != null) ...[
+          const Gap.xs(),
+          _SupportingText(error: errorText, helper: helperText),
+        ],
       ],
     );
   }

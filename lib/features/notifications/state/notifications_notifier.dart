@@ -1,6 +1,8 @@
 import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/api/pagination.dart';
 import 'package:app/core/state/cursor_list.dart';
+import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/auth/state/session_state.dart';
 import 'package:app/features/notifications/data/models/app_notification.dart';
 import 'package:app/features/notifications/data/notification_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,11 @@ final notificationsProvider =
 /// The number on the Activity tab. A failure to fetch it shows no number;
 /// it is never an error the user must deal with.
 final unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
+  // A guest has no notifications; do not ask.
+  final signedIn = ref.watch(
+    sessionControllerProvider.select((session) => session is SignedIn),
+  );
+  if (!signedIn) return 0;
   try {
     return await ref.watch(notificationRepositoryProvider).unreadCount();
   } on ApiException {

@@ -1,3 +1,4 @@
+import 'package:app/core/motion/motion.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +37,7 @@ class PrimaryButton extends StatelessWidget {
     return _Busy(
       isLoading: isLoading,
       label: label,
+      enabled: onPressed != null,
       child: FilledButton(
         onPressed: onPressed,
         style: ButtonStyle(
@@ -90,6 +92,7 @@ class SecondaryButton extends StatelessWidget {
     return _Busy(
       isLoading: isLoading,
       label: label,
+      enabled: onPressed != null,
       child: OutlinedButton(
         onPressed: onPressed,
         style: ButtonStyle(
@@ -129,12 +132,16 @@ class TextAction extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.isDestructive = false,
+    this.onNavy = false,
     super.key,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool isDestructive;
+
+  /// On the navy brand background: white text instead of primary blue.
+  final bool onNavy;
 
   @override
   Widget build(BuildContext context) {
@@ -154,9 +161,12 @@ class TextAction extends StatelessWidget {
           if (states.contains(WidgetState.disabled)) {
             return colors.textDisabled;
           }
+          if (onNavy) return colors.onNavy;
           return isDestructive ? colors.danger.solid : colors.primary;
         }),
-        overlayColor: WidgetStatePropertyAll(colors.surfaceSubtle),
+        overlayColor: WidgetStatePropertyAll(
+          onNavy ? colors.onNavy.withValues(alpha: 0.1) : colors.surfaceSubtle,
+        ),
       ),
       child: Text(label),
     );
@@ -169,11 +179,13 @@ class _Busy extends StatelessWidget {
     required this.isLoading,
     required this.label,
     required this.child,
+    this.enabled = true,
   });
 
   final bool isLoading;
   final String label;
   final Widget child;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -181,7 +193,10 @@ class _Busy extends StatelessWidget {
     label: label,
     excludeSemantics: isLoading,
     liveRegion: isLoading,
-    child: IgnorePointer(ignoring: isLoading, child: child),
+    child: IgnorePointer(
+      ignoring: isLoading,
+      child: PressScale(enabled: enabled && !isLoading, child: child),
+    ),
   );
 }
 

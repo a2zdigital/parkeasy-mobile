@@ -1,5 +1,6 @@
 import 'package:app/app/app.dart';
 import 'package:app/core/widgets/app_buttons.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,9 +62,12 @@ void main() {
     expect(find.text('Pay at the facility'), findsOneWidget);
     expect(find.text('Pay online'), findsOneWidget);
     expect(
-      find.text('Your booking is confirmed as soon as you book.'),
+      find.textContaining('approved automatically when you book.'),
       findsOneWidget,
     );
+    // The exact cancellation rule, in the facility's time.
+    expect(find.textContaining('Free cancellation until'), findsOneWidget);
+    expect(find.textContaining('9:00'), findsWidgets);
 
     h.http.respond(201, {'data': bookingJson()});
     h.http.stubs['/bookings/$bookingId'] = {'data': bookingJson()};
@@ -112,12 +116,50 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('Review and book'), findsNothing);
+    // A cancelled booking is no longer Upcoming: it is under Past.
+    expect(find.text('BK-K2M5XCN4'), findsNothing);
+    await tester.tap(find.text('Past'));
+    await tester.pumpAndSettle();
     expect(find.text('BK-K2M5XCN4'), findsOneWidget);
     expect(find.text('Cancelled'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a facility that needs approval sends a request, and says so', (
+  for (final (refund, text) in [
+    (true, 'your payment refunded in full'),
+    (false, "won't be refunded"),
+  ]) {
+    testWidgets(
+      'cancelling a paid booking says whether it is refunded ($refund)',
+      (tester) async {
+        final h = Harness(token: validToken());
+        final paid = bookingJson(
+          paymentMode: 'online',
+          refundIfCancelledNow: refund,
+        );
+        h.http.stubs['/bookings'] = bookingsJson([paid]);
+        h.http.stubs['/bookings/$bookingId'] = {'data': paid};
+        h.http.respond(200, {'data': userJson()});
+        await tester.pumpWidget(
+          ProviderScope(overrides: h.overrides, child: const App()),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Bookings'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('BK-K2M5XCN4'));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.text('Cancel booking'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cancel booking'));
+        await tester.pumpAndSettle();
+
+        expect(find.textContaining(text), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets('a facility that used to require approval books automatically', (
     tester,
   ) async {
     final h = await atReview(tester);
@@ -125,30 +167,63 @@ void main() {
     // This facility takes online payment only: no choice is offered.
     expect(find.text('Pay at the facility'), findsNothing);
     expect(find.text('Pay online'), findsOneWidget);
-    expect(find.textContaining('This is a request.'), findsOneWidget);
-
-    final pending = bookingJson(
-      status: 'pending_approval',
-      paymentMode: 'online',
-      approvalDeadline: '2026-11-02T04:48:00Z',
-    );
-    h.http.respond(201, {'data': pending});
-    h.http.stubs['/bookings/$bookingId'] = {'data': pending};
-    await tester.tap(find.widgetWithText(PrimaryButton, 'Send request'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Awaiting approval'), findsOneWidget);
     expect(
-      find.text('Request sent. The owner has until 10:18 AM to answer.'),
+      find.textContaining(
+        'Your booking is approved automatically when you book.',
+      ),
       findsOneWidget,
     );
-    expect(
-      find.text("You're booked. Show the reference at the facility."),
-      findsNothing,
+
+    final waitingForPayment = bookingJson(
+      status: 'awaiting_payment',
+      paymentMode: 'online',
+      bookingMode: 'owner_approval',
+      paymentDeadline: '2026-11-02T04:27:00Z',
     );
-    await tester.ensureVisible(find.text('Cancel request'));
+    h.http.respond(201, {'data': waitingForPayment});
+    h.http.stubs['/bookings/$bookingId'] = {'data': waitingForPayment};
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Book parking'));
     await tester.pumpAndSettle();
-    expect(find.text('Cancel request'), findsOneWidget);
+
+    expect(find.text('Payment pending'), findsOneWidget);
+    expect(
+      find.textContaining('Pay by 9:57 AM to confirm this booking.'),
+      findsOneWidget,
+    );
+    expect(find.text('Pay ₹80.00'), findsOneWidget);
+    expect(find.text('Awaiting approval'), findsNothing);
+    expect(find.text('Cancel request'), findsNothing);
+
+    h.http.respond(201, {'data': orderJson(provider: 'fake')});
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Pay ₹80.00'));
+    await tester.pumpAndSettle();
+    expect(find.text('Payment'), findsOneWidget);
+    expect(
+      find.text('Test server: payments are simulated and no money moves.'),
+      findsOneWidget,
+    );
+
+    final paid = bookingJson(paymentMode: 'online');
+    h.http
+      ..respond(200, {'data': <String, Object?>{}})
+      ..respond(
+        200,
+        paymentJson(
+          orderStatus: 'succeeded',
+          bookingStatus: 'confirmed',
+          provider: 'fake',
+        ),
+      );
+    h.http.stubs['/bookings/$bookingId'] = {'data': paid};
+    h.http.stubs['/bookings'] = bookingsJson([paid]);
+    await tester.tap(find.text('Simulate a successful payment'));
+    await tester.pumpAndSettle();
+    expect(find.text('Payment received'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(PrimaryButton, 'View booking'));
+    await tester.pumpAndSettle();
+    expect(find.text('Confirmed'), findsOneWidget);
+    expect(find.text('Pay ₹80.00'), findsNothing);
   });
 
   testWidgets('when the last space was just taken, it says so and stays put', (
@@ -186,7 +261,43 @@ void main() {
     await tester.tap(find.text('Bookings'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Upcoming'), findsOneWidget);
+    expect(find.text('Past'), findsOneWidget);
     expect(find.text('No bookings yet'), findsOneWidget);
     expect(find.text('Find parking'), findsOneWidget);
+
+    await tester.tap(find.text('Past'));
+    await tester.pumpAndSettle();
+    expect(find.text('No past bookings'), findsOneWidget);
+    expect(find.text('Find parking'), findsNothing);
+  });
+
+  testWidgets('refreshes bookings when the app returns to the foreground', (
+    tester,
+  ) async {
+    final h = Harness(token: validToken());
+    h.http.stubs['/bookings'] = bookingsJson(const []);
+    h.http.respond(200, {'data': userJson()});
+    await tester.pumpWidget(
+      ProviderScope(overrides: h.overrides, child: const App()),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bookings'));
+    await tester.pumpAndSettle();
+
+    final initialBookingRequests = h.http.requests
+        .where((request) => request.path == '/bookings')
+        .length;
+    expect(initialBookingRequests, 3);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(
+      h.http.requests.where((request) => request.path == '/bookings').length,
+      6,
+    );
   });
 }

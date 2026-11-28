@@ -67,6 +67,21 @@ void main() {
       expect(pool.rates.first.price.toWire(), '40.00');
     });
 
+    test('reads photos in order, and none when absent', () {
+      expect(ParkingLot.fromJson(lotJson()).photos, isEmpty);
+
+      final lot = ParkingLot.fromJson({
+        ...lotJson(),
+        'photos': [
+          {'id': 'b', 'url': 'https://files.test/b.jpg'},
+          {'id': 'a', 'url': 'https://files.test/a.jpg'},
+        ],
+      });
+
+      expect(lot.photos.map((p) => p.id), ['b', 'a']);
+      expect(lot.photos.first.url, 'https://files.test/b.jpg');
+    });
+
     test('accepts coordinates sent as strings', () {
       final lot = ParkingLot.fromJson({
         ...lotJson(),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app/core/api/api_error_code.dart';
 import 'package:app/features/auth/state/otp_notifier.dart';
 import 'package:app/features/auth/state/phone_number.dart';
@@ -98,6 +100,94 @@ void main() {
 
       expect(state().isPhoneInvalid, isFalse);
     });
+
+    test(
+      'a refusal with Retry-After blocks repeat taps until the wait ends',
+      () async {
+        harness.http.respond(
+          429,
+          {
+            'error': {'code': 'RATE_LIMITED', 'message': 'Too many.'},
+          },
+          headers: {'retry-after': '120'},
+        );
+        await notifier().submit('9000000001');
+
+        expect(state().failure?.code, ApiErrorCode.rateLimited);
+        expect(state().retryAt, harness.now.add(const Duration(seconds: 120)));
+        expect(state().retryPhone, '+919000000001');
+
+        // Tapping again during the wait sends nothing.
+        await notifier().submit('9000000001');
+        await notifier().submit('9000000001');
+        expect(harness.http.requests, hasLength(1));
+
+        // Editing keeps the wait for that number.
+        notifier().clearProblems();
+        expect(state().retryAt, isNotNull);
+        await notifier().submit('9000000001');
+        expect(harness.http.requests, hasLength(1));
+
+        // Once the wait is over, the request goes out.
+        harness.now = harness.now.add(const Duration(seconds: 121));
+        harness.http.respond(200, {
+          'data': {'expires_in': 300, 'resend_in': 60},
+        });
+        await notifier().submit('9000000001');
+        expect(harness.http.requests, hasLength(2));
+        expect(state().sent, isNotNull);
+        expect(state().retryAt, isNull);
+      },
+    );
+
+    test(
+      'another number is not held by the wait for the first number',
+      () async {
+        harness.http.respond(
+          429,
+          {
+            'error': {'code': 'RATE_LIMITED', 'message': 'Too many.'},
+          },
+          headers: {'retry-after': '120'},
+        );
+        await notifier().submit('9000000001');
+        harness.http.respond(200, {
+          'data': {'expires_in': 300, 'resend_in': 60},
+        });
+        await notifier().submit('9000000002');
+
+        expect(harness.http.requests, hasLength(2));
+        expect(state().sent?.phone, '+919000000002');
+      },
+    );
+
+    test('a request in flight cannot be sent twice', () async {
+      final release = Completer<void>();
+      harness.http.respondLater(200, {
+        'data': {'expires_in': 300, 'resend_in': 60},
+      }, release: release);
+      final first = notifier().submit('9000000001');
+      await Future<void>.delayed(Duration.zero);
+      expect(state().isSubmitting, isTrue);
+      await notifier().submit('9000000001');
+      release.complete();
+      await first;
+
+      expect(harness.http.requests, hasLength(1));
+    });
+
+    test(
+      'a refusal without Retry-After shows the message and no wait',
+      () async {
+        harness.http.respond(429, {
+          'error': {'code': 'RATE_LIMITED', 'message': 'Too many.'},
+        });
+        await notifier().submit('9000000001');
+
+        expect(state().failure?.code, ApiErrorCode.rateLimited);
+        expect(state().retryAt, isNull);
+      },
+    );
   });
 
   group('OtpNotifier', () {

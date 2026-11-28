@@ -4,6 +4,7 @@ import 'package:app/core/api/api_exception.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
 import 'package:app/core/theme/app_theme.dart';
+import 'package:app/core/validation/identity_numbers.dart';
 import 'package:app/core/widgets/api_error_text.dart';
 import 'package:app/core/widgets/app_banner.dart';
 import 'package:app/core/widgets/app_buttons.dart';
@@ -12,9 +13,16 @@ import 'package:app/core/widgets/app_scaffold.dart';
 import 'package:app/core/widgets/app_text_field.dart';
 import 'package:app/core/widgets/state_views.dart';
 import 'package:app/features/auth/state/phone_number.dart';
+import 'package:app/features/auth/state/registration_role.dart';
+import 'package:app/features/auth/state/session_controller.dart';
+import 'package:app/features/auth/state/session_state.dart';
+import 'package:app/features/owner/data/models/owner_document.dart';
 import 'package:app/features/owner/data/models/parking_owner.dart';
 import 'package:app/features/owner/data/models/verification_status.dart';
 import 'package:app/features/owner/state/owner_application_notifier.dart';
+import 'package:app/features/owner/state/owner_documents_notifier.dart';
+import 'package:app/features/owner/ui/identity_cards_section.dart';
+import 'package:app/features/owner/ui/owner_documents_section.dart';
 import 'package:app/l10n/l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -43,14 +51,22 @@ class _OwnerApplicationScreenState
     super.dispose();
   }
 
-  void _submit() => ref
+  void _submit({String? verifiedPhone}) => ref
       .read(ownerApplicationProvider.notifier)
-      .apply(businessName: _name.text, contactPhone: _phone.text);
+      .apply(
+        businessName: _name.text,
+        contactPhone: verifiedPhone ?? _phone.text,
+      );
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final application = ref.watch(ownerApplicationProvider);
+    final verifiedPhone = switch (ref.watch(sessionControllerProvider)) {
+      SignedIn(user: final user, registrationRole: RegistrationRole.owner) =>
+        user.phone,
+      _ => null,
+    };
 
     return application.when(
       loading: () => AppScaffold(
@@ -100,23 +116,35 @@ class _OwnerApplicationScreenState
                 textInputAction: TextInputAction.next,
                 onChanged: clear,
               ),
-              const Gap.sm(),
-              AppTextField(
-                label: l10n.ownerContactPhone,
-                controller: _phone,
-                enabled: !state.isSubmitting,
-                prefixText: '${PhoneNumber.countryCode} ',
-                helperText: l10n.phoneHelper,
-                errorText: state.isPhoneInvalid ? l10n.phoneInvalid : null,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.done,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(PhoneNumber.nationalLength),
-                ],
-                onChanged: clear,
-                onSubmitted: (_) => _submit(),
-              ),
+              if (verifiedPhone != null) ...[
+                const Gap.sm(),
+                Text(
+                  l10n.ownerVerifiedContact(PhoneNumber.format(verifiedPhone)),
+                  style: context.text.body.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ] else ...[
+                const Gap.sm(),
+                AppTextField(
+                  label: l10n.ownerContactPhone,
+                  controller: _phone,
+                  enabled: !state.isSubmitting,
+                  prefixText: '${PhoneNumber.countryCode} ',
+                  helperText: l10n.phoneHelper,
+                  errorText: state.isPhoneInvalid ? l10n.phoneInvalid : null,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.done,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(
+                      PhoneNumber.nationalLength,
+                    ),
+                  ],
+                  onChanged: clear,
+                  onSubmitted: (_) => _submit(),
+                ),
+              ],
               if (failure != null) ...[
                 const Gap.sm(),
                 AppBanner(
@@ -129,7 +157,7 @@ class _OwnerApplicationScreenState
           bottom: PrimaryButton(
             label: l10n.ownerApplySubmit,
             isLoading: state.isSubmitting,
-            onPressed: _submit,
+            onPressed: () => _submit(verifiedPhone: verifiedPhone),
           ),
         );
       },
@@ -177,6 +205,16 @@ class _Status extends ConsumerWidget {
     };
     final isApproved =
         application.verificationStatus == VerificationStatus.approved;
+    final hasOwnerRole = switch (ref.watch(sessionControllerProvider)) {
+      SignedIn(user: final user) => user.isOwner,
+      _ => false,
+    };
+    final documents =
+        ref.watch(ownerDocumentsProvider).valueOrNull?.documents ??
+        const <OwnerDocument>[];
+    final cardsDone = IdentityCardKind.values.every(
+      (kind) => IdentityCardsSection.cardOf(documents, kind) != null,
+    );
 
     return AppScaffold(
       title: l10n.profileOwnerArea,
@@ -197,13 +235,29 @@ class _Status extends ConsumerWidget {
               style: context.text.body.copyWith(color: colors.textSecondary),
               textAlign: TextAlign.center,
             ),
+            const Gap.xl(),
+            OwnerDocumentsSection(
+              canRemove: !isApproved,
+              onCardsComplete: () => goHomeAfterIdentityCards(
+                context,
+                ref,
+                ownerArea: isApproved && hasOwnerRole,
+              ),
+            ),
+            const Gap.xl(),
           ],
         ),
       ),
-      bottom: isApproved
+      bottom: isApproved && hasOwnerRole
           ? PrimaryButton(
               label: l10n.ownerOpen,
               onPressed: () => context.go(Routes.ownerBookings),
+            )
+          : cardsDone
+          // Both cards are in: nothing more to do here while staff review.
+          ? PrimaryButton(
+              label: l10n.identityGoHome,
+              onPressed: () => leaveApplicationForHome(context, ref),
             )
           : null,
     );

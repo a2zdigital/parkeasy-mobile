@@ -1,7 +1,9 @@
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/providers.dart';
 import 'package:app/features/booking/data/models/booking.dart';
 import 'package:app/features/booking/data/models/booking_status.dart';
 import 'package:app/features/booking/data/models/payment_mode.dart';
+import 'package:app/features/gate/data/extra_time_payment.dart';
 import 'package:app/features/owner/data/models/onsite_collection_state.dart';
 import 'package:app/features/owner/data/owner_repository.dart';
 import 'package:app/features/owner/state/owner_lists.dart';
@@ -12,12 +14,29 @@ final ownerBookingProvider = AsyncNotifierProvider.autoDispose
       OwnerBookingNotifier.new,
     );
 
+/// How early before the start a booking can be checked in. The same value
+/// as the API's booking setting `check_in_early_minutes`; the API decides.
+const checkInEarlyMinutes = 30;
+
+/// Whether the owner may check this booking in at [now]: confirmed, not yet
+/// checked in, from [checkInEarlyMinutes] before the start until the end.
+/// Only decides whether to offer the button; the API checks again.
+bool canCheckInAt(Booking booking, DateTime now) {
+  if (booking.status != BookingStatus.confirmed) return false;
+  if (booking.checkedInAt != null) return false;
+  final opens = booking.startAt.subtract(
+    const Duration(minutes: checkInEarlyMinutes),
+  );
+  return !now.isBefore(opens) && now.isBefore(booking.endAt);
+}
+
 class OwnerBookingState {
   const OwnerBookingState({
     required this.booking,
     this.collection,
     this.isBusy = false,
     this.failure,
+    this.now,
   });
 
   final Booking booking;
@@ -29,10 +48,15 @@ class OwnerBookingState {
   final bool isBusy;
   final ApiException? failure;
 
+  /// When this state was made, from the app's clock. Decides whether
+  /// check-in is offered; null means "now".
+  final DateTime? now;
+
   bool get canAnswerRequest => booking.status == BookingStatus.pendingApproval;
 
-  bool get canCheckIn =>
-      booking.status == BookingStatus.confirmed && booking.checkedInAt == null;
+  /// Confirmed, not checked in, and inside the check-in window (from 30
+  /// minutes before the start until the end).
+  bool get canCheckIn => canCheckInAt(booking, now ?? DateTime.now());
 
   bool get canCheckOut => booking.isCheckedIn;
 
@@ -42,6 +66,7 @@ class OwnerBookingState {
     final collection = this.collection;
     if (collection == null || collection.collection != null) return false;
     return booking.status == BookingStatus.confirmed ||
+        booking.status == BookingStatus.parked ||
         booking.status == BookingStatus.completed;
   }
 }
@@ -58,6 +83,7 @@ class OwnerBookingNotifier
     final booking = await repository.booking(arg);
     return OwnerBookingState(
       booking: booking,
+      now: ref.read(clockProvider)(),
       collection: booking.paymentMode == PaymentMode.onSite
           ? await repository.collection(arg)
           : null,
@@ -73,8 +99,10 @@ class OwnerBookingNotifier
     }
   }
 
-  Future<void> act(OwnerBookingAction action) =>
-      _run((repository) => repository.act(arg, action));
+  Future<void> act(
+    OwnerBookingAction action, {
+    CheckOutChoice choice = const CheckOutChoice(),
+  }) => _run((repository) => repository.act(arg, action, choice: choice));
 
   Future<void> recordPayment() =>
       _run((repository) => repository.recordCollection(arg));
@@ -90,6 +118,7 @@ class OwnerBookingNotifier
         booking: current.booking,
         collection: current.collection,
         isBusy: true,
+        now: current.now,
       ),
     );
     try {
@@ -107,6 +136,7 @@ class OwnerBookingNotifier
         OwnerBookingState(
           booking: current.booking,
           collection: current.collection,
+          now: ref.read(clockProvider)(),
           failure: failure,
         ),
       );
