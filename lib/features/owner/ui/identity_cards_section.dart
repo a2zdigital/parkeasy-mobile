@@ -1,5 +1,6 @@
 import 'package:app/app/routes.dart';
 import 'package:app/core/api/api_exception.dart';
+import 'package:app/core/config/app_identity.dart';
 import 'package:app/core/files/picked_file.dart';
 import 'package:app/core/theme/app_colors.dart';
 import 'package:app/core/theme/app_dimensions.dart';
@@ -694,7 +695,10 @@ class _AadhaarCardSheetState extends ConsumerState<_AadhaarCardSheet> {
             onChanged: _working
                 ? null
                 : (value) => setState(() => _consent = value ?? false),
-            title: Text(l10n.identityOtpConsent, style: text.bodySmall),
+            title: Text(
+              l10n.identityOtpConsent(appDisplayName),
+              style: text.bodySmall,
+            ),
           ),
           if (_checked && !_consent)
             Text(
@@ -972,7 +976,10 @@ class _AadhaarOtpSheetState extends ConsumerState<_AadhaarOtpSheet> {
                   onChanged: _working
                       ? null
                       : (value) => setState(() => _consent = value ?? false),
-                  title: Text(l10n.identityOtpConsent, style: text.bodySmall),
+                  title: Text(
+                    l10n.identityOtpConsent(appDisplayName),
+                    style: text.bodySmall,
+                  ),
                 ),
                 if (_checked && !_consent)
                   Text(
